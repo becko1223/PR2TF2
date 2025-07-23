@@ -3,6 +3,8 @@ import tensorflow as tf
 import os
 import ray
 
+import pynvml
+
 from Ray_ACNet import ACNet
 from Runner import imitationRunner, RLRunner
 
@@ -13,12 +15,38 @@ import random
 ray.init(num_gpus=1)
 
 
-tf.reset_default_graph()
+#tf.reset_default_graph()
 print("Hello World")
 
+'''
 config = tf.ConfigProto(allow_soft_placement = True)
 config.gpu_options.per_process_gpu_memory_fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
 config.gpu_options.allow_growth=True
+'''
+
+pynvml.nvmlInit()
+handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+total_memory = info.total / (1024 ** 2)  # MB単位
+pynvml.nvmlShutdown()
+
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
+        for gpu in gpus:
+            tf.config.experimental.set_virtual_device_configuration(
+                gpu,
+                #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
+                #get_device_detailsの返り値はGPUによるらしい、、、
+
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory)]
+            )
+        
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 
 
@@ -30,7 +58,7 @@ if not os.path.exists(gifs_path):
     os.makedirs(gifs_path)
 
 
-global_step = tf.placeholder(tf.float32)
+global_step = 0
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -40,33 +68,33 @@ else:
     lr = tf.constant(LR_Q)
 
 
-def apply_gradients(global_network, gradients, sess, curr_episode):
-    feed_dict = {
-        global_network.tempGradients[i]: g for i, g in enumerate(gradients)
-    }
-    feed_dict[global_step] = curr_episode
+def apply_gradients(global_network, gradients, optimizer, curr_episode):
+    optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
+    if ADAPT_LR:
+        lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
+        optimizer.learning_rate.assign(lr)
+    else:
+        optimizer.learning_rate.assign(LR_Q)
+    global_step+=1
 
-    sess.run([global_network.apply_grads], feed_dict=feed_dict)
-
-def writeImitationDataToTensorboard(global_summary, metrics, curr_episode):    
-    summary = tf.Summary()
-    summary.value.add(tag='Losses/Imitation loss', simple_value=metrics[0])
-    global_summary.add_summary(summary, curr_episode)
-    global_summary.flush()
+def writeImitationDataToTensorboard(global_summary, metrics, curr_episode):  
+    with global_summary.as_default():
+        tf.summary.scalar('Losses/Imitation loss',metrics[0],curr_episode)
+        global_summary.flush()
 
 
-def writeEpisodeRatio(global_summary, numIL, numRL, sess, curr_episode):
-    summary = tf.Summary()
+def writeEpisodeRatio(global_summary, numIL, numRL,  curr_episode):
+    with global_summary.as_default():
+      
+        current_learning_rate = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
 
-    current_learning_rate = sess.run(lr, feed_dict={global_step: curr_episode})
-
-    RL_IL_Ratio = numRL / (numRL + numIL)
-    summary.value.add(tag='Perf/Num IL Ep.', simple_value=numIL)
-    summary.value.add(tag='Perf/Num RL Ep.', simple_value=numRL)
-    summary.value.add(tag='Perf/ RL IL ratio Ep.', simple_value=RL_IL_Ratio)
-    summary.value.add(tag='Perf/Learning Rate', simple_value=current_learning_rate)
-    global_summary.add_summary(summary, curr_episode)
-    global_summary.flush()
+        RL_IL_Ratio = numRL / (numRL + numIL)
+        tf.summary.scalar('Perf/Num IL Ep.', numIL,curr_episode)
+        tf.summary.scalar('Perf/Num RL Ep.', numRL,curr_episode)
+        tf.summary.scalar('Perf/ RL IL ratio Ep.', RL_IL_Ratio,curr_episode)
+        tf.summary.scalar('Perf/Learning Rate', current_learning_rate,curr_episode)
+        
+        global_summary.flush()
 
     
 
@@ -90,48 +118,46 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
 
         
     summary = tf.Summary()
-    
-    summary.value.add(tag='Perf/Reward', simple_value=mean_reward)
-    summary.value.add(tag='Perf/Targets Done', simple_value=mean_finishes)
-    summary.value.add(tag='Perf/Length', simple_value=mean_length)
-    summary.value.add(tag='Perf/Valid Rate', simple_value=(mean_length - mean_invalid) / mean_length)
-    summary.value.add(tag='Perf/Stop Rate', simple_value=(mean_stop) / mean_length)
 
-    summary.value.add(tag='Losses/Value Loss', simple_value=valueLoss)
-    summary.value.add(tag='Losses/Policy Loss', simple_value=policyLoss)
-    summary.value.add(tag='Losses/Valid Loss', simple_value=validLoss)
-    summary.value.add(tag='Losses/Entropy Loss', simple_value=entropyLoss)
-    summary.value.add(tag='Losses/Grad Norm', simple_value=gradNorm)
-    summary.value.add(tag='Losses/Var Norm', simple_value=varNorm)
+    with global_summary.as_default():
+        tf.summary.scalar('Perf/Reward',mean_reward,curr_episode)
+        tf.summary.scalar('Perf/Targets Done',mean_finishes,curr_episode)
+        tf.summary.scalar('Perf/Length',mean_length,curr_episode)
+        tf.summary.scalar('Perf/Valid Rate',(mean_length-mean_invalid)/mean_length,curr_episode)
+        tf.summary.scalar('Perf/Stop Rate',mean_stop/mean_length,curr_episode)
 
-    
-    global_summary.add_summary(summary, int(curr_episode - len(tensorboardData)))
-    global_summary.flush()
+        tf.summary.scalar('Losses/Value Loss',valueLoss,curr_episode)
+        tf.summary.scalar('Losses/Policy Loss',policyLoss,curr_episode)
+        tf.summary.scalar('Losses/Valid Loss',validLoss,curr_episode)
+        tf.summary.scalar('Losses/Entropy Loss',entropyLoss,curr_episode)
+        tf.summary.scalar('Losses/Grad Norm',gradNorm,curr_episode)
+        tf.summary.scalar('Losses/Var Norm',varNorm,curr_episode)
+        global_summary.flush()
 
 
     
 def main():    
-    with tf.device("/gpu:0"):
-        trainer = tf.contrib.opt.NadamOptimizer(learning_rate=lr, use_locking=True)
-        global_network = ACNet(GLOBAL_NET_SCOPE,a_size,trainer,False,NUM_CHANNEL, OBS_SIZE,GLOBAL_NET_SCOPE, GLOBAL_NETWORK=True)
+    with tf.device("/GPU:0"):
+        optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+        global_network = ACNet()
 
-        global_summary = tf.summary.FileWriter(train_path)
-        saver = tf.train.Saver(max_to_keep=1)
+        global_summary = tf.summary.create_file_writer(train_path)
+        checkpoint = tf.train.Checkpoint(model=global_network, optimizer=optimizer)
+        checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
 
-    with tf.Session(config=config) as sess:
-        sess.run(tf.global_variables_initializer())
-        if load_model == True:
-            print ('Loading Model...')
-            ckpt = tf.train.get_checkpoint_state(model_path)
-            p=ckpt.model_checkpoint_path
-            p=p[p.find('-')+1:]
-            p=p[:p.find('.')]
-            curr_episode=int(p)
+   
+    if load_model == True:
+        print ('Loading Model...')
+        checkpoint.restore(checkpoint_manager.latest_checkpoint)
 
-            saver.restore(sess,ckpt.model_checkpoint_path)
-            print("curr_episode set to ",curr_episode)
-        else:
-            curr_episode = 0
+        p=checkpoint_manager.latest_checkpoint
+        p=p[p.find('-')+1:]
+        p=p[:p.find('.')]
+        curr_episode=int(p)
+
+        print("curr_episode set to ",curr_episode)
+    else:
+        curr_episode = 0
 
 
         
@@ -143,12 +169,10 @@ def main():
 
         
 
-        # get the initial weights from the global network
-        weight_names = tf.trainable_variables()
-        weights = sess.run(weight_names) # Gets weights in numpy arrays CHECK
+        
 
+        weights=global_network.get_weights()
 
-        weightVars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 
         
         # launch the first job (e.g. getGradient) on each runner
@@ -184,13 +208,13 @@ def main():
 
 
                 # Write ratio of RL to IL episodes to tensorboard
-                writeEpisodeRatio(global_summary, numImitationEpisodes, numRLEpisodes, sess, curr_episode)
+                writeEpisodeRatio(global_summary, numImitationEpisodes, numRLEpisodes, curr_episode)
 
                 
                 if JOB_TYPE == JOB_OPTIONS.getGradient:
                     if jobResults:
                         for gradient in jobResults:
-                            apply_gradients(global_network, gradient, sess, curr_episode)
+                            apply_gradients(global_network, gradient, optimizer, curr_episode)
 
                     
                 elif JOB_TYPE == JOB_OPTIONS.getExperience:
@@ -208,7 +232,7 @@ def main():
                     
                 # get the updated weights from the global network
                 weight_names = tf.trainable_variables()
-                weights = sess.run(weight_names)
+                weights = global_network.get_weights()
                 curr_episode += 1
 
                 # start a new job on the recently completed agent with the updated weights
@@ -217,7 +241,8 @@ def main():
                 
                 if curr_episode % 100 == 0:
                     print ('Saving Model', end='\n')
-                    saver.save(sess, model_path+'/model-'+str(int(curr_episode))+'.cptk')
+                    #checkpoint_numberのところにエピソードナンバーを保存しておく
+                    checkpoint_manager.save(checkpoint_number=curr_episode)
                     print ('Saved Model', end='\n')
 
                 

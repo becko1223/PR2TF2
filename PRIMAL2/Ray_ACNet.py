@@ -35,7 +35,7 @@ class NormalizedColumnsInitializer(tf.keras.initializers.Initializer):
 
 
 class ACNet(tf.keras.Model):
-    def __init__(self, scope, a_size, trainer, TRAINING, NUM_CHANNEL, OBS_SIZE, GLOBAL_NET_SCOPE, GLOBAL_NETWORK=False):
+    def __init__(self):
    
         super().__init__()
         w_init = tf.keras.initializers.VarianceScaling()
@@ -72,8 +72,11 @@ class ACNet(tf.keras.Model):
 
         self.value=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
 
+
+#inputsで入ってくるのは(step,c,h,w)
     def call(self,inputs,goal_pos,initial_state):
         x=inputs
+        x=tf.transpose(x, perm=[0, 2, 3, 1])
 
         x=self.vgg1_conv1(x)
         x=self.vgg1_conv2(x)
@@ -89,6 +92,7 @@ class ACNet(tf.keras.Model):
         x=self.flat(x)
         x=self.actflat(x)
 
+        
         y=self.goal_layer(goal_pos)
 
         x=tf.concat([x,y],1)
@@ -101,8 +105,9 @@ class ACNet(tf.keras.Model):
         x=self.d2(x)
 
         x=self.h3(x+skip)
+        x=tf.expand_dims(x,0)
 
-        x=tf.expand_dims(x,axis=0)
+        
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
 
