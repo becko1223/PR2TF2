@@ -3,6 +3,7 @@ import threading
 import numpy as np
 import ray
 import os
+import pynvml 
 
 from Ray_ACNet import ACNet
 import GroupLock
@@ -24,7 +25,10 @@ class Runner(object):
     def __init__(self, metaAgentID):
         # tensorflow must be imported within the constructor
         # because this class will be instantiated on a remote ray node
-        import tensorflow as tf
+       
+
+
+        
         
         num_agents = NUM_THREADS
         self.env = Primal2Env(num_agents=num_agents,
@@ -39,43 +43,59 @@ class Runner(object):
         
         self.metaAgentID = metaAgentID
 
-        trainer = None
-        self.localNetwork = ACNet(GLOBAL_NET_SCOPE,a_size,trainer,True,NUM_CHANNEL,OBS_SIZE,GLOBAL_NET_SCOPE=GLOBAL_NET_SCOPE, GLOBAL_NETWORK=False)
-        self.currEpisode = int(metaAgentID)
 
-        self.global_step = tf.placeholder(tf.float32)
-        
-        
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        total_memory = info.total / (1024 ** 2)  # MB単位
+        pynvml.nvmlShutdown()
+
+
         # first `NUM_IL_META_AGENTS` only use IL and don't need gpu/tensorflow
         if self.metaAgentID < NUM_IL_META_AGENTS:
-            config = tf.ConfigProto(allow_soft_placement=True, device_count={"GPU": 0})
+            tf.config.set_visible_devices([], 'GPU')
             self.coord = None
-            self.saver = None
+            
 
         else:
             # set up tf session
-            config = tf.ConfigProto(allow_soft_placement = True)
-            config.gpu_options.per_process_gpu_memory_fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
-            config.gpu_options.allow_growth=True
+            gpus = tf.config.list_physical_devices('GPU')
+            if gpus:
+                try:
+                    fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
+                    for gpu in gpus:
+                        tf.config.experimental.set_virtual_device_configuration(
+                            gpu,
+                            #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
+                            #get_device_detailsの返り値はGPUによるらしい、、、
 
-            self.saver = tf.train.Saver(max_to_keep=1)
-            self.coord = tf.train.Coordinator()
+                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory)]
+                        )
+                    
+                    for gpu in gpus:
+                        tf.config.experimental.set_memory_growth(gpu, True)
+                except RuntimeError as e:
+                    print(e)
 
             
-        self.sess = tf.Session(config=config)
-        self.sess.run(tf.global_variables_initializer())
+            self.coord = tf.train.Coordinator()
+
+
+
+        trainer = None
+        self.localNetwork = ACNet()
+       
+        
+        
         
 
-        self.weightVars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-        weights = self.sess.run(self.weightVars)
-        self.weightSetters = [tf.placeholder(shape=w.shape, dtype=tf.float32) for w in weights]
-        self.set_weights_ops = [var.assign(w) for var, w in zip(self.weightVars, self.weightSetters)]
+        
+        
+
+       
 
     def set_weights(self, weights):
-        feed_dict = {
-            self.weightSetters[i]: w for i, w in enumerate(weights)
-        }
-        self.sess.run([self.set_weights_ops], feed_dict=feed_dict)
+        self.localNetwork.set_weights(weights)
 
 
         
@@ -92,11 +112,11 @@ class Runner(object):
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
-                                  self.sess, groupLock, learningAgent=True, global_step=self.global_step))
+                                  groupLock, learningAgent=True, global_step=self.global_step))
 
         for w in workers:
             groupLock.acquire(0, w.name)
-            worker_work = lambda: w.work(episodeNumber, self.coord, self.saver, self.weightVars)
+            worker_work = lambda: w.work(episodeNumber, self.coord)
             t = threading.Thread(target=(worker_work))
             t.start()
             
@@ -157,7 +177,7 @@ class Runner(object):
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                         self.env, self.localNetwork,
-                        self.sess, None, learningAgent=True, global_step=self.global_step)
+                        None, learningAgent=True, global_step=self.global_step)
 
         
         gradients, losses = worker.imitation_learning_only(episodeNumber)
@@ -199,14 +219,16 @@ class Runner(object):
 
         return jobResults, metrics, info
 
+import multiprocessing
+cpu=multiprocessing.cpu_count()
 
-@ray.remote(num_cpus=3, num_gpus= 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1))
+@ray.remote(num_cpus=(cpu*3)//19, num_gpus= 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1))
 class RLRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
 
 
-@ray.remote(num_cpus=1, num_gpus=0)
+@ray.remote(num_cpus=(cpu*1)//19, num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)

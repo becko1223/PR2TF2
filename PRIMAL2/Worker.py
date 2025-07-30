@@ -1,3 +1,4 @@
+import tensorflow as tf
 import scipy.signal as signal
 import copy
 import numpy as np
@@ -10,6 +11,8 @@ from Map_Generator import maze_generator
 
 from parameters import *
 
+GRAD_CLIP = 10.0
+
 
 # helper functions
 def discount(x, gamma):
@@ -17,7 +20,7 @@ def discount(x, gamma):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, sess, groupLock, learningAgent,
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock, learningAgent,
                  global_step):
 
         self.metaAgentID = metaAgentID
@@ -31,7 +34,6 @@ class Worker():
         self.local_AC = localNetwork
         self.groupLock = groupLock
         self.learningAgent = learningAgent
-        self.sess = sess
         self.allGradients = []
 
     def calculateImitationGradient(self, rollout, episode_count):
@@ -40,26 +42,19 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
-        temp_actions = np.stack(rollout[:, 2])
-        rnn_state = self.local_AC.state_init
-        feed_dict = {self.global_step             : episode_count,
-                     self.local_AC.inputs         : np.stack(rollout[:, 0]),
-                     self.local_AC.goal_pos       : np.stack(rollout[:, 1]),
-                     self.local_AC.optimal_actions: np.stack(rollout[:, 2]),
-                     self.local_AC.state_in[0]    : rnn_state[0],
-                     self.local_AC.state_in[1]    : rnn_state[1],
-                     self.local_AC.train_imitation: (rollout[:, 3]),
-                     self.local_AC.target_v       : np.stack(temp_actions),
-                     self.local_AC.train_value    : temp_actions,
+        rnn_state = [self.local_AC.h0,self.local_AC.c0]
+        
+        with tf.GradientTape() as tape:
+            policy,_,_,_=self.local_AC(np.stack(rollout[:, 0]),np.stack(rollout[:, 1]),rnn_state)
 
-                     }
+            optimal_actions_onehot = tf.one_hot(np.stack(rollout[:, 2]), a_size, dtype=tf.float32)
 
-        v_l, i_l, i_grads = self.sess.run([self.local_AC.value_loss,
-                                           self.local_AC.imitation_loss,
-                                           self.local_AC.i_grads],
-                                          feed_dict=feed_dict)
+            loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
-        return [i_l], i_grads
+        i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
+
+
+        return [loss], i_grads
 
     def calculateGradient(self, rollout, bootstrap_value, episode_count, rnn_state0):
         # ([s,a,r,s1,v[0,0]])
@@ -74,6 +69,8 @@ class Worker():
         train_value = rollout[:, -2]
         train_policy = rollout[:, -1]
 
+        #rnn_state = [self.local_AC.h0,self.local_AC.c0]
+
         # Here we take the rewards and values from the rollout, and use them to
         # generate the advantage and discounted returns. (With bootstrapping)
         # The advantage function uses "Generalized Advantage Estimation"
@@ -83,34 +80,31 @@ class Worker():
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
 
-        num_samples = min(EPISODE_SAMPLES, len(advantages))
-        sampleInd = np.sort(np.random.choice(advantages.shape[0], size=(num_samples,), replace=False))
 
-        feed_dict = {
-            self.global_step          : episode_count,
-            self.local_AC.target_v    : np.stack(discounted_rewards),
-            self.local_AC.inputs      : np.stack(observations),
-            self.local_AC.goal_pos    : np.stack(goals),
-            self.local_AC.actions     : actions,
-            self.local_AC.train_valid : np.stack(valids),
-            self.local_AC.advantages  : advantages,
-            self.local_AC.train_value : train_value,
-            self.local_AC.state_in[0] : rnn_state0[0],
-            self.local_AC.state_in[1] : rnn_state0[1],
-            self.local_AC.train_policy: train_policy,
-            self.local_AC.train_valids: np.vstack(train_policy)
-        }
+        actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float32)
+        responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
 
-        v_l, p_l, valid_l, e_l, g_n, v_n, grads = self.sess.run([self.local_AC.value_loss,
-                                                                 self.local_AC.policy_loss,
-                                                                 self.local_AC.valid_loss,
-                                                                 self.local_AC.entropy,
-                                                                 self.local_AC.grad_norms,
-                                                                 self.local_AC.var_norms,
-                                                                 self.local_AC.grads],
-                                                                feed_dict=feed_dict)
+        with tf.GradientTape() as tape:
+            policy,policy_sig,value,[state_h,state_c]=self.local_AC(np.stack(observations),np.stack(goals),rnn_state0)
 
-        return [v_l, p_l, valid_l, e_l, g_n, v_n], grads
+            #train_valueはinvalid actionをとったかどうかのラベル
+            value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value, shape=[-1])))
+
+            entropy     = - tf.reduce_mean(policy * tf.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+
+            policy_loss= - 0.5 * tf.reduce_mean(tf.log(tf.clip_by_value(responsible_outputs, 1e-15, 1.0)) * advantages)
+
+            valid_loss  = - 16 * tf.reduce_mean(tf.log(tf.clip_by_value(policy_sig, 1e-10, 1.0)) * np.stack(valids) + tf.log(tf.clip_by_value(1 - policy_sig, 1e-10, 1.0)) * (1 - np.stack(valids)))
+
+
+            loss=value_loss+policy_loss+valid_loss-entropy*0.01
+
+        grads=tape.gradient(loss,self.local_AC.trainable_variables)
+
+        var_norms = tf.global_norm(self.local_AC.trainable_variables)
+        grads, grad_norms = tf.clip_by_global_norm(grads, GRAD_CLIP)
+
+        return [value_loss, policy_loss, valid_loss, entropy, grad_norms, var_norms], grads
 
     def imitation_learning_only(self, episode_count):
         self.env._reset()
@@ -143,182 +137,178 @@ class Worker():
 
         num_agents = self.num_workers
 
-        with self.sess.as_default(), self.sess.graph.as_default():
-            while self.shouldRun(coord, episode_count):
-                episode_buffer, episode_values = [], []
-                episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = 0
+        
+        while self.shouldRun(coord, episode_count):
+            episode_buffer, episode_values = [], []
+            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = 0
 
-                # Initial state from the environment
-                if self.agentID == 1:
-                    self.env._reset()
-                    joint_observations[self.metaAgentID] = self.env._observe()
+            # Initial state from the environment
+            if self.agentID == 1:
+                self.env._reset()
+                joint_observations[self.metaAgentID] = self.env._observe()
 
-                self.synchronize()  # synchronize starting time of the threads
+            self.synchronize()  # synchronize starting time of the threads
 
-                # Get Information For Each Agent 
-                validActions = self.env.listValidActions(self.agentID,
-                                                         joint_observations[self.metaAgentID][self.agentID])
+            # Get Information For Each Agent 
+            validActions = self.env.listValidActions(self.agentID,
+                                                        joint_observations[self.metaAgentID][self.agentID])
 
-                s = joint_observations[self.metaAgentID][self.agentID]
+            s = joint_observations[self.metaAgentID][self.agentID]
 
-                rnn_state = self.local_AC.state_init
-                rnn_state0 = rnn_state
+            rnn_state = [self.local_AC.h0,self.local_AC.c0]
+            rnn_state0 = rnn_state
 
-                self.synchronize()  # synchronize starting time of the threads
-                swarm_reward[self.metaAgentID] = 0
-                swarm_targets[self.metaAgentID] = 0
+            self.synchronize()  # synchronize starting time of the threads
+            swarm_reward[self.metaAgentID] = 0
+            swarm_targets[self.metaAgentID] = 0
 
-                episode_rewards[self.metaAgentID] = []
-                episode_finishes[self.metaAgentID] = []
-                episode_lengths[self.metaAgentID] = []
-                episode_mean_values[self.metaAgentID] = []
-                episode_invalid_ops[self.metaAgentID] = []
-                episode_stop_ops[self.metaAgentID] = []
+            episode_rewards[self.metaAgentID] = []
+            episode_finishes[self.metaAgentID] = []
+            episode_lengths[self.metaAgentID] = []
+            episode_mean_values[self.metaAgentID] = []
+            episode_invalid_ops[self.metaAgentID] = []
+            episode_stop_ops[self.metaAgentID] = []
 
-                # ===============================start training =======================================================================
-                # RL
-                if True:
-                    # prepare to save GIF
-                    saveGIF = False
-                    global GIFS_FREQUENCY_RL
-                    if OUTPUT_GIFS and self.agentID == 1 and ((not TRAINING) or (episode_count >= self.nextGIF)):
-                        saveGIF = True
-                        self.nextGIF = episode_count + GIFS_FREQUENCY_RL
-                        GIF_episode = int(episode_count)
-                        GIF_frames = [self.env._render()]
+            # ===============================start training =======================================================================
+            # RL
+            if True:
+                # prepare to save GIF
+                saveGIF = False
+                global GIFS_FREQUENCY_RL
+                if OUTPUT_GIFS and self.agentID == 1 and ((not TRAINING) or (episode_count >= self.nextGIF)):
+                    saveGIF = True
+                    self.nextGIF = episode_count + GIFS_FREQUENCY_RL
+                    GIF_episode = int(episode_count)
+                    GIF_frames = [self.env._render()]
 
-                    # start RL
-                    self.env.finished = False
-                    while not self.env.finished:
-                        a_dist, v, rnn_state = self.sess.run([self.local_AC.policy,
-                                                              self.local_AC.value,
-                                                              self.local_AC.state_out],
-                                                             feed_dict={self.local_AC.inputs     : [s[0]],  # state
-                                                                        self.local_AC.goal_pos   : [s[1]],
-                                                                        # goal vector
-                                                                        self.local_AC.state_in[0]: rnn_state[0],
-                                                                        self.local_AC.state_in[1]: rnn_state[1]})
+                # start RL
+                self.env.finished = False
+                while not self.env.finished:
 
-                        skipping_state = False
-                        train_policy = train_val = 1
+                    a_dist,_,v,rnn_state=self.local_AC(s[0],s[1],rnn_state)
 
-                        if not skipping_state:
-                            if not (np.argmax(a_dist.flatten()) in validActions):
-                                episode_inv_count += 1
-                                train_val = 0
-                            train_valid = np.zeros(a_size)
-                            train_valid[validActions] = 1
+                    skipping_state = False
+                    train_policy = train_val = 1
 
-                            valid_dist = np.array([a_dist[0, validActions]])
-                            valid_dist /= np.sum(valid_dist)
+                    if not skipping_state:
+                        if not (np.argmax(a_dist.flatten()) in validActions):
+                            episode_inv_count += 1
+                            train_val = 0
+                        train_valid = np.zeros(a_size)
+                        train_valid[validActions] = 1
 
-                            a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
-                            joint_actions[self.metaAgentID][self.agentID] = a
-                            if a == 0:
-                                episode_stop_count += 1
+                        valid_dist = np.array([a_dist[0, validActions]])
+                        valid_dist /= np.sum(valid_dist)
 
-                        # Make A Single Agent Gather All Information
+                        a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
+                        joint_actions[self.metaAgentID][self.agentID] = a
+                        if a == 0:
+                            episode_stop_count += 1
 
-                        self.synchronize()
-
-                        if self.agentID == 1:
-                            all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
-                            for i in range(1, self.num_workers + 1):
-                                joint_observations[self.metaAgentID][i] = all_obs[i]
-                                joint_rewards[self.metaAgentID][i] = all_rewards[i]
-                                joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
-                            if saveGIF and self.agentID == 1:
-                                GIF_frames.append(self.env._render())
-
-                        self.synchronize()  # synchronize threads
-
-                        # Get observation,reward, valid actions for each agent 
-                        s1 = joint_observations[self.metaAgentID][self.agentID]
-                        r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])
-                        validActions = self.env.listValidActions(self.agentID, s1)
-
-                        self.synchronize()
-                        # Append to Appropriate buffers 
-                        if not skipping_state:
-                            episode_buffer.append(
-                                [s[0], a, joint_rewards[self.metaAgentID][self.agentID], s1, v[0, 0], train_valid, s[1],
-                                 train_val, train_policy])
-                            episode_values.append(v[0, 0])
-                        episode_reward += r
-                        episode_step_count += 1
-
-                        # Update State
-                        s = s1
-
-                        # If the episode hasn't ended, but the experience buffer is full, then we
-                        # make an update step using that experience rollout.
-                        if (len(episode_buffer) > 1) and (
-                                (len(episode_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
-                            self.agentID] or episode_step_count == max_episode_length):
-                            # Since we don't know what the true final return is,
-                            # we "bootstrap" from our current value estimation.
-                            if len(episode_buffer) >= EXPERIENCE_BUFFER_SIZE:
-                                train_buffer = episode_buffer[-EXPERIENCE_BUFFER_SIZE:]
-                            else:
-                                train_buffer = episode_buffer[:]
-
-                            if joint_done[self.metaAgentID][self.agentID]:
-                                s1Value = 0  # Terminal state
-                                episode_buffer = []
-                                joint_done[self.metaAgentID][self.agentID] = False
-                                targets_done += 1
-
-                            else:
-                                s1Value = self.sess.run(self.local_AC.value,
-                                                        feed_dict={self.local_AC.inputs     : np.array([s[0]]),
-                                                                   self.local_AC.goal_pos   : [s[1]],
-                                                                   self.local_AC.state_in[0]: rnn_state[0],
-                                                                   self.local_AC.state_in[1]: rnn_state[1]})[0, 0]
-
-                            self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
-                                                                              rnn_state0)
-
-                            self.allGradients.append(grads)
-
-                            rnn_state0 = rnn_state
-
-                        self.synchronize()
-
-                        # finish condition: reach max-len or all agents are done under one-shot mode
-                        if episode_step_count >= max_episode_length:
-                            break
-
-                    episode_lengths[self.metaAgentID].append(episode_step_count)
-                    episode_mean_values[self.metaAgentID].append(np.nanmean(episode_values))
-                    episode_invalid_ops[self.metaAgentID].append(episode_inv_count)
-                    episode_stop_ops[self.metaAgentID].append(episode_stop_count)
-                    swarm_reward[self.metaAgentID] += episode_reward
-                    swarm_targets[self.metaAgentID] += targets_done
+                    # Make A Single Agent Gather All Information
 
                     self.synchronize()
+
                     if self.agentID == 1:
-                        episode_rewards[self.metaAgentID].append(swarm_reward[self.metaAgentID])
-                        episode_finishes[self.metaAgentID].append(swarm_targets[self.metaAgentID])
+                        all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
+                        for i in range(1, self.num_workers + 1):
+                            joint_observations[self.metaAgentID][i] = all_obs[i]
+                            joint_rewards[self.metaAgentID][i] = all_rewards[i]
+                            joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
+                        if saveGIF and self.agentID == 1:
+                            GIF_frames.append(self.env._render())
 
-                        if saveGIF:
-                            make_gif(np.array(GIF_frames),
-                                     '{}/episode_{:d}_{:d}_{:.1f}.gif'.format(gifs_path, GIF_episode,
-                                                                              episode_step_count,
-                                                                              swarm_reward[self.metaAgentID]))
+                    self.synchronize()  # synchronize threads
+
+                    # Get observation,reward, valid actions for each agent 
+                    s1 = joint_observations[self.metaAgentID][self.agentID]
+                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])
+                    validActions = self.env.listValidActions(self.agentID, s1)
+
+                    self.synchronize()
+                    # Append to Appropriate buffers 
+                    if not skipping_state:
+                        episode_buffer.append(
+                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID], s1, v[0, 0], train_valid, s[1],
+                                train_val, train_policy])
+                        episode_values.append(v[0, 0])
+                    episode_reward += r
+                    episode_step_count += 1
+
+                    # Update State
+                    s = s1
+
+                    # If the episode hasn't ended, but the experience buffer is full, then we
+                    # make an update step using that experience rollout.
+                    if (len(episode_buffer) > 1) and (
+                            (len(episode_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
+                        self.agentID] or episode_step_count == max_episode_length):
+                        # Since we don't know what the true final return is,
+                        # we "bootstrap" from our current value estimation.
+                        if len(episode_buffer) >= EXPERIENCE_BUFFER_SIZE:
+                            train_buffer = episode_buffer[-EXPERIENCE_BUFFER_SIZE:]
+                        else:
+                            train_buffer = episode_buffer[:]
+
+                        if joint_done[self.metaAgentID][self.agentID]:
+                            s1Value = 0  # Terminal state
+                            episode_buffer = []
+                            joint_done[self.metaAgentID][self.agentID] = False
+                            targets_done += 1
+
+                        else:
+                            s1Value = self.sess.run(self.local_AC.value,
+                                                    feed_dict={self.local_AC.inputs     : np.array([s[0]]),
+                                                                self.local_AC.goal_pos   : [s[1]],
+                                                                self.local_AC.state_in[0]: rnn_state[0],
+                                                                self.local_AC.state_in[1]: rnn_state[1]})[0, 0]
+                            
+                            _,_,s1Value,_=self.local_AC(s[0],s[1],rnn_state)
+
+                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
+                                                                            rnn_state0)
+
+                        self.allGradients.append(grads)
+
+                        rnn_state0 = rnn_state
 
                     self.synchronize()
 
-                    perf_metrics = np.array([
-                        episode_step_count,
-                        np.nanmean(episode_values),
-                        episode_inv_count,
-                        episode_stop_count,
-                        episode_reward,
-                        targets_done
-                    ])
+                    # finish condition: reach max-len or all agents are done under one-shot mode
+                    if episode_step_count >= max_episode_length:
+                        break
 
-                    assert len(self.allGradients) > 0, 'Empty gradients at end of RL episode?!'
-                    return perf_metrics
+                episode_lengths[self.metaAgentID].append(episode_step_count)
+                episode_mean_values[self.metaAgentID].append(np.nanmean(episode_values))
+                episode_invalid_ops[self.metaAgentID].append(episode_inv_count)
+                episode_stop_ops[self.metaAgentID].append(episode_stop_count)
+                swarm_reward[self.metaAgentID] += episode_reward
+                swarm_targets[self.metaAgentID] += targets_done
+
+                self.synchronize()
+                if self.agentID == 1:
+                    episode_rewards[self.metaAgentID].append(swarm_reward[self.metaAgentID])
+                    episode_finishes[self.metaAgentID].append(swarm_targets[self.metaAgentID])
+
+                    if saveGIF:
+                        make_gif(np.array(GIF_frames),
+                                    '{}/episode_{:d}_{:d}_{:.1f}.gif'.format(gifs_path, GIF_episode,
+                                                                            episode_step_count,
+                                                                            swarm_reward[self.metaAgentID]))
+
+                self.synchronize()
+
+                perf_metrics = np.array([
+                    episode_step_count,
+                    np.nanmean(episode_values),
+                    episode_inv_count,
+                    episode_stop_count,
+                    episode_reward,
+                    targets_done
+                ])
+
+                assert len(self.allGradients) > 0, 'Empty gradients at end of RL episode?!'
+                return perf_metrics
 
     def synchronize(self):
         # handy thing for keeping track of which to release and acquire
@@ -328,7 +318,7 @@ class Worker():
         self.groupLock.acquire(int(not self.lock_bool), self.name)
         self.lock_bool = not self.lock_bool
 
-    def work(self, currEpisode, coord, saver, allVariables):
+    def work(self, currEpisode, coord):
         '''
         Interacts with the environment. The agent gets either gradients or experience buffer
         '''
