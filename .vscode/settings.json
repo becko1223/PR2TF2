@@ -1,0 +1,6 @@
+{
+    "python-envs.pythonProjects": [],
+    "python.analysis.extraPaths": [
+    "./myenv311/lib/python3.11/site-packages"
+  ]
+}

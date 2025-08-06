@@ -68,6 +68,7 @@ else:
     lr = tf.constant(LR_Q)
 
 
+
 def apply_gradients(global_network, gradients, optimizer, curr_episode):
     optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
