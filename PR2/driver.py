@@ -24,11 +24,15 @@ config.gpu_options.per_process_gpu_memory_fraction = 1.0 / (NUM_META_AGENTS - NU
 config.gpu_options.allow_growth=True
 '''
 
-pynvml.nvmlInit()
-handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-total_memory = info.total / (1024 ** 2)  # MB単位
-pynvml.nvmlShutdown()
+
+try:
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    total_memory = info.total / (1024 ** 2)  # MB単位
+    pynvml.nvmlShutdown()
+except pynvml.NVMLError_LibraryNotFound:
+    print("NO GPU")
 
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
