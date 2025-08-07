@@ -38,7 +38,6 @@ grpcio==1.64.0
 gym==0.26.2
 hiredis==2.3.2
 idna==3.7
-imagecodecs==2023.1.23
 imageio==2.34.0
 immutables==0.20
 ipython==8.24.0
