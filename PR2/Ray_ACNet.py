@@ -42,17 +42,17 @@ class ACNet(tf.keras.Model):
         w_init = tf.keras.initializers.VarianceScaling()
 
 
-        self.vgg1_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.maxpool1=layers.MaxPool2D(2)
 
-        self.vgg2_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,stride=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.maxpool2=layers.MaxPool2D(2)
 
-        self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,stride=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
 
         self.flat=layers.Flatten()
         self.actflat=layers.ReLU()
