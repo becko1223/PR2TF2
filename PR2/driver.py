@@ -77,7 +77,7 @@ def apply_gradients(global_network, gradients, optimizer, curr_episode):
     optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
-        optimizer.learning_rate.assign(lr)
+        optimizer.learning_rate.assign(float(lr))
     else:
         optimizer.learning_rate.assign(LR_Q)
     global_step+=1
@@ -143,7 +143,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
     
 def main():    
     with tf.device("/GPU:0"):
-        optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+        optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
         global_network = ACNet()
 
         global_summary = tf.summary.create_file_writer(train_path)
