@@ -43,12 +43,15 @@ class Runner(object):
         
         self.metaAgentID = metaAgentID
 
+        try:
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            total_memory = info.total / (1024 ** 2)  # MB単位
+            pynvml.nvmlShutdown()
 
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        total_memory = info.total / (1024 ** 2)  # MB単位
-        pynvml.nvmlShutdown()
+        except pynvml.NVMLError_LibraryNotFound:
+            print("NO GPU")
 
 
         # first `NUM_IL_META_AGENTS` only use IL and don't need gpu/tensorflow
