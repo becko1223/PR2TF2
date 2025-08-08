@@ -82,7 +82,7 @@ pyarrow==15.0.2
 pyasn1==0.6.0
 pyasn1-modules==0.4.0
 pycparser==2.22
-pyglet==2.0.15
+pyglet==1.5.0
 Pygments==2.18.0
 pyparsing==3.1.2
 pyrsistent==0.20.0
