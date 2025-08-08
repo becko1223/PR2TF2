@@ -93,7 +93,10 @@ def writeEpisodeRatio(global_summary, numIL, numRL,  curr_episode):
       
         current_learning_rate = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
 
+    if (numRL + numIL) != 0:
         RL_IL_Ratio = numRL / (numRL + numIL)
+    else:
+        RL_IL_Ratio = 0 
         tf.summary.scalar('Perf/Num IL Ep.', numIL,curr_episode)
         tf.summary.scalar('Perf/Num RL Ep.', numRL,curr_episode)
         tf.summary.scalar('Perf/ RL IL ratio Ep.', RL_IL_Ratio,curr_episode)
