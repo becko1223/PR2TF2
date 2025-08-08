@@ -78,7 +78,7 @@ class ACNet(tf.keras.Model):
         self.value=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
 
 
-#inputsで入ってくるのは(step,c,h,w)
+#inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
     def call(self,inputs,goal_pos,initial_state):
         x=inputs
         x=tf.transpose(x, perm=[0, 2, 3, 1])
@@ -110,8 +110,9 @@ class ACNet(tf.keras.Model):
         x=self.d2(x)
 
         x=self.h3(x+skip)
-        x=tf.expand_dims(x,0)
 
+        #x=tf.expand_dims(x,0)
+        x = tf.reshape(x, [1, -1, RNN_SIZE])
         
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
