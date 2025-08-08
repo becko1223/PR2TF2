@@ -35,6 +35,7 @@ class Worker():
         self.groupLock = groupLock
         self.learningAgent = learningAgent
         self.allGradients = []
+        self.loss_metrics
 
     def calculateImitationGradient(self, rollout, episode_count):
         rollout = np.array(rollout, dtype=object)
