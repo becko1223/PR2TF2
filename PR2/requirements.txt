@@ -13,7 +13,7 @@ certifi==2024.2.2
 cffi==1.16.0
 chardet==5.2.0
 click==8.1.7
-cloudpickle==1.7.0
+cloudpickle==1.6.0
 colorama==0.4.6
 colorful==0.5.5
 crowdai-api==0.1.22
