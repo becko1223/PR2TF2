@@ -239,7 +239,7 @@ def main():
                     tensorboardData = []
                     
                 # get the updated weights from the global network
-                weight_names = tf.trainable_variables()
+                
                 weights = global_network.get_weights()
                 curr_episode += 1
 
