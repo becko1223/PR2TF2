@@ -21,13 +21,13 @@ def discount(x, gamma):
 
 class Worker():
     def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock, learningAgent,
-                 global_step):
+                 ):
 
         self.metaAgentID = metaAgentID
         self.agentID = workerID
         self.name = "worker_" + str(workerID)
         self.num_workers = workers_per_metaAgent
-        self.global_step = global_step
+        
         self.nextGIF = 0
 
         self.env = env
