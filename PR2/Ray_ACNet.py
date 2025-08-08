@@ -118,6 +118,7 @@ class ACNet(tf.keras.Model):
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
 
+        lstm_out = tf.reshape(lstm_out, [-1, lstm_out.shape[2]])
         policy=self.policy_layer(lstm_out)
         policy=tf.nn.softmax(policy)
         policy_sig=tf.sigmoid(policy)
