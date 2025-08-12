@@ -5,6 +5,7 @@ import ray
 import os
 import pynvml 
 
+
 from Ray_ACNet import ACNet
 import GroupLock
 
@@ -192,35 +193,46 @@ class Runner(object):
         
         
     def job(self, global_weights, episodeNumber):
-        print("starting episode {} on metaAgent {}".format(episodeNumber, self.metaAgentID))
+        try:
+            print("starting episode {} on metaAgent {}".format(episodeNumber, self.metaAgentID))
 
-        # set the local weights to the global weight values from the master network
-        self.set_weights(global_weights)
+            # set the local weights to the global weight values from the master network
+            self.set_weights(global_weights)
 
 
-        # set first `NUM_IL_META_AGENTS` to perform imitation learning
-        if self.metaAgentID < NUM_IL_META_AGENTS:
-            print("running imitation job")
-            jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
+            # set first `NUM_IL_META_AGENTS` to perform imitation learning
+            if self.metaAgentID < NUM_IL_META_AGENTS:
+                print("running imitation job")
+                jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
 
-        elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-            jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber)
+            elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
+                jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber)
 
-        elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
-            print("not implemented")
-            assert(1==0)
+            elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
+                print("not implemented")
+                assert(1==0)
 
-                   
-        
-        # Get the job results from the learning agents
-        # and send them back to the master network        
-        info = {
-            "id": self.metaAgentID,
-            "episode_number": episodeNumber,
-            "is_imitation": is_imitation
-        }
+                    
+            
+            # Get the job results from the learning agents
+            # and send them back to the master network        
+            info = {
+                "id": self.metaAgentID,
+                "episode_number": episodeNumber,
+                "is_imitation": is_imitation
+            }
 
-        return jobResults, metrics, info
+            result= jobResults, metrics, info
+            return {"ok": True, "result": result}
+        except Exception as e:
+            import traceback
+            tb = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            return {"ok": False, "error_type": type(e).__name__, "error": repr(e), "traceback": tb}
+    
+
+
+
+
 
 import multiprocessing
 cpu=multiprocessing.cpu_count()

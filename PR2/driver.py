@@ -202,7 +202,26 @@ def main():
                 done_id, jobList = ray.wait(jobList)
                 
                 # get the results of the task from the object store
-                jobResults, metrics, info = ray.get(done_id)[0]
+                #jobResults, metrics, info = ray.get(done_id)[0]
+
+
+                res = ray.get(done_id)[0]
+
+                if not res["ok"]:
+                    # 例外が発生しているので中身を表示して中断
+                    print("Remote job error:")
+                    print(f"Type: {res['error_type']}")
+                    print(res["traceback"])
+                    break  # or continue, or raise 例外を再発生させるなど対応
+
+                # 成功時は result の中身をアンパック
+                jobResults, metrics, info = res["result"]
+
+
+
+
+
+
 
                 # imitation episodes write different data to tensorboard
                 if info['is_imitation']:
