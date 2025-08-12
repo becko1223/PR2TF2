@@ -170,6 +170,14 @@ class Runner(object):
             all_metrics = avg_loss_metrics + avg_perf_metrics
         else:
             all_metrics = avg_loss_metrics
+
+
+        print(f"Number of gradients returned: {len(jobResults)}")
+        for i, grads in enumerate(jobResults):
+            if grads is None:
+                print(f"gradient[{i}] is None")
+            else:
+                print(f"gradient[{i}] length: {len(grads)}")
         
         return jobResults, all_metrics, is_imitation
     
