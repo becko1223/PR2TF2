@@ -67,7 +67,7 @@ class ACNet(tf.keras.Model):
 
         self.h3=layers.ReLU()
 
-        self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True)
+        self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)
 
         self.h0=tf.zeros((1,RNN_SIZE))
         self.c0=tf.zeros((1,RNN_SIZE))
