@@ -34,7 +34,7 @@ google-auth==2.29.0
 google-pasta==0.2.0
 googleapis-common-protos==1.63.0
 gpustat==1.1.1
-grpcio==1.62.1
+grpcio==1.54.3
 gym==0.17.3
 hiredis==2.3.2
 idna==3.7
