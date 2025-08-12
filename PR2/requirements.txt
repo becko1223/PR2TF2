@@ -34,7 +34,7 @@ google-auth==2.29.0
 google-pasta==0.2.0
 googleapis-common-protos==1.63.0
 gpustat==1.1.1
-grpcio
+grpcio==1.62.1
 gym==0.17.3
 hiredis==2.3.2
 idna==3.7
@@ -73,7 +73,7 @@ pox==0.3.4
 ppft>=1.7.6.8 
 prometheus-client==0.20.0
 prompt-toolkit==3.0.43
-protobuf
+protobuf==4.25.3
 psutil==5.9.8
 ptyprocess==0.7.0
 py==1.11.0
