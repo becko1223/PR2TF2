@@ -81,6 +81,7 @@ class ACNet(tf.keras.Model):
 #inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
     def call(self,inputs,goal_pos,initial_state):
         x=inputs
+        print(f"#####input shape!!!!!!#####  {x.shape}")
         x=tf.transpose(x, perm=[0, 2, 3, 1])
 
         x=self.vgg1_conv1(x)
