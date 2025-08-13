@@ -122,7 +122,8 @@ class Worker():
         losses = []
         for i in range(self.num_workers):
             train_buffer = rollouts[i]
-
+            print("show trainbuffer")
+            print(train_buffer)
             imitation_loss, grads = self.calculateImitationGradient(train_buffer, episode_count)
 
             gradients.append(grads)
