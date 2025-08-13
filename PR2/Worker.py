@@ -266,6 +266,8 @@ class Worker():
                             
                             _,_,s1Value,_=self.local_AC(s[0],s[1],rnn_state)
 
+                        print("show trainbuffer")
+                        print(train_buffer)
                         self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
                                                                             rnn_state0)
 
