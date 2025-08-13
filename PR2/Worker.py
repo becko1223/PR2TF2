@@ -101,7 +101,10 @@ class Worker():
 
             loss=value_loss+policy_loss+valid_loss-entropy*0.01
 
+            print(f"value_loss:{value_loss}\npolicy_loss:{policy_loss}\nvalid_loss:{valid_loss}")
+
         grads=tape.gradient(loss,self.local_AC.trainable_variables)
+        print(f"grads:{grads}")
 
         var_norms = tf.global_norm(self.local_AC.trainable_variables)
         grads, grad_norms = tf.clip_by_global_norm(grads, GRAD_CLIP)
