@@ -84,7 +84,7 @@ class ACNet(tf.keras.Model):
         if tf.rank(x) == 3:  
             x = tf.expand_dims(x, axis=0)  
             
-        print(f"#####input shape!!!!!!#####  {x.shape}:{goal_pos.shape}:{initial_state.shape}")
+        print(f"#####input shape!!!!!!#####  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
         x=tf.transpose(x, perm=[0, 2, 3, 1])
 
         x=self.vgg1_conv1(x)
