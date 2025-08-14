@@ -151,7 +151,7 @@ def main():
         #global_network.build([(None,11,11,11),(None,2),(2,1,512)])
         dummy_input=tf.zeros((1,11,11,11))
         dummy_goalpos=tf.zeros((1,2))
-        dummy_state=tf.zeros((2,1,512))
+        dummy_state=[global_network.h0,global_network.c0]
         global_network(dummy_input,dummy_goalpos,dummy_state)
 
         global_summary = tf.summary.create_file_writer(train_path)
