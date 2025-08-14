@@ -148,7 +148,7 @@ def main():
     with tf.device("/GPU:0"):
         optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
         global_network = ACNet()
-        global_network.build([(None,11,11,11),(None,2),(2,1,512)])
+        #global_network.build([(None,11,11,11),(None,2),(2,1,512)])
 
         global_summary = tf.summary.create_file_writer(train_path)
         checkpoint = tf.train.Checkpoint(model=global_network, optimizer=optimizer)
