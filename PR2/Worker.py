@@ -197,7 +197,7 @@ class Worker():
                     train_policy = train_val = 1
 
                     if not skipping_state:
-                        if not (np.argmax(a_dist.flatten()) in validActions):
+                        if not (np.argmax(tf.reshape(a_dist, [-1])) in validActions):
                             episode_inv_count += 1
                             train_val = 0
                         train_valid = np.zeros(a_size)
