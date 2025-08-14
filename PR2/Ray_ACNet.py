@@ -101,8 +101,10 @@ class ACNet(tf.keras.Model):
         x=self.flat(x)
         x=self.actflat(x)
 
-        
-        y=self.goal_layer(goal_pos)
+        y=goal_pos
+        if tf.rank(y)==1:
+            y=tf.expand_dims(y,0)
+        y=self.goal_layer(y)
 
         x=tf.concat([x,y],1)
 
