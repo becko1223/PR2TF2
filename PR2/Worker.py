@@ -190,7 +190,8 @@ class Worker():
                 # start RL
                 self.env.finished = False
                 while not self.env.finished:
-
+                    s[0]=tf.expand_dims(s[0],0)
+                    s[1]=tf.expand_dims(s[1],0)
                     a_dist,_,v,rnn_state=self.local_AC(s[0],s[1],rnn_state)
 
                     skipping_state = False
