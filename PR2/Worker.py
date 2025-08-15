@@ -270,7 +270,7 @@ class Worker():
 
                         print("show trainbuffer")
                         print(len(one) for one in train_buffer)
-                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
+                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value[0], episode_count,
                                                                             rnn_state0)
 
                         self.allGradients.append(grads)
