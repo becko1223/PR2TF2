@@ -80,6 +80,7 @@ def apply_gradients(global_network, gradients, optimizer, curr_episode):
         optimizer.learning_rate.assign(float(lr))
     else:
         optimizer.learning_rate.assign(LR_Q)
+    global global_step
     global_step+=1
 
 def writeImitationDataToTensorboard(global_summary, metrics, curr_episode):  
