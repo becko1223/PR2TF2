@@ -76,17 +76,17 @@ class Worker():
         # Here we take the rewards and values from the rollout, and use them to
         # generate the advantage and discounted returns. (With bootstrapping)
         # The advantage function uses "Generalized Advantage Estimation"
+        print("rewards type:", type(rewards))
+        if isinstance(rewards, np.ndarray):
+            print("rewards.shape:", rewards.shape)
+            print("rewards.dtype:", rewards.dtype)
+            print("rewards.ndim:", rewards.ndim)
+
+        print("rewards.tolist()[:5]:", rewards.tolist()[:5])
+
         self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
-        print("bootstrap_value:", bootstrap_value)
-        print("type:", type(bootstrap_value))
-        print("values type:", type(values))
-        if isinstance(values, np.ndarray):
-            print("values.shape:", values.shape)
-            print("values.dtype:", values.dtype)
-            print("values.ndim:", values.ndim)
 
-        print("values.tolist()[:5]:", values.tolist()[:5]) 
         #self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
 
         values_array = np.array([v.numpy().item() for v in values])
