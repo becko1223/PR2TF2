@@ -80,6 +80,13 @@ class Worker():
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
         print("bootstrap_value:", bootstrap_value)
         print("type:", type(bootstrap_value))
+        print("values type:", type(values))
+        if isinstance(values, np.ndarray):
+            print("values.shape:", values.shape)
+            print("values.dtype:", values.dtype)
+            print("values.ndim:", values.ndim)
+
+        print("values.tolist()[:5]:", values.tolist()[:5]) 
         self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
         
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
