@@ -79,7 +79,7 @@ class Worker():
         print("bootstrap_value:", bootstrap_value)
         if isinstance(bootstrap_value, np.ndarray):
             print("bootstrap_value.shape:", bootstrap_value.shape)
-        rewards_array = rewards.astype(float)
+        rewards_array = np.array([float(r) for r in rewards])
         self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
@@ -98,7 +98,9 @@ class Worker():
 
         with tf.GradientTape() as tape:
             print("xshape!!!!!!!  ",np.stack(observations).shape)
-            policy,policy_sig,value,[state_h,state_c]=self.local_AC(np.stack(observations),np.stack(goals),rnn_state0)
+            obs_array = np.stack(observations) 
+            obs_array = np.squeeze(obs_array, axis=1)
+            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,np.stack(goals),rnn_state0)
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
 
             #train_valueはinvalid actionをとったかどうかのラベル
