@@ -76,13 +76,9 @@ class Worker():
         # Here we take the rewards and values from the rollout, and use them to
         # generate the advantage and discounted returns. (With bootstrapping)
         # The advantage function uses "Generalized Advantage Estimation"
-        print("rewards type:", type(rewards))
-        if isinstance(rewards, np.ndarray):
-            print("rewards.shape:", rewards.shape)
-            print("rewards.dtype:", rewards.dtype)
-            print("rewards.ndim:", rewards.ndim)
-
-        print("rewards.tolist()[:5]:", rewards.tolist()[:5])
+        print("bootstrap_value:", bootstrap_value)
+        if isinstance(bootstrap_value, np.ndarray):
+            print("bootstrap_value.shape:", bootstrap_value.shape)
         rewards_array = rewards.astype(float)
         self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
@@ -101,6 +97,7 @@ class Worker():
         
 
         with tf.GradientTape() as tape:
+            print("xshape!!!!!!!  ",np.stack(observations).shape)
             policy,policy_sig,value,[state_h,state_c]=self.local_AC(np.stack(observations),np.stack(goals),rnn_state0)
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
 
