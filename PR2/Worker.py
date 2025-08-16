@@ -97,10 +97,11 @@ class Worker():
 
 
         actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float32)
-        responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
+        
 
         with tf.GradientTape() as tape:
             policy,policy_sig,value,[state_h,state_c]=self.local_AC(np.stack(observations),np.stack(goals),rnn_state0)
+            responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
 
             #train_valueはinvalid actionをとったかどうかのラベル
             value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value, shape=[-1])))
