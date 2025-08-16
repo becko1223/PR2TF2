@@ -87,7 +87,10 @@ class Worker():
             print("values.ndim:", values.ndim)
 
         print("values.tolist()[:5]:", values.tolist()[:5]) 
-        self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
+        #self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
+
+        values_array = np.array([v.numpy().item() for v in values])
+        self.value_plus = np.concatenate([values_array, [bootstrap_value]])
         
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
