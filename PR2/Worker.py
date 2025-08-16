@@ -79,7 +79,10 @@ class Worker():
         print("bootstrap_value:", bootstrap_value)
         if isinstance(bootstrap_value, np.ndarray):
             print("bootstrap_value.shape:", bootstrap_value.shape)
-        bootstrap_scalar = bootstrap_value.numpy().item()
+
+        #bootstrap_valueが0のときと2次元のときとがある
+        if not isinstance(bootstrap_value,int):
+            bootstrap_scalar = bootstrap_value.numpy().item()
         rewards_array = np.array([float(r) for r in rewards])
         self.rewards_plus = np.concatenate([rewards_array, [bootstrap_scalar]])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
