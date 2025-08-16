@@ -266,11 +266,12 @@ class Worker():
                         else:
                             
                             
-                            _,_,s1Value,_=self.local_AC(s[0],s[1],rnn_state)
+                            _,_,s1Value_array,_=self.local_AC(s[0],s[1],rnn_state)
+                            s1Value=s1Value_array[0,0]
 
                         print("show trainbuffer")
                         print(len(one) for one in train_buffer)
-                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value[0], episode_count,
+                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
                                                                             rnn_state0)
 
                         self.allGradients.append(grads)
