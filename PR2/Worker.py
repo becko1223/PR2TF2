@@ -79,15 +79,16 @@ class Worker():
         print("bootstrap_value:", bootstrap_value)
         if isinstance(bootstrap_value, np.ndarray):
             print("bootstrap_value.shape:", bootstrap_value.shape)
+        bootstrap_scalar = bootstrap_value.numpy().item()
         rewards_array = np.array([float(r) for r in rewards])
-        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
+        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_scalar]])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
 
         #self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
 
         values_array = np.array([v.numpy().item() for v in values])
-        self.value_plus = np.concatenate([values_array, [bootstrap_value]])
+        self.value_plus = np.concatenate([values_array, [bootstrap_scalar]])
         
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
