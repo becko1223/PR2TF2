@@ -80,6 +80,7 @@ class Worker():
         if isinstance(bootstrap_value, np.ndarray):
             print("bootstrap_value.shape:", bootstrap_value.shape)
 
+        bootstrap_scalar=bootstrap_value
         #bootstrap_valueが0のときと2次元のときとがある
         if not isinstance(bootstrap_value,int):
             bootstrap_scalar = bootstrap_value.numpy().item()
