@@ -113,11 +113,11 @@ class Worker():
             #train_valueはinvalid actionをとったかどうかのラベル
             value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value, shape=[-1])))
 
-            entropy     = - tf.reduce_mean(policy * tf.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+            entropy     = - tf.reduce_mean(policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
-            policy_loss= - 0.5 * tf.reduce_mean(tf.log(tf.clip_by_value(responsible_outputs, 1e-15, 1.0)) * advantages)
+            policy_loss= - 0.5 * tf.reduce_mean(tf.math.log(tf.clip_by_value(responsible_outputs, 1e-15, 1.0)) * advantages)
 
-            valid_loss  = - 16 * tf.reduce_mean(tf.log(tf.clip_by_value(policy_sig, 1e-10, 1.0)) * np.stack(valids) + tf.log(tf.clip_by_value(1 - policy_sig, 1e-10, 1.0)) * (1 - np.stack(valids)))
+            valid_loss  = - 16 * tf.reduce_mean(tf.math.log(tf.clip_by_value(policy_sig, 1e-10, 1.0)) * np.stack(valids) + tf.math.log(tf.clip_by_value(1 - policy_sig, 1e-10, 1.0)) * (1 - np.stack(valids)))
 
 
             loss=value_loss+policy_loss+valid_loss-entropy*0.01
