@@ -126,7 +126,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
             mean_stop, mean_reward, mean_finishes = firstEpisode
 
         
-    summary = tf.Summary()
+ 
 
     with global_summary.as_default():
         tf.summary.scalar('Perf/Reward',mean_reward,curr_episode)
