@@ -104,7 +104,9 @@ class Worker():
             print("xshape!!!!!!!  ",np.stack(observations).shape)
             obs_array = np.stack(observations) 
             obs_array = np.squeeze(obs_array, axis=1)
-            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,np.stack(goals),rnn_state0)
+            goals_array=np.stack(goals)
+            goals_array=np.squeeze(goals_array,axis=1)
+            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,rnn_state0)
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
 
             #train_valueはinvalid actionをとったかどうかのラベル
