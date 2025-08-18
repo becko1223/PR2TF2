@@ -81,7 +81,7 @@ class ACNet(tf.keras.Model):
 #inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
     def call(self,inputs,goal_pos,initial_state):
         x=inputs
-        if tf.rank(x) == 3:  
+        if x.shape.rank == 3:  
             x = tf.expand_dims(x, axis=0)  
             
         print(f"#####input shape!!!!!!#####  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
@@ -102,7 +102,7 @@ class ACNet(tf.keras.Model):
         x=self.actflat(x)
 
         y=goal_pos
-        if tf.rank(y)==1:
+        if y.shape.rank==1:
             y=tf.expand_dims(y,0)
         y=self.goal_layer(y)
 
