@@ -125,9 +125,9 @@ class Worker():
             print(f"value_loss:{value_loss}\npolicy_loss:{policy_loss}\nvalid_loss:{valid_loss}")
 
         grads=tape.gradient(loss,self.local_AC.trainable_variables)
-        print(f"grads:{grads}")
+        
 
-        var_norms = tf.global_norm(self.local_AC.trainable_variables)
+        var_norms = tf.linalg.global_norm(self.local_AC.trainable_variables)
         grads, grad_norms = tf.clip_by_global_norm(grads, GRAD_CLIP)
 
         return [value_loss, policy_loss, valid_loss, entropy, grad_norms, var_norms], grads
@@ -143,8 +143,7 @@ class Worker():
         losses = []
         for i in range(self.num_workers):
             train_buffer = rollouts[i]
-            print("show trainbuffer")
-            print(len(one) for one in train_buffer)
+            
             imitation_loss, grads = self.calculateImitationGradient(train_buffer, episode_count)
 
             gradients.append(grads)
@@ -290,8 +289,7 @@ class Worker():
                             _,_,s1Value_array,_=self.local_AC(s[0],s[1],rnn_state)
                             s1Value=s1Value_array[0,0]
 
-                        print("show trainbuffer")
-                        print(len(one) for one in train_buffer)
+                        
                         self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
                                                                             rnn_state0)
 
