@@ -149,7 +149,8 @@ class Runner(object):
             loss_metrics.append(w.loss_metrics)
             perf_metrics.append(w.perf_metrics)
 
-            
+        for i, x in enumerate(loss_metrics):
+            print(i, type(x), np.shape(x))
         avg_loss_metrics = list(np.mean(np.array(loss_metrics), axis=0))
 
 
