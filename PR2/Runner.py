@@ -66,6 +66,7 @@ class Runner(object):
             gpus = tf.config.list_physical_devices('GPU')
             if gpus:
                 try:
+                    '''
                     fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
                     for gpu in gpus:
                         tf.config.experimental.set_virtual_device_configuration(
@@ -75,9 +76,10 @@ class Runner(object):
 
                             [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory)]
                         )
+                    '''
                     
-                    #for gpu in gpus:
-                    #    tf.config.experimental.set_memory_growth(gpu, True)
+                    for gpu in gpus:
+                        tf.config.experimental.set_memory_growth(gpu, True)
                 except RuntimeError as e:
                     print(e)
 
