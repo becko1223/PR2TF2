@@ -74,7 +74,7 @@ class Runner(object):
                             #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
                             #get_device_detailsの返り値はGPUによるらしい、、、
 
-                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory)]
+                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory*0.9)]
                         )
                     
                     
