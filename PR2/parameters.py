@@ -10,6 +10,19 @@ max_episode_length      = 256
 IL_MAX_EP_LENGTH        = 64
 episode_count           = 0
 
+# TDMPC parameters
+horizon                 =5
+rho                     =0.5
+
+num_samples             =512
+num_actor_traj          =16
+num_elites              =64
+
+gammma_tdmpc            =0.99
+temperature             =0.25
+iterations              =3
+
+
 # observer parameters
 OBS_SIZE                = 11   # the size of the FOV grid to apply to each agent
 NUM_FUTURE_STEPS        = 3

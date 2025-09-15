@@ -35,13 +35,13 @@ class NormalizedColumnsInitializer(tf.keras.initializers.Initializer):
         return {'std': self.std}
 
 
-class ACNet(tf.keras.Model):
+class ACRDNet(tf.keras.Model):
     def __init__(self):
    
         super().__init__()
         w_init = tf.keras.initializers.VarianceScaling()
 
-
+        #エンコード
         self.vgg1_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.vgg1_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.vgg1_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
@@ -71,11 +71,125 @@ class ACNet(tf.keras.Model):
 
         self.h0=tf.zeros((1,RNN_SIZE))
         self.c0=tf.zeros((1,RNN_SIZE))
+
+
+        #状態遷移
+        self.dynamics_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.dynamics_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.dynamics_dense3=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="liner")
+        
+
                          
+        #方策、価値、報酬
+        self.policy_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.policy_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.policy_dense3=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
-        self.policy_layer=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
+        self.q1_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
+        self.q1_layernorm=layers.LayerNormalization()
+        #実行時tanh
+        self.q1_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.q1_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
 
-        self.value=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+        self.q2_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
+        self.q2_layernorm=layers.LayerNormalization()
+        #実行時tanh
+        self.q2_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.q2_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+
+        self.reward_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.reward_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.reward_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+
+
+
+
+    def encode(self,inputs,goal_pos,initial_state):
+        x=inputs
+        
+            
+        x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
+
+        x=layers.TimeDistributed(self.vgg1_conv1(x))
+        x=layers.TimeDistributed(self.vgg1_conv2(x))
+        x=layers.TimeDistributed(self.vgg1_conv3(x))
+        x=layers.TimeDistributed(self.maxpool1(x))
+
+        x=layers.TimeDistributed(self.vgg2_conv1(x))
+        x=layers.TimeDistributed(self.vgg2_conv2(x))
+        x=layers.TimeDistributed(self.vgg2_conv3(x))
+        x=layers.TimeDistributed(self.maxpool2(x))
+
+        x=layers.TimeDistributed(self.conv3(x))
+        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[4]])
+        x=self.actflat(x)
+
+        y=goal_pos
+        
+        y=self.goal_layer(y)
+
+        x=tf.concat([x,y],-1)
+
+        skip=x
+
+        x=self.h1(x)
+        x=self.d1(x)
+        x=self.h2(x)
+        x=self.d2(x)
+
+        x=self.h3(x+skip)
+
+
+        #x=tf.expand_dims(x,0)
+        x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
+        
+
+        lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
+        return lstm_out,[state_h,state_c]
+    
+
+    def dynamics(self,latent,action):
+        x=tf.concat([latent,action],-1)
+        x=self.dynamics_dense1(x)
+        x=self.dynamics_dense2(x)
+        x=self.dynamics_dense3(x)
+        return x
+    
+    
+    def reward(self,latent,action):
+        x=tf.concat([latent,action],-1)
+        x=self.reward_dense1(x)
+        x=self.reward_dense2(x)
+        x=self.reward_dense3(x)
+        return x
+    
+
+    def policy(self,latent):
+        x=self.policy_dense1(latent)
+        x=self.policy_dense2(x)
+        x=self.policy_dense3(x)
+      
+        return x
+    
+
+    def q1(self,latent,action):
+        x=tf.concat([latent,action],-1)
+        x=self.q1_dense1(x)
+        x=self.q1_layernorm(x)
+        x=tf.keras.activations.tanh(x)
+        x=self.q1_dense2(x)
+        x=self.q1_dense3(x)
+        return x
+    
+
+    def q2(self,latent,action):
+        x=tf.concat([latent,action],-1)
+        x=self.q2_dense1(x)
+        x=self.q2_layernorm(x)
+        x=tf.keras.activations.tanh(x)
+        x=self.q2_dense2(x)
+        x=self.q2_dense3(x)
+        return x
 
 
 #inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
@@ -130,8 +244,9 @@ class ACNet(tf.keras.Model):
         policy_sig=tf.sigmoid(policy[0])
 
         value=self.value(lstm_out)
+        reward=self.reward(lstm_out)
 
-        return policy,policy_sig,value,[state_h,state_c]
+        return policy,policy_sig,value,[state_h,state_c],reward
 
 
 
@@ -139,69 +254,4 @@ class ACNet(tf.keras.Model):
 
 
 
-    def _build_net(self, inputs, goal_pos, RNN_SIZE, TRAINING, a_size):
-        def conv_mlp(inputs, kernal_size, output_size):
-            inputs = tf.reshape(inputs, [-1, 1, kernal_size, 1])
-            conv = layers.conv2d(inputs=inputs, padding="VALID", num_outputs=output_size,
-                                 kernel_size=[1, kernal_size], stride=1,
-                                 data_format="NHWC", weights_initializer=w_init, activation_fn=tf.nn.relu)
-
-            return conv
-
-        def VGG_Block(inputs):
-            def conv_2d(inputs, kernal_size, output_size):
-                conv = layers.conv2d(inputs=inputs, padding="SAME", num_outputs=output_size,
-                                     kernel_size=[kernal_size[0], kernal_size[1]], stride=1,
-                                     data_format="NHWC", weights_initializer=w_init, activation_fn=tf.nn.relu)
-
-                return conv
-
-            conv1 = conv_2d(inputs, [3, 3], RNN_SIZE // 4)
-            conv1a = conv_2d(conv1, [3, 3], RNN_SIZE // 4)
-            conv1b = conv_2d(conv1a, [3, 3], RNN_SIZE // 4)
-            pool1 = layers.max_pool2d(inputs=conv1b, kernel_size=[2, 2])
-            return pool1
-
-        w_init = layers.variance_scaling_initializer()
-        vgg1 = VGG_Block(inputs)
-        vgg2 = VGG_Block(vgg1)
-
-        conv3 = layers.conv2d(inputs=vgg2, padding="VALID", num_outputs=RNN_SIZE - GOAL_REPR_SIZE, kernel_size=[2, 2],
-                              stride=1, data_format="NHWC", weights_initializer=w_init, activation_fn=None)
-
-        flat = tf.nn.relu(layers.flatten(conv3))
-        goal_layer = layers.fully_connected(inputs=goal_pos, num_outputs=GOAL_REPR_SIZE)
-        hidden_input = tf.concat([flat, goal_layer], 1)
-        h1 = layers.fully_connected(inputs=hidden_input, num_outputs=RNN_SIZE)
-        d1 = layers.dropout(h1, keep_prob=KEEP_PROB1, is_training=TRAINING)
-        h2 = layers.fully_connected(inputs=d1, num_outputs=RNN_SIZE, activation_fn=None)
-        d2 = layers.dropout(h2, keep_prob=KEEP_PROB2, is_training=TRAINING)
-        self.h3 = tf.nn.relu(d2 + hidden_input)
-        # Recurrent network for temporal dependencies
-        lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(RNN_SIZE, state_is_tuple=True)
-        c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
-        h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
-        state_init = [c_init, h_init]
-        c_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.c])
-        h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
-        state_in = (c_in, h_in)
-        rnn_in = tf.expand_dims(self.h3, [0])
-        step_size = tf.shape(inputs)[:1]
-        state_in = tf.nn.rnn_cell.LSTMStateTuple(c_in, h_in)
-        lstm_outputs, lstm_state = tf.nn.dynamic_rnn(
-            lstm_cell, rnn_in, initial_state=state_in, sequence_length=step_size,
-            time_major=False)
-        lstm_c, lstm_h = lstm_state
-        state_out = (lstm_c[:1, :], lstm_h[:1, :])
-        self.rnn_out = tf.reshape(lstm_outputs, [-1, RNN_SIZE])
-
-        policy_layer = layers.fully_connected(inputs=self.rnn_out, num_outputs=a_size,
-                                              weights_initializer=normalized_columns_initializer(1. / float(a_size)),
-                                              biases_initializer=None, activation_fn=None)
-        policy = tf.nn.softmax(policy_layer)
-        policy_sig = tf.sigmoid(policy_layer)
-        value = layers.fully_connected(inputs=self.rnn_out, num_outputs=1,
-                                       weights_initializer=normalized_columns_initializer(1.0), biases_initializer=None,
-                                       activation_fn=None)
-
-        return policy, value, state_out, state_in, state_init, policy_sig
+    

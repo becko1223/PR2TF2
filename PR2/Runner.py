@@ -6,7 +6,7 @@ import os
 import pynvml 
 
 
-from Ray_ACNet import ACNet
+from Ray_ACNet import ACRDNet
 import GroupLock
 
 from Primal2Env import Primal2Env
@@ -89,7 +89,7 @@ class Runner(object):
 
 
         trainer = None
-        self.localNetwork = ACNet()
+        self.localNetwork = ACRDNet() 
         dummy_input=tf.zeros((1,11,11,11))
         dummy_goalpos=tf.zeros((1,3))
         dummy_state=[self.localNetwork.h0,self.localNetwork.c0]
