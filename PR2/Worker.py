@@ -44,17 +44,13 @@ class Worker():
         
 
 
-    def sample_from_actor(self,latent_inits,validActions):    #init,[batch,1,feature]
+    def sample_from_actor(self,latent_inits):    #init,[batch,1,feature]
         def scan_fn(actions_latents,elem):
             action_probs=tf.nn.softmax(self.local_ACRD.policy(actions_latents[1]))
             action_probs=tf.squeeze(action_probs,axis=1)
             
-            if(elem==0):
-                action_probs=action_probs[:,validActions]
-                action_probs = tf.nn.softmax(action_probs)
-                actions=tf.map_fn(lambda action_prob: validActions[np.random.choice(range(tf.shape(action_prob)[1]),p=action_prob)],action_probs)
-            else:
-                actions=tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),action_probs)
+         
+            actions=tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),action_probs)
             actions_onehot=tf.one_hot(actions,a_size)
             actions_onehot=tf.expand_dims(actions_onehot,axis=1)
             latent_preds=self.local_ACRD.dynamics(actions_latents[1],actions_onehot)
@@ -72,28 +68,28 @@ class Worker():
 
 
 
-    def sample_from_distribution(self,actions_mean,actions_std,validActions):
-        def onehot_to_coordinate(action_onehot):
-            action=tf.math.argmax(action_onehot,axis=-1)
-            action=self.env.action2dir(action)
-            return action
+    def sample_from_distribution(self,actions_mean,actions_std):
+        def distribution_to_coordinate(action_prob):
+            coord=None
+            for i in range(a_size):
+                coord+=np.array(action_prob[i]*self.env.action2dr(i))
+            return coord
         
-        actions_mean_2D=tf.map_fn(fn=onehot_to_coordinate,elems=actions_mean)
+        actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean)
         
-        actions_mean_2D_samples=[actions_mean_2D for i in range(num_samples)]
+        actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
-        actions_std_samples=[actions_std for i in range(num_samples)]
-
-        actions=actions_mean_2D_samples+actions_std_samples*eps
+        
+        actions=actions_mean_2D_samples+actions_std*eps
 
 
         def coordinate_to_onehot(action):
             distance=[]
-            distance.append(np.linalg.norm([0,0]-action))
-            distance.append(np.linalg.norm([0,1]-action))
-            distance.append(np.linalg.norm([1,0]-action))
-            distance.append(np.linalg.norm([0,-1]-action))
-            distance.append(np.linalg.norm([-1,0]-action))
+            distance.append(np.linalg.norm(np.array([0,0])-np.array(action)))
+            distance.append(np.linalg.norm(np.array([0,1])-np.array(action)))
+            distance.append(np.linalg.norm(np.array([1,0])-np.array(action)))
+            distance.append(np.linalg.norm(np.array([0,-1])-np.array(action)))
+            distance.append(np.linalg.norm(np.array([-1,0])-np.array(action)))
             distance=tf.convert_to_tensor(distance)
             index=tf.argmin(distance)
             onehot=tf.one_hot(index,a_size)
@@ -104,11 +100,11 @@ class Worker():
 
         #invalidなものを取り除くが、環境モデルのことを考えるとinvalidな選択肢を絶対に取らせないようにするのは良くないかも
 
-        first_step=actions_onehot_samples[:,0]
+        #first_step=actions_onehot_samples[:,0]
 
-        cond=tf.argmax(first_step) in validActions
+        #cond=tf.argmax(first_step) in validActions
 
-        actions_onehot_samples=tf.boolean_mask(actions_onehot_samples,cond)
+        #actions_onehot_samples=tf.boolean_mask(actions_onehot_samples,cond)
 
         return actions_onehot_samples
 
@@ -119,14 +115,19 @@ class Worker():
             actions=tf.expand_dims(actions,axis=1)
             next_latents=self.local_ACRD.dynamics(latents,actions)
             rewards=self.local_ACRD.reward(latents,actions)
+            rewards=tf.squeeze(rewards,axis=1)
             return (next_latents, discount*gammma_tdmpc, discount*rewards)
         
+        samples=tf.transpose(samples,[1,0,2])
+        
         latents,discounts,rewards=zip(*tf.scan(fn=rollout,elems=samples,initializer=(latent_inits,1,0)))
-        last_policies=self.local_ACRD.policy(tf.expand_dims(latents[-1],axis=1))
+        last_policies=tf.nn.softmax(self.local_ACRD.policy(latents[-1]))
         last_actions=tf.map_fn(lambda last_policy:tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),last_policy),last_policies)
         last_actions=tf.one_hot(last_actions)
-        q_value=self.local_ACRD.q1(tf.expand_dims(latents[-1],axis=1),last_actions)
-        V=tf.reduce_sum(rewards,axis=0)+discount[-1]*tf.squeeze(q_value,1)
+        q1_value=self.local_ACRD.q1(latents[-1],last_actions)
+        q2_value=self.local_ACRD.q2(latents[-1],last_actions)
+        q_value=tf.minimum(q1_value,q2_value)
+        V=tf.reduce_sum(rewards,axis=0)+discounts[-1]*tf.squeeze(q_value,1)
         return V
 
 
@@ -142,7 +143,7 @@ class Worker():
         def distribution_to_coordinate(action_prob):
             coord=None
             for i in range(a_size):
-                coord+=action_prob[i]*self.env.action2dr(i)
+                coord+=np.array(action_prob[i]*self.env.action2dr(i))
             return coord
 
 
@@ -157,34 +158,32 @@ class Worker():
         elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
-        std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm((elite_coord - mean_coord)**2,axis=-1),axis=0))
+        std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2,axis=0))
 
         return mean, std
 
 
 
-    def mppi(self,obs_init,goal_init,initial_state,validActions,mean):
+    def mppi(self,latent_init,mean):
         std=tf.ones([horizon,1])
-
-        latent_init=self.local_ACRD.encode(obs_init,goal_init,initial_state)
 
         inits_for_actor=tf.repeat(latent_init,num_actor_traj,axis=0)
         
         inits_for_return=tf.repeat(latent_init,num_actor_traj+num_samples,axis=0)
         
 
-        samples_from_actor=self.sample_from_actor(inits_for_actor,validActions)
+        samples_from_actor=self.sample_from_actor(inits_for_actor)
 
         for i in range(iterations):
-            samples_from_distribution=self.sample_from_distribution(mean,std,validActions) 
+            samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
             mean,std=self.get_mean(V,allsamples)
 
-        samples_from_distribution=self.sample_from_distribution(mean,std,validActions)
+        samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
         V=self.compute_return(samples_from_distribution,inits_for_return)
-        action_best=samples_from_distribution[tf.argmax(V),0]
+        action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
         return action_best,mean
 
@@ -203,11 +202,11 @@ class Worker():
         rnn_state = [self.local_AC.h0,self.local_AC.c0]
         
         with tf.GradientTape() as tape:
-            latent=self.local_ACRD.encode(np.expand_dims(np.stack(rollout[:, 0]),0),np.expand_dims(np.stack(rollout[:, -4]),0),np.expand_dims(rnn_state))
+            latent,_=self.local_ACRD.encode(np.expand_dims(np.stack(rollout[:, 0]),0),np.expand_dims(np.stack(rollout[:, -4]),0),np.expand_dims(rnn_state))
             policy=self.local_ACRD.policy(latent)
             policy=tf.nn.softmax(policy)
 
-            optimal_actions_onehot = tf.one_hot(np.expand_dims(np.stack(rollout[:, 2])), a_size, dtype=tf.float32)
+            optimal_actions_onehot = tf.one_hot(np.expand_dims(np.stack(rollout[:, 2]),axis=0), a_size, dtype=tf.float32)
 
             loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
@@ -218,7 +217,7 @@ class Worker():
 
     
 
-    def calculateGradient(self, rollout, bootstrap_value, episode_count, rnn_state0):
+    def calculateGradient(self, rollout, episode_count, rnn_state0):
         
         rollout = np.array(rollout, dtype=object)
         obs=tf.convert_to_tensor(rollout[:, 0])
@@ -231,16 +230,11 @@ class Worker():
 
         
 
-        bootstrap_scalar=bootstrap_value
-        #bootstrap_valueが0のときと2次元のときとがある
-        if not isinstance(bootstrap_value,int):
-            bootstrap_scalar = bootstrap_value.numpy().item()
-
         
 
         rewards_array = np.array([float(r) for r in rewards])
-        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_scalar]])
-        discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
+        #self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
+        discounted_rewards = discount(rewards_array, gamma)[:-1]
         discounted_rewards=tf.convert_to_tensor(discounted_rewards)
         
 
@@ -252,52 +246,70 @@ class Worker():
         chosen.append(step-horizon-1)
 
 
-        batch_obs = tf.stack([obs[i:i+horizon] for i in chosen]) #長さhorizon+1
-        batch_goals = tf.stack([goals[i:i+horizon]] for i in chosen)
-        batch_rewards=tf.stack([rewards[i:i+horizon] for i in chosen])
-        batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon] for i in chosen])
-        batch_actions=tf.stack([actions[i:i+horizon] for i in chosen])
+        batch_obs = tf.stack([obs[i:i+horizon+1] for i in chosen]) #長さhorizon+1
+        batch_goals = tf.stack([goals[i:i+horizon+1]] for i in chosen)
+        batch_rewards=tf.stack([rewards[i:i+horizon+1] for i in chosen])
+        batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
+        batch_actions=tf.stack([actions[i:i+horizon+1] for i in chosen])
         batch_actions=tf.one_hot(batch_actions,a_size)
-        batch_train_value=tf.stack([train_value[i:i+horizon] for i in chosen])
-        batch_states=tf.stack([rnn_states[i:i+horizon] for i in chosen])
-        batch_valids=tf.stack([valids[i:i+horizon] for i in chosen])
-        rhos=tf.stack([[rho**i for i in range(horizon-1)] for j in chosen])
+        batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
+        batch_states=tf.stack([rnn_states[i:i+horizon+1] for i in chosen])
+        batch_valids=tf.stack([valids[i:i+horizon+1] for i in chosen])
+        rhos=tf.stack([[rho**i for i in range(horizon)] for j in chosen])
 
 
 
         #アクター以外訓練
         with tf.GradientTape() as tape:
 
-            def dynamics(prev_latents, elem):
+            def dynamics(carry, elem):
                 elem=tf.expand_dims(elem,axis=1)
+                prev_latents,_=carry
                 latents = self.local_ACRD.dynamics(prev_latents,elem)
-                return latents
+                rewards= self.local_ACRD.reward(prev_latents,elem)
+                return (latents,rewards)
             
-            batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
+            batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
 
-            batch_latent_preds = tf.scan(  #[horizon,batch,1,action_dim]
+            latent_init=self.local_ACRD.encode(batch_obs[:, 0],batch_goals[:,0],batch_states[:,0])[0]
+
+            #latentの予測値
+            batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
                 fn=dynamics,
                 elems=batch_actions_T,     
-                initializer=self.local_ACRD.encode(batch_obs[:, 0],batch_goals[:,0],batch_states[:,0])
-                )
+                initializer=(latent_init,0)
+                ))
             
             batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)   
-            batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2]) 
+            batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  #長さhorizon
 
-            #rewardの予測値を出す
-            batch_reward_preds=self.local_ACRD.reward(batch_latent_preds,batch_actions[:,1:])
-
+            batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
+            batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
+           
             #valueの予測値を出す
-            batch_value_preds=self.local_ACRD.q1(batch_latent_preds,batch_actions[:,1:])
+            batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+            batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+
+
             #latentのターゲットを出す(b,s,h,w,c)
-            batch_latent_targets=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states[:,1])
+            batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states[:,1])
+
+            #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
+            policy=tf.nn.softmax(self.local_ACRD.policy(batch_latent_preds))
+            next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
+            next_actions=tf.one_hot(next_actions,a_size)
+            q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
+            q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
+            q_next=tf.minimum(q1_next,q2_next)
+            q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
             
 
-            reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards))
-            value_loss=tf.reduce_mean(rhos*batch_train_value[:,1:]*tf.square(batch_discounted_rewards-batch_value_preds))
+            reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
+            q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
+            q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
             consistency_loss=tf.reduce_mean(rhos*tf.square(batch_latent_targets-batch_latent_preds))
 
-            total_loss=0.5*reward_loss+0.1*value_loss+2.0*consistency_loss
+            total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
         world_grads=tape.gradient(total_loss,self.local_ACRD.trainable_variables)
 
 
@@ -313,7 +325,7 @@ class Worker():
             batch_latent_preds = tf.scan(  #長さhorizon
                 fn=dynamics,
                 elems=batch_actions_T,     
-                initializer=self.local_ACRD.encode(batch_obs[:, 0],batch_states[:,0])
+                initializer=self.local_ACRD.encode(batch_obs[:, 0],batch_states[:,0])[0]
                 )
             
             batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)   
@@ -323,7 +335,11 @@ class Worker():
             batch_policies=self.local_ACRD.policy(batch_latent_preds)
             batch_policies_softmax=tf.nn.softmax(batch_policies)
             batch_policies_sig=tf.sigmoid(batch_policies)
-            batch_q=self.local_ACRD.q1(batch_latent_preds,batch_policies_softmax)
+            for i in range(a_size):
+                vec = tf.constant(tf.one_hot(i,a_size), dtype=tf.float32)
+                tensor = tf.tile(tf.reshape(vec, [1,1,a_size]), [tf.shape(batch_latent_preds)[0], tf.shape(batch_latent_preds)[1], 1])
+                batch_q+=batch_policies_softmax[:,:,i]*self.local_ACRD.q1(batch_latent_preds,tensor)
+          
 
 
             policy_loss=-tf.reduce_mean(rhos*batch_q)
@@ -339,7 +355,7 @@ class Worker():
         world_grads, world_grad_norms = tf.clip_by_global_norm(world_grads, GRAD_CLIP)
         policy_grads, policy_grad_norms=tf.clip_by_global_norm(policy_grads, GRAD_CLIP )
 
-        return [reward_loss,value_loss,consistency_loss,policy_loss,valid_loss,entropy,world_grad_norms, policy_grad_norms, var_norms],world_grads,policy_grads
+        return [reward_loss,q1value_loss+q2value_loss,consistency_loss,policy_loss,valid_loss,entropy,world_grad_norms, policy_grad_norms, var_norms],world_grads,policy_grads
 
 
 
@@ -395,6 +411,8 @@ class Worker():
             rnn_state = [self.local_AC.h0,self.local_AC.c0]
             rnn_state0 = rnn_state
 
+            mean=tf.one_hot(tf.zeros([5]),a_size)
+
             self.synchronize()  # synchronize starting time of the threads
             swarm_reward[self.metaAgentID] = 0
             swarm_targets[self.metaAgentID] = 0
@@ -433,24 +451,29 @@ class Worker():
                     goal=tf.expand_dims(s[1],0)
                     goal=tf.expand_dims(goal,0)
 
+                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state)
+                    a, mean=self.mppi(latent_init,mean)
+                    q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a)),0),0)
+                  
 
-
-                    a_dist,_,v,rnn_state=self.local_AC(ob,goal,rnn_state)
+                   
 
                     skipping_state = False
                     train_policy = train_val = 1
 
                     if not skipping_state:
+                        '''
                         if not (np.argmax(tf.reshape(a_dist, [-1])) in validActions):
                             episode_inv_count += 1
-                            train_val = 0  #最大行動がinvalidの場合valueを訓練しないのは、最大行動以外の行動で得たデータはクリティックの訓練に不適切ということ？　状態価値でやるか行動価値でやるかによってもこれの必要性は変わる？
+                            train_val = 0  #最大行動がinvalidの場合valueを訓練しないのは、最大行動以外の行動で得た(というより、方策に従わずに得た)データはクリティックの訓練に不適切ということ？　状態価値でやるか行動価値でやるかによってもこれの必要性は変わる？
+                        '''
+                        if not (a in validActions):
+                            episode_inv_count += 1
                         train_valid = np.zeros(a_size)
                         train_valid[validActions] = 1
 
-                        valid_dist = np.array([tf.gather(a_dist[0],validActions)])
-                        valid_dist /= np.sum(valid_dist)
+                        
 
-                        a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
                             episode_stop_count += 1
@@ -479,9 +502,9 @@ class Worker():
                     # Append to Appropriate buffers 
                     if not skipping_state:
                         episode_buffer.append(
-                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID], s1, v[0, 0], train_valid, s[1],
-                                train_val, train_policy])
-                        episode_values.append(v[0, 0])
+                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID], s1, train_valid, s[1],
+                                train_val, train_policy, rnn_state])
+                        episode_values.append(q[0, 0])
                     episode_reward += r
                     episode_step_count += 1
 
@@ -490,7 +513,7 @@ class Worker():
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
-                    if (len(episode_buffer) > 1) and (
+                    if (len(episode_buffer) > horizon) and (
                             (len(episode_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
                         self.agentID] or episode_step_count == max_episode_length):
                         # Since we don't know what the true final return is,
@@ -506,16 +529,21 @@ class Worker():
                             joint_done[self.metaAgentID][self.agentID] = False
                             targets_done += 1
 
-                        else:
+                        #else:
                             
                             
-                            _,_,s1Value_array,_=self.local_AC(s[0],s[1],rnn_state)
-                            s1Value=s1Value_array[0,0]
+                            
+                            #latent_init,_=self.local_ACRD.encode(s[0],s[1],rnn_state)
+                            
+                            #for i in range(a_size):
+                            #    s1Value+=a_dist[i]*self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(i)),0),0)
+                            
 
                         
-                        self.loss_metrics, grads = self.calculateGradient(train_buffer, s1Value, episode_count,
+                        self.loss_metrics, world_grads, policy_grads = self.calculateGradient(train_buffer, episode_count,
                                                                             rnn_state0)
 
+                        grads=(world_grads,policy_grads)
                         self.allGradients.append(grads)
 
                         rnn_state0 = rnn_state

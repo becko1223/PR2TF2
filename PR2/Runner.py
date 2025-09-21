@@ -74,7 +74,7 @@ class Runner(object):
                             #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
                             #get_device_detailsの返り値はGPUによるらしい、、、
 
-                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory*0.9)]
+                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory)]
                         )
                     
                     
@@ -88,11 +88,17 @@ class Runner(object):
 
 
 
-        trainer = None
+      
         self.localNetwork = ACRDNet() 
-        dummy_input=tf.zeros((1,11,11,11))
-        dummy_goalpos=tf.zeros((1,3))
+        #一回入出力させないとパラメータが作られず、workerに渡せない。
+        dummy_input=tf.zeros((1,1,11,11,11))
+        dummy_goalpos=tf.zeros((1,1,3))
         dummy_state=[self.localNetwork.h0,self.localNetwork.c0]
+        dummy_latent=self.localNetwork.encode(dummy_input,dummy_goalpos,dummy_state)
+        dummy_reward=self.localNetwork.reward(dummy_latent)
+        dummy_policy=self.localNetwork.policy(dummy_latent)
+        dummy_q1=self.localNetwork.q1(dummy_latent,[[[1,0,0,0,0]]])
+        dummy_q2=self.localNetwork.q2(dummy_latent,[[[1,0,0,0,0]]])
         self.localNetwork(dummy_input,dummy_goalpos,dummy_state)
        
         

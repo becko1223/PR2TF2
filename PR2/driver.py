@@ -5,7 +5,7 @@ import ray
 
 import pynvml
 
-from Ray_ACNet import ACNet
+from Ray_ACNet import ACRDNet
 from Runner import imitationRunner, RLRunner
 
 from parameters import *
@@ -76,7 +76,11 @@ else:
 
 
 def apply_gradients(global_network, gradients, optimizer, curr_episode):
-    optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
+    if (isinstance(gradients,tuple)):
+        optimizer.apply_gradients(zip(gradients[0],global_network.trainable_variables))
+        optimizer.apply_gradients(zip(gradients[1],global_network.policy_dense1.trainable_variables + global_network.policy_dense2.trainable_variables + global_network.policy_dense3.trainable_variables))
+    else:
+        optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
         optimizer.learning_rate.assign(float(lr))
@@ -117,13 +121,13 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
         tensorboardData = np.array(tensorboardData)
         tensorboardData = list(np.mean(tensorboardData, axis=0))
 
-        valueLoss, policyLoss, validLoss, entropyLoss, gradNorm, varNorm,\
+        rewardLoss, valueLoss, consistencyLoss, policyLoss, validLoss, entropy, worldgradNorm, policygradNorm, varNorm, \
             mean_length, mean_value, mean_invalid, \
             mean_stop, mean_reward, mean_finishes = tensorboardData
         
     else:
         firstEpisode = tensorboardData[0]
-        valueLoss, policyLoss, validLoss, entropyLoss, gradNorm, varNorm, \
+        rewardLoss, valueLoss, consistencyLoss, policyLoss, validLoss, entropy, worldgradNorm, policygradNorm, varNorm, \
             mean_length, mean_value, mean_invalid, \
             mean_stop, mean_reward, mean_finishes = firstEpisode
 
@@ -137,11 +141,14 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
         tf.summary.scalar('Perf/Valid Rate',(mean_length-mean_invalid)/mean_length,curr_episode)
         tf.summary.scalar('Perf/Stop Rate',mean_stop/mean_length,curr_episode)
 
+        tf.summary.scalar('Losses/Reward Loss',rewardLoss,curr_episode)
         tf.summary.scalar('Losses/Value Loss',valueLoss,curr_episode)
+        tf.summary.scalar('Losses/Consistency Loss',consistencyLoss,curr_episode)
         tf.summary.scalar('Losses/Policy Loss',policyLoss,curr_episode)
         tf.summary.scalar('Losses/Valid Loss',validLoss,curr_episode)
-        tf.summary.scalar('Losses/Entropy Loss',entropyLoss,curr_episode)
-        tf.summary.scalar('Losses/Grad Norm',gradNorm,curr_episode)
+        tf.summary.scalar('Losses/Entropy',entropy,curr_episode)
+        tf.summary.scalar('Losses/allGrad Norm',worldgradNorm,curr_episode)
+        tf.summary.scalar('Losses/policyGrad Norm',policygradNorm,curr_episode)
         tf.summary.scalar('Losses/Var Norm',varNorm,curr_episode)
         global_summary.flush()
 
@@ -150,11 +157,18 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
 def main():    
     with tf.device("/GPU:0"):
         optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
-        global_network = ACNet()
-        #global_network.build([(None,11,11,11),(None,2),(2,1,512)])
-        dummy_input=tf.zeros((1,11,11,11))
-        dummy_goalpos=tf.zeros((1,3))
+        global_network = ACRDNet()
+        
+        #重みを渡すため
+
+        dummy_input=tf.zeros((1,1,11,11,11))
+        dummy_goalpos=tf.zeros((1,1,3))
         dummy_state=[global_network.h0,global_network.c0]
+        dummy_latent=global_network.encode(dummy_input,dummy_goalpos,dummy_state)
+        dummy_reward=global_network.reward(dummy_latent)
+        dummy_policy=global_network.policy(dummy_latent)
+        dummy_q1=global_network.q1(dummy_latent,[[[1,0,0,0,0]]])
+        dummy_q2=global_network.q2(dummy_latent,[[[1,0,0,0,0]]])
         global_network(dummy_input,dummy_goalpos,dummy_state)
 
         global_summary = tf.summary.create_file_writer(train_path)
