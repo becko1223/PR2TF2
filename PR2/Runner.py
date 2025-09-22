@@ -69,12 +69,12 @@ class Runner(object):
                     
                     fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
                     for gpu in gpus:
-                        tf.config.experimental.set_virtual_device_configuration(
+                        tf.config.set_logical_device_configuration(
                             gpu,
                             #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
                             #get_device_detailsの返り値はGPUによるらしい、、、
 
-                            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * total_memory*0.9)]
+                            [tf.config.LogicalDeviceConfiguration(memory_limit=fraction * total_memory)]
                         )
                     
                     
