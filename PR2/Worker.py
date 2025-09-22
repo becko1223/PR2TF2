@@ -211,6 +211,7 @@ class Worker():
                 while not self.env.finished:
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                    print("step")
                     a_dist,_,v,rnn_state=self.local_AC(obs,goal,tf.expand_dims(rnn_state,0))
 
                     skipping_state = False
