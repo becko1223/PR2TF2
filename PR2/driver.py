@@ -152,9 +152,9 @@ def main():
         optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
         global_network = ACNet()
         #global_network.build([(None,11,11,11),(None,2),(2,1,512)])
-        dummy_input=tf.zeros((1,11,11,11))
-        dummy_goalpos=tf.zeros((1,3))
-        dummy_state=[global_network.h0,global_network.c0]
+        dummy_input=tf.zeros((1,1,11,11,11))
+        dummy_goalpos=tf.zeros((1,1,3))
+        dummy_state=[[global_network.h0,global_network.c0]]
         global_network(dummy_input,dummy_goalpos,dummy_state)
 
         global_summary = tf.summary.create_file_writer(train_path)
