@@ -81,29 +81,27 @@ class ACNet(tf.keras.Model):
 #inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
     def call(self,inputs,goal_pos,initial_state):
         x=inputs
-        if np.array(x).ndim == 3:  
-            x = tf.expand_dims(x, axis=0)  
+        
             
         print(f"#####input shape!!!!!!#####  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
-        x=tf.transpose(x, perm=[0, 2, 3, 1])
+        x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
 
-        x=self.vgg1_conv1(x)
-        x=self.vgg1_conv2(x)
-        x=self.vgg1_conv3(x)
-        x=self.maxpool1(x)
+        x=layers.TimeDistributed(self.vgg1_conv1(x))
+        x=layers.TimeDistributed(self.vgg1_conv2(x))
+        x=layers.TimeDistributed(self.vgg1_conv3(x))
+        x=layers.TimeDistributed(self.maxpool1(x))
 
-        x=self.vgg2_conv1(x)
-        x=self.vgg2_conv2(x)
-        x=self.vgg2_conv3(x)
-        x=self.maxpool2(x)
+        x=layers.TimeDistributed(self.vgg2_conv1(x))
+        x=layers.TimeDistributed(self.vgg2_conv2(x))
+        x=layers.TimeDistributed(self.vgg2_conv3(x))
+        x=layers.TimeDistributed(self.maxpool2(x))
 
-        x=self.conv3(x)
-        x=self.flat(x)
+        x=layers.TimeDistributed(self.conv3(x))
+        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[4]])
         x=self.actflat(x)
 
         y=goal_pos
-        if np.array(y).ndim==1:
-            y=tf.expand_dims(y,0)
+       
         y=self.goal_layer(y)
 
         x=tf.concat([x,y],1)
@@ -119,7 +117,7 @@ class ACNet(tf.keras.Model):
 
 
         #x=tf.expand_dims(x,0)
-        x = tf.reshape(x, [1, -1, RNN_SIZE])
+        x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
         
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)

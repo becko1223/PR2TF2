@@ -47,9 +47,9 @@ class Worker():
         rnn_state = [self.local_AC.h0,self.local_AC.c0]
         
         with tf.GradientTape() as tape:
-            policy,_,_,_=self.local_AC(np.stack(rollout[:, 0]),np.stack(rollout[:, 1]),rnn_state)
+            policy,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),tf.expand_dims(rnn_state,0))
 
-            optimal_actions_onehot = tf.one_hot(np.stack(rollout[:, 2]), a_size, dtype=tf.float32)
+            optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
 
             loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
@@ -80,19 +80,19 @@ class Worker():
         if isinstance(bootstrap_value, np.ndarray):
             print("bootstrap_value.shape:", bootstrap_value.shape)
 
-        bootstrap_scalar=bootstrap_value
+        #bootstrap_scalar=bootstrap_value
         #bootstrap_valueが0のときと2次元のときとがある
-        if not isinstance(bootstrap_value,int):
-            bootstrap_scalar = bootstrap_value.numpy().item()
+        #if not isinstance(bootstrap_value,int):
+        #    bootstrap_scalar = bootstrap_value.numpy().item()
         rewards_array = np.array([float(r) for r in rewards])
-        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_scalar]])
+        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
 
         #self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
 
         values_array = np.array([v.numpy().item() for v in values])
-        self.value_plus = np.concatenate([values_array, [bootstrap_scalar]])
+        self.value_plus = np.concatenate([values_array, [bootstrap_value]])
         
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
@@ -103,12 +103,11 @@ class Worker():
 
         with tf.GradientTape() as tape:
             print("xshape!!!!!!!  ",np.stack(observations).shape)
-            obs_array = np.stack(observations) 
-            obs_array = np.squeeze(obs_array, axis=1)
-            goals_array=np.stack(goals)
-            goals_array=np.squeeze(goals_array,axis=1)
-            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,rnn_state0)
-            responsible_outputs = tf.reduce_sum(policy * actions_onehot, [1])
+            obs_array = tf.expand_dims(np.stack(observations) ,0)
+            goals_array=tf.expand_dims(np.stack(goals),0)
+            
+            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,tf.expand_dims(rnn_state0,0))
+            responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
             value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value, shape=[-1])))
@@ -210,9 +209,9 @@ class Worker():
                 # start RL
                 self.env.finished = False
                 while not self.env.finished:
-                    s[0]=tf.expand_dims(s[0],0)
-                    s[1]=tf.expand_dims(s[1],0)
-                    a_dist,_,v,rnn_state=self.local_AC(s[0],s[1],rnn_state)
+                    obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
+                    goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                    a_dist,_,v,rnn_state=self.local_AC(obs,goal,tf.expand_dims(rnn_state,0))
 
                     skipping_state = False
                     train_policy = train_val = 1
@@ -224,7 +223,7 @@ class Worker():
                         train_valid = np.zeros(a_size)
                         train_valid[validActions] = 1
 
-                        valid_dist = np.array([tf.gather(a_dist[0],validActions)])
+                        valid_dist = np.array([tf.gather(a_dist[0,0],validActions)])
                         valid_dist /= np.sum(valid_dist)
 
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
@@ -286,7 +285,7 @@ class Worker():
                         else:
                             
                             
-                            _,_,s1Value_array,_=self.local_AC(s[0],s[1],rnn_state)
+                            _,_,s1Value_array,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),tf.expand_dims(rnn_state,0))
                             s1Value=s1Value_array[0,0]
 
                         
