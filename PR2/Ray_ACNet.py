@@ -94,18 +94,18 @@ class ACNet(tf.keras.Model):
         x=layers.TimeDistributed(self.vgg2_conv1)(x)
         x=layers.TimeDistributed(self.vgg2_conv2)(x)
         x=layers.TimeDistributed(self.vgg2_conv3)(x)
+        print("xshpae before maxpool2 ",x.shape)
         x=layers.TimeDistributed(self.maxpool2)(x)
 
+        print("xshape before conv3 ",x.shape)
         x=layers.TimeDistributed(self.conv3)(x)
+        print("xshape after conv3 ", x.shape)
         x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[-1]])
         x=self.actflat(x)
 
         y=goal_pos
        
         y=self.goal_layer(y)
-
-        print("xyshape!!!!!!!")
-        print(x.shape, y.shape, RNN_SIZE)
 
         x=tf.concat([x,y],-1)
 
