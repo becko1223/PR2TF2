@@ -97,7 +97,7 @@ class ACNet(tf.keras.Model):
         x=layers.TimeDistributed(self.maxpool2)(x)
 
         x=layers.TimeDistributed(self.conv3)(x)
-        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[4]])
+        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[-1]])
         x=self.actflat(x)
 
         y=goal_pos
