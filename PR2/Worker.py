@@ -224,7 +224,7 @@ class Worker():
                         train_valid = np.zeros(a_size)
                         train_valid[validActions] = 1
 
-                        valid_dist = np.array([tf.gather(a_dist[0,0],validActions)])
+                        valid_dist = np.array([a_dist[0,0,validActions]])
                         valid_dist /= np.sum(valid_dist)
 
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
