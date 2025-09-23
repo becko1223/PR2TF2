@@ -90,8 +90,8 @@ class Runner(object):
 
         trainer = None
         self.localNetwork = ACNet()
-        dummy_input=tf.zeros((1,11,11,11))
-        dummy_goalpos=tf.zeros((1,3))
+        dummy_input=tf.zeros((1,1,11,11,11))
+        dummy_goalpos=tf.zeros((1,1,3))
         dummy_state=[self.localNetwork.h0,self.localNetwork.c0]
         self.localNetwork(dummy_input,dummy_goalpos,dummy_state)
        
