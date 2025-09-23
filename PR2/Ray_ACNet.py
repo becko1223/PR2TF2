@@ -104,6 +104,9 @@ class ACNet(tf.keras.Model):
        
         y=self.goal_layer(y)
 
+        print("xyshape!!!!!!!")
+        print(x.shape, y.shape, RNN_SIZE)
+
         x=tf.concat([x,y],-1)
 
         skip=x
