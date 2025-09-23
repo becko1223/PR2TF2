@@ -104,7 +104,7 @@ class ACNet(tf.keras.Model):
        
         y=self.goal_layer(y)
 
-        x=tf.concat([x,y],1)
+        x=tf.concat([x,y],-1)
 
         skip=x
 
