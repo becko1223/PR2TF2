@@ -47,7 +47,7 @@ class Worker():
         rnn_state = [self.local_AC.h0,self.local_AC.c0]
         
         with tf.GradientTape() as tape:
-            policy,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),tf.expand_dims(rnn_state,0))
+            policy,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),rnn_state)
 
             optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
 
@@ -106,7 +106,7 @@ class Worker():
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             goals_array=tf.expand_dims(np.stack(goals),0)
             
-            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,tf.expand_dims(rnn_state0,0))
+            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,rnn_state0)
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
@@ -212,7 +212,7 @@ class Worker():
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     print("step")
-                    a_dist,_,v,rnn_state=self.local_AC(obs,goal,tf.expand_dims(rnn_state,0))
+                    a_dist,_,v,rnn_state=self.local_AC(obs,goal,rnn_state)
 
                     skipping_state = False
                     train_policy = train_val = 1
@@ -286,7 +286,7 @@ class Worker():
                         else:
                             
                             
-                            _,_,s1Value_array,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),tf.expand_dims(rnn_state,0))
+                            _,_,s1Value_array,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),rnn_state)
                             s1Value=s1Value_array[0,0]
 
                         
