@@ -105,6 +105,7 @@ class Runner(object):
        
 
     def set_weights(self, weights):
+        weights = [np.asarray(w, dtype=np.float32) for w in weights]
         self.localNetwork.set_weights(weights)
 
 
