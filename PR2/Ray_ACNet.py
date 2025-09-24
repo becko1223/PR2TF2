@@ -118,6 +118,7 @@ class ACNet(tf.keras.Model):
 
         x=self.h3(x+skip)
 
+        print("x before last reshape = ",x.shape)
 
         #x=tf.expand_dims(x,0)
         x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
