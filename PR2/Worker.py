@@ -233,6 +233,9 @@ class Worker():
                         valid_dist = np.array([tf.gather(a_dist[0,0], validActionstensor)])
                         valid_dist /= np.sum(valid_dist)
 
+                        print("valid_dist.shape=",valid_dist.shape)
+                        print("valid_dist.ravel = ",valid_dist.ravel())
+
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
