@@ -12,6 +12,7 @@ from Map_Generator import maze_generator
 from parameters import *
 
 GRAD_CLIP = 10.0
+RNN_SIZE = 512
 
 
 # helper functions
@@ -180,7 +181,7 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            rnn_state = [self.local_AC.h0,self.local_AC.c0]
+            rnn_state = [tf.zeros((1,RNN_SIZE)),tf.zeros((1,RNN_SIZE))]
             rnn_state0 = rnn_state
 
             self.synchronize()  # synchronize starting time of the threads

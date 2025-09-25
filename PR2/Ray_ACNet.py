@@ -69,8 +69,7 @@ class ACNet(tf.keras.Model):
 
         self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)
 
-        self.h0=tf.zeros((1,RNN_SIZE))
-        self.c0=tf.zeros((1,RNN_SIZE))
+        
                          
 
         self.policy_layer=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
