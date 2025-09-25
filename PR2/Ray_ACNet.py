@@ -101,7 +101,7 @@ class ACNet(tf.keras.Model):
         print("xshape before conv3 ",x.shape)
         x=layers.TimeDistributed(self.conv3)(x)
        
-        x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], -1]) 
+        x = tf.reshape(x, [1, 1, 500]) 
 
         print("x after reshape = ",x.shape) 
 
