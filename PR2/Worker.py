@@ -228,15 +228,15 @@ class Worker():
                         validActionstensor = tf.convert_to_tensor(validActions, dtype=tf.int32)
                         validActionstensor = tf.reshape(validActionstensor, [-1]) 
 
-                        print("a_dist.shape =", a_dist.shape)
-                        print("a_dist[0].shape =", a_dist[0].shape)
+                        #print("a_dist.shape =", a_dist.shape)
+                        #print("a_dist[0].shape =", a_dist[0].shape)
 
                         valid_dist = np.array([tf.gather(a_dist[0,0], validActionstensor)])
                         valid_dist /= np.sum(valid_dist)
 
-                        print("valid_dist.shape=",valid_dist.shape)
-                        print("valid_dist.ravel = ",valid_dist.ravel())
-                        print("validactions = ",validActions)
+                        #print("valid_dist.shape=",valid_dist.shape)
+                        #print("valid_dist.ravel = ",valid_dist.ravel())
+                        #print("validactions = ",validActions)
 
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
                         joint_actions[self.metaAgentID][self.agentID] = a
