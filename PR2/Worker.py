@@ -45,7 +45,7 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
-        rnn_state = [self.local_AC.h0,self.local_AC.c0]
+        rnn_state = [tf.zeros((1,512)),tf.zeros((1,512))]
         
         with tf.GradientTape() as tape:
             policy,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),rnn_state)
