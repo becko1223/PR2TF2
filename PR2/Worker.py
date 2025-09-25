@@ -296,7 +296,7 @@ class Worker():
 
                         else:
                             
-                            
+                            print("s1value!!!!!!")
                             _,_,s1Value_array,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),rnn_state)
                             s1Value=s1Value_array[0,0]
 
