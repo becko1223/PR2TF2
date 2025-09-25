@@ -254,13 +254,13 @@ class Runner(object):
 import multiprocessing
 cpu=multiprocessing.cpu_count()
 
-@ray.remote(num_cpus=max([(cpu*3)//19,0.5]), num_gpus= 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1))
+@ray.remote(num_cpus=max([(cpu*3)//19,1]), num_gpus= 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1))
 class RLRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
 
 
-@ray.remote(num_cpus=max([(cpu*1)//19,0.5]), num_gpus=0)
+@ray.remote(num_cpus=max([(cpu*1)//19,1]), num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
