@@ -99,7 +99,8 @@ class ACNet(tf.keras.Model):
 
         print("xshape before conv3 ",x.shape)
         x=layers.TimeDistributed(self.conv3)(x)
-        print("xshape after conv3 ", x.shape)
+       
+        print("x before reshape = ",x.shape)
         x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[-1]])
         x=self.actflat(x)
 
@@ -118,13 +119,15 @@ class ACNet(tf.keras.Model):
 
         x=self.h3(x+skip)
 
-        print("x before last reshape = ",x.shape)
+      
 
         #x=tf.expand_dims(x,0)
         #x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
 
         print("x shape for lstm = ",x.shape)        
-        print("initial_state shape for lstm = ",tf.shape(initial_state))
+        print("initial_state type for lstm = ",type(initial_state))
+        print("initial_state[0]=",tf.shape(initial_state[0]))
+        print("initial_state[1]=",tf.shape(initial_state[1]))
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
 

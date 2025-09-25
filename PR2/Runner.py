@@ -89,6 +89,7 @@ class Runner(object):
 
 
         trainer = None
+        print("runner dummy")
         self.localNetwork = ACNet()
         dummy_input=tf.zeros((1,1,11,11,11))
         dummy_goalpos=tf.zeros((1,1,3))
