@@ -87,21 +87,26 @@ class ACNet(tf.keras.Model):
         print(f"#####input shape!!!!!!#####  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
         x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
 
-        x=layers.TimeDistributed(self.vgg1_conv1)(x)
-        x=layers.TimeDistributed(self.vgg1_conv2)(x)
-        x=layers.TimeDistributed(self.vgg1_conv3)(x)
-        x=layers.TimeDistributed(self.maxpool1)(x)
+        batch=tf.shape(x)[0]
+        step=tf.shape(x)[1]
 
-        x=layers.TimeDistributed(self.vgg2_conv1)(x)
-        x=layers.TimeDistributed(self.vgg2_conv2)(x)
-        x=layers.TimeDistributed(self.vgg2_conv3)(x)
+        x=tf.reshape(x,[batch*step,11,11,11])
+
+        x=self.vgg1_conv1(x)
+        x=self.vgg1_conv2(x)
+        x=self.vgg1_conv3(x)
+        x=self.maxpool1(x)
+
+        x=self.vgg2_conv1(x)
+        x=self.vgg2_conv2(x)
+        x=self.vgg2_conv3(x)
         print("xshpae before maxpool2 ",x.shape)
-        x=layers.TimeDistributed(self.maxpool2)(x)
+        x=self.maxpool2(x)
 
         print("xshape before conv3 ",x.shape)
-        x=layers.TimeDistributed(self.conv3)(x)
+        x=self.conv3(x)
        
-        x = tf.reshape(x, [1, 1, 500]) 
+        x = tf.reshape(x, [batch, step, 500]) 
 
         print("x after reshape = ",x.shape) 
 
