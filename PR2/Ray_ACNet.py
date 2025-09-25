@@ -101,10 +101,10 @@ class ACNet(tf.keras.Model):
         print("xshape before conv3 ",x.shape)
         x=layers.TimeDistributed(self.conv3)(x)
        
-        x = self.time_distributed_flatten(x) 
+        x = tf.reshape(x, [tf.shape(x)[0], tf.shape(x)[1], -1]) 
 
-        print("x after flatten = ",x.shape) 
-        
+        print("x after reshape = ",x.shape) 
+
         x=self.actflat(x)
 
         y=goal_pos
