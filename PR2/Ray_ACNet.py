@@ -54,6 +54,8 @@ class ACNet(tf.keras.Model):
 
         self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
 
+        self.time_distributed_flatten = layers.TimeDistributed(layers.Flatten())
+
         self.flat=layers.Flatten()
         self.actflat=layers.ReLU()
 
@@ -99,8 +101,10 @@ class ACNet(tf.keras.Model):
         print("xshape before conv3 ",x.shape)
         x=layers.TimeDistributed(self.conv3)(x)
        
-        print("x before reshape = ",x.shape)
-        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[-1]])
+        x = self.time_distributed_flatten(x) 
+
+        print("x after flatten = ",x.shape) 
+        
         x=self.actflat(x)
 
         y=goal_pos
