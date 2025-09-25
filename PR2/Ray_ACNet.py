@@ -125,6 +125,7 @@ class ACNet(tf.keras.Model):
 
         print("x shape for lstm = ",x.shape)        
         print("initial_state type for lstm = ",type(initial_state))
+        print(type(initial_state[0]), initial_state[0].shape)
         
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
