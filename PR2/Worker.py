@@ -32,14 +32,14 @@ class Worker():
                  ):
         
         print("worker dummy")
-        self.localAC = ACNet()
+        self.local_AC = ACNet()
         dummy_input=tf.zeros((1,1,11,11,11))
         dummy_goalpos=tf.zeros((1,1,3))
         dummy_state=[tf.zeros((1,512)),tf.zeros((1,512))]
-        self.localAC(dummy_input,dummy_goalpos,dummy_state)
+        self.local_AC(dummy_input,dummy_goalpos,dummy_state)
 
         weights = [np.asarray(w, dtype=np.float32) for w in global_weights]
-        self.localAC.set_weights(weights)
+        self.local_AC.set_weights(weights)
 
         self.metaAgentID = metaAgentID
         self.agentID = workerID
