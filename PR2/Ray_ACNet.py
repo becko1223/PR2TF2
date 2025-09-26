@@ -54,6 +54,8 @@ class ACNet(tf.keras.Model):
 
         self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
 
+        self.conv_reshape = layers.Reshape([1, RNN_SIZE - GOAL_REPR_SIZE])
+
      
 
         self.flat=layers.Flatten()
@@ -105,8 +107,10 @@ class ACNet(tf.keras.Model):
 
         print("xshape before conv3 ",x.shape)
         x=self.conv3(x)
+
+        x = tf.reshape(x, [batch * step, RNN_SIZE - GOAL_REPR_SIZE]) 
        
-        x = tf.reshape(x, [batch, step, 500]) 
+        x = tf.reshape(x, [batch, step, RNN_SIZE - GOAL_REPR_SIZE]) 
 
         print("x after reshape = ",x.shape) 
 
