@@ -125,7 +125,7 @@ class Runner(object):
             agentID = a + 1
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                                  self.env, self.localNetwork,
+                                  self.env, 
                                   groupLock,weights))
 
         for w in workers:
@@ -201,7 +201,7 @@ class Runner(object):
         weights=self.localNetwork.get_weights()
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                        self.env, self.localNetwork,
+                        self.env, 
                         None, weights)
 
         

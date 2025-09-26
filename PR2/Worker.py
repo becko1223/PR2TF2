@@ -28,7 +28,7 @@ def discount(x, gamma):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock, global_weights
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env,  groupLock, global_weights
                  ):
         
         print("worker dummy")
