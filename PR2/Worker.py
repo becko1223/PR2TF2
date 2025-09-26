@@ -11,6 +11,8 @@ from Map_Generator import maze_generator
 
 from parameters import *
 
+from Ray_ACNet import ACNet
+
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
 
@@ -20,9 +22,24 @@ def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
+
+
+
+
+
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock, learningAgent,
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock, global_weights
                  ):
+        
+        print("worker dummy")
+        self.localAC = ACNet()
+        dummy_input=tf.zeros((1,1,11,11,11))
+        dummy_goalpos=tf.zeros((1,1,3))
+        dummy_state=[tf.zeros((1,512)),tf.zeros((1,512))]
+        self.localAC(dummy_input,dummy_goalpos,dummy_state)
+
+        weights = [np.asarray(w, dtype=np.float32) for w in global_weights]
+        self.localAC.set_weights(weights)
 
         self.metaAgentID = metaAgentID
         self.agentID = workerID
@@ -32,12 +49,14 @@ class Worker():
         self.nextGIF = 0
 
         self.env = env
-        self.local_AC = localNetwork
+        #self.local_AC = localNetwork
         self.groupLock = groupLock
-        self.learningAgent = learningAgent
+        
         self.allGradients = []
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
+
+
 
     def calculateImitationGradient(self, rollout, episode_count):
         rollout = np.array(rollout, dtype=object)

@@ -119,12 +119,14 @@ class Runner(object):
 
         workersPerMetaAgent = NUM_THREADS
 
+        weights=self.localNetwork.get_weights()
+
         for a in range(NUM_THREADS):
             agentID = a + 1
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
-                                  groupLock, learningAgent=True))
+                                  groupLock,weights))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -196,9 +198,11 @@ class Runner(object):
         agentID=None
         groupLock = None
 
+        weights=self.localNetwork.get_weights()
+
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                         self.env, self.localNetwork,
-                        None, learningAgent=True)
+                        None, weights)
 
         
         gradients, losses = worker.imitation_learning_only(episodeNumber)
