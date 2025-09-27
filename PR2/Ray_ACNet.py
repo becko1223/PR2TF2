@@ -98,6 +98,12 @@ class ACNet(tf.keras.Model):
 
         x=tf.reshape(x,[batch*step,11,11,11])
 
+        # 明示的に形状をTensorFlowに認識させる
+        x = tf.ensure_shape(x, (None, 11, 11, 11))
+        
+        # ログにも形状を出力して確認する
+        print("x shape before vgg1_conv1:", x.shape)
+
         x=self.vgg1_conv1(x)
         x=self.vgg1_conv2(x)
         x=self.vgg1_conv3(x)
