@@ -84,7 +84,7 @@ class ACNet(tf.keras.Model):
 
 
 #inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
-    def __call__(self,inputs,goal_pos,initial_state):
+    def __call__(self,inputs,goal_pos,initial_state,batch,step):
         x=inputs
         
         x = tf.ensure_shape(x, (None, None, 11, 11, 11))
@@ -96,8 +96,8 @@ class ACNet(tf.keras.Model):
 
         x = tf.ensure_shape(x, (None, None, 11, 11, 11))
 
-        batch=tf.shape(x)[0]
-        step=tf.shape(x)[1]
+        #batch=tf.shape(x)[0]
+        #step=tf.shape(x)[1]
 
         x=tf.reshape(x,[batch*step,11,11,11])
 
