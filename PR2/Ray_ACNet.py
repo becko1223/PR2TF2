@@ -35,6 +35,8 @@ class NormalizedColumnsInitializer(tf.keras.initializers.Initializer):
         return {'std': self.std}
 
 
+RNN_SIZE = 512
+GOAL_REPR_SIZE = 12
 class ACNet(tf.keras.Model):
     def __init__(self):
    
@@ -148,25 +150,9 @@ class ACNet(tf.keras.Model):
         initial_state_tuple = tuple(initial_state)
 
 
-        def call_lstm_with_fix():
-            # Keras/TFのLSTMがT=1のシーケンスで内部エラーを出すのを回避する
-            # 入力を (batch, 1, 512) に戻し、明示的にシーケンス入力として扱う
-            fixed_x = tf.squeeze(x, axis=1) 
-            fixed_x = tf.expand_dims(fixed_x, axis=1) 
-            return self.lstm(fixed_x, initial_state=initial_state_tuple)
+        
 
-        def call_lstm_normal():
-            # T > 1 の場合は通常通りLSTMを呼び出す
-            return self.lstm(x, initial_state=initial_state_tuple)
-
-        # tf.cond を用いて動的に処理を切り替える
-        lstm_out, state_h, state_c = tf.cond(
-            tf.equal(step, 1),
-            call_lstm_with_fix, # step=1 の時は回避策の関数を実行
-            call_lstm_normal    # step > 1 の時は通常の関数を実行
-        )
-
-        #lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state_tuple)
+        lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state_tuple)
 
         #lstm_out = tf.reshape(lstm_out, [-1, lstm_out.shape[2]])
         policy=self.policy_layer(lstm_out)
