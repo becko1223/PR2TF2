@@ -260,6 +260,7 @@ class Worker():
                         print("validactions = ",validActions)
 
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
+                        print("selected_action = ",a)
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
                             episode_stop_count += 1
