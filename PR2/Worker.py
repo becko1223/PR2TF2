@@ -234,6 +234,8 @@ class Worker():
                     print("obs:",s[0].shape)
                     a_dist,_,v,rnn_state=self.local_AC(obs,goal,rnn_state)
 
+                    print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
+
                     skipping_state = False
                     train_policy = train_val = 1
 
