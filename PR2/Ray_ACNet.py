@@ -133,6 +133,7 @@ class ACNet(tf.keras.Model):
        
         y=self.goal_layer(y)
 
+        x = tf.ensure_shape(x, (None, None, RNN_SIZE - GOAL_REPR_SIZE))
         y = tf.ensure_shape(y, (None, None, GOAL_REPR_SIZE))
 
         print("xshape before concat = ",x.shape) # (None, None, 500)
