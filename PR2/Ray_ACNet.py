@@ -108,16 +108,24 @@ class ACNet(tf.keras.Model):
         print("x shape before vgg1_conv1:", x.shape)
 
         x=self.vgg1_conv1(x)
+        x = tf.ensure_shape(x, (None, 11, 11, 128))
         x=self.vgg1_conv2(x)
+        x = tf.ensure_shape(x, (None, 11, 11, 128))
         x=self.vgg1_conv3(x)
+        x = tf.ensure_shape(x, (None, 11, 11, 128))
         x=self.maxpool1(x)
 
+        x = tf.ensure_shape(x, (None, 5, 5, 128))
         x=self.vgg2_conv1(x)
+        x = tf.ensure_shape(x, (None, 5, 5, 128))
         x=self.vgg2_conv2(x)
+        x = tf.ensure_shape(x, (None, 5, 5, 128))
         x=self.vgg2_conv3(x)
+        x = tf.ensure_shape(x, (None, 5, 5, 128))
         print("xshpae before maxpool2 ",x.shape)
         x=self.maxpool2(x)
 
+        x = tf.ensure_shape(x, (None, 2, 2, 128))
         print("xshape before conv3 ",x.shape)
         x=self.conv3(x)
 
