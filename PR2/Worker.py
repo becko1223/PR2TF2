@@ -86,6 +86,7 @@ class Worker():
         step=rollout.shape[0]
 
         rollout = np.array(rollout, dtype=object)
+        step=rollout.shape[0]
         observations = rollout[:, 0]
         goals = rollout[:, -3]
         actions = rollout[:, 1]
