@@ -87,11 +87,14 @@ class ACNet(tf.keras.Model):
     def __call__(self,inputs,goal_pos,initial_state):
         x=inputs
         
+        x = tf.ensure_shape(x, (None, None, 11, 11, 11))
             
         print(f"input shape  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
         x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
 
         print(f" x shape after transpose {tf.shape(x)}")
+
+        x = tf.ensure_shape(x, (None, None, 11, 11, 11))
 
         batch=tf.shape(x)[0]
         step=tf.shape(x)[1]
