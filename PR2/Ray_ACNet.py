@@ -153,9 +153,11 @@ class ACNet(tf.keras.Model):
         print(type(initial_state[0]), initial_state[0].shape)
 
         
-        initial_state_tuple = tuple(initial_state)
+        state_h = tf.ensure_shape(initial_state[0], (None, RNN_SIZE))
+        state_c = tf.ensure_shape(initial_state[1], (None, RNN_SIZE))
+        initial_state_tuple = (state_h, state_c)
 
-
+        x = tf.ensure_shape(x, (None, None, RNN_SIZE))
         
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state_tuple)
