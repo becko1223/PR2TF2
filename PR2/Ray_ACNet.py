@@ -139,7 +139,7 @@ class ACNet(tf.keras.Model):
         #x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
 
         print("x shape for lstm = ",x.shape)        
-        print("initial_state type for lstm = ",type(initial_state))
+        #print("initial_state type for lstm = ",type(initial_state))
         print(type(initial_state[0]), initial_state[0].shape)
 
         
