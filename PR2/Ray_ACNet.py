@@ -130,7 +130,10 @@ class ACNet(tf.keras.Model):
        
         y=self.goal_layer(y)
 
-        print("xshape before concat = ",x.shape)
+        y = tf.ensure_shape(y, (None, None, GOAL_REPR_SIZE))
+
+        print("xshape before concat = ",x.shape) # (None, None, 500)
+        print("yshape before concat = ",y.shape) # (None, None, 12)
 
         x=tf.concat([x,y],-1)
 
@@ -148,7 +151,7 @@ class ACNet(tf.keras.Model):
         #x=tf.expand_dims(x,0)
         #x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
 
-        print("x shape for lstm = ",x.shape)        
+              
         #print("initial_state type for lstm = ",type(initial_state))
         print(type(initial_state[0]), initial_state[0].shape)
 
@@ -158,6 +161,7 @@ class ACNet(tf.keras.Model):
         initial_state_tuple = (state_h, state_c)
 
         x = tf.ensure_shape(x, (None, None, RNN_SIZE))
+        print("x shape for lstm (ensured) = ",x.shape) 
         
 
         lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state_tuple)
