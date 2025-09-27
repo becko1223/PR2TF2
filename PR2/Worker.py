@@ -28,7 +28,7 @@ def discount(x, gamma):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env,  groupLock, global_weights
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env,  groupLock, global_weights,learningAgent
                  ):
         
         print("worker dummy")
@@ -40,6 +40,8 @@ class Worker():
 
         weights = [np.asarray(w, dtype=np.float32) for w in global_weights]
         self.local_AC.set_weights(weights)
+
+        self.learningAgent=learningAgent
 
         self.metaAgentID = metaAgentID
         self.agentID = workerID

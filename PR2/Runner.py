@@ -126,7 +126,7 @@ class Runner(object):
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, 
-                                  groupLock,weights))
+                                  groupLock,weights,learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -202,7 +202,7 @@ class Runner(object):
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                         self.env, 
-                        None, weights)
+                        None, weights, learningAgent=True)
 
         
         gradients, losses = worker.imitation_learning_only(episodeNumber)
