@@ -108,7 +108,7 @@ class ACNet(tf.keras.Model):
         print("xshape before conv3 ",x.shape)
         x=self.conv3(x)
 
-        x = tf.reshape(x, [batch * step, RNN_SIZE - GOAL_REPR_SIZE]) 
+        x = tf.squeeze(x, [1, 2])
        
         x = tf.reshape(x, [batch, step, RNN_SIZE - GOAL_REPR_SIZE]) 
 
