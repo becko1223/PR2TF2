@@ -270,6 +270,7 @@ class Worker():
                     self.synchronize()
 
                     if self.agentID == 1:
+                        print("step forward")
                         all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
@@ -335,6 +336,8 @@ class Worker():
                     # finish condition: reach max-len or all agents are done under one-shot mode
                     if episode_step_count >= max_episode_length:
                         break
+
+                    print("roop")
 
                 episode_lengths[self.metaAgentID].append(episode_step_count)
                 episode_mean_values[self.metaAgentID].append(np.nanmean(episode_values))
