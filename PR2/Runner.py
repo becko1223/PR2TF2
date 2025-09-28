@@ -7,6 +7,7 @@ import pynvml
 
 
 from Ray_ACNet import ACNet
+from functional_ACNet import createmodel
 import GroupLock
 
 from Primal2Env import Primal2Env
@@ -90,11 +91,8 @@ class Runner(object):
 
         trainer = None
         print("runner dummy")
-        self.localNetwork = ACNet()
-        dummy_input=tf.zeros((1,1,11,11,11))
-        dummy_goalpos=tf.zeros((1,1,3))
-        dummy_state=[tf.zeros((1,512)),tf.zeros((1,512))]
-        self.localNetwork(dummy_input,dummy_goalpos,dummy_state,1,1)
+        self.localNetwork = createmodel()
+       
        
         
         
@@ -119,14 +117,13 @@ class Runner(object):
 
         workersPerMetaAgent = NUM_THREADS
 
-        weights=self.localNetwork.get_weights()
 
         for a in range(NUM_THREADS):
             agentID = a + 1
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                                  self.env, 
-                                  groupLock,weights,learningAgent=True))
+                                  self.env, self.localNetwork,
+                                  groupLock,learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -198,11 +195,10 @@ class Runner(object):
         agentID=None
         groupLock = None
 
-        weights=self.localNetwork.get_weights()
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                        self.env, 
-                        None, weights, learningAgent=True)
+                        self.env, self.localNetwork,
+                        None, learningAgent=True)
 
         
         gradients, losses = worker.imitation_learning_only(episodeNumber)

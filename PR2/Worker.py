@@ -12,6 +12,7 @@ from Map_Generator import maze_generator
 from parameters import *
 
 from Ray_ACNet import ACNet
+from functional_ACNet import createmodel
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
@@ -28,18 +29,11 @@ def discount(x, gamma):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env,  groupLock, global_weights,learningAgent
-                 ):
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork,groupLock,learningAgent):
         
         print("worker dummy")
-        self.local_AC = ACNet()
-        dummy_input=tf.zeros((1,1,11,11,11))
-        dummy_goalpos=tf.zeros((1,1,3))
-        dummy_state=[tf.zeros((1,512)),tf.zeros((1,512))]
-        self.local_AC(dummy_input,dummy_goalpos,dummy_state,1,1)
-
-        weights = [np.asarray(w, dtype=np.float32) for w in global_weights]
-        self.local_AC.set_weights(weights)
+        self.local_AC = localNetwork
+        
 
         self.learningAgent=learningAgent
 
@@ -67,10 +61,11 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
-        rnn_state = [tf.zeros((1,512)),tf.zeros((1,512))]
+        h_state = tf.zeros((1,512))
+        c_state = tf.zeros((1,512))
         
         with tf.GradientTape() as tape:
-            policy,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),rnn_state,1,step)
+            policy,_,_,_,_=self.local_AC(tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),h_state,c_state)
 
             optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
 
@@ -127,11 +122,11 @@ class Worker():
         
 
         with tf.GradientTape() as tape:
-            print("xshape!!!!!!!  ",np.stack(observations).shape)
+            print("xshape: ",np.stack(observations).shape)
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             goals_array=tf.expand_dims(np.stack(goals),0)
             
-            policy,policy_sig,value,[state_h,state_c]=self.local_AC(obs_array,goals_array,rnn_state0,1,step)
+            policy,policy_sig,value,state_h,state_c=self.local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
@@ -237,7 +232,8 @@ class Worker():
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     print("obs:",s[0].shape)
-                    a_dist,_,v,rnn_state=self.local_AC(obs,goal,rnn_state,1,1)
+                    a_dist,_,v,h_state,c_state=self.local_AC(obs,goal,rnn_state[0],rnn_state[1])
+                    rnn_state=[h_state,c_state]
 
                     print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
 
@@ -325,7 +321,7 @@ class Worker():
                         else:
                             
                             print("s1value!!!!!!")
-                            _,_,s1Value_array,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),rnn_state,1,1)
+                            _,_,s1Value_array,_,_=self.local_AC(tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),rnn_state[0],rnn_state[1])
                             s1Value=s1Value_array[0,0]
 
                         
