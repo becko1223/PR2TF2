@@ -44,7 +44,7 @@ def createmodel():
     rnn_state_c_input = keras.Input(shape=(RNN_SIZE,))
 
     x = layers.Lambda(lambda t: tf.transpose(t, perm=[0, 1, 3, 4, 2]), output_shape=(None, 11,11,11), name='transpose_5d')(ob_inputs)
-    x=layers.Reshape((-1,11,11,11))
+    x=layers.Reshape((-1,11,11,11))(x)
 
 
     x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
