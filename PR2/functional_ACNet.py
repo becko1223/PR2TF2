@@ -63,7 +63,7 @@ def createmodel():
     x = layers.ReLU()(x)
 
 
-    y = layers.Reshape((-1, 3), name='reshape_goal_features')(goal_inputs)
+    y = layers.Lambda(lambda t: tf.reshape(t,[-1,3]))(goal_inputs)
     y = layers.Dense(units=GOAL_REPR_SIZE, activation='relu', name='goal_dense')(y)
 
 
