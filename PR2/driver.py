@@ -15,6 +15,7 @@ import random
 
 ray.init(num_gpus=1)
 
+tf.keras.backend.set_floatx('float32')
 
 #tf.reset_default_graph()
 print("Hello World")

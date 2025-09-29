@@ -11,6 +11,8 @@ RNN_SIZE = 512
 GOAL_REPR_SIZE = 12
 A_SIZE=5
 
+tf.keras.backend.set_floatx('float32')
+
 
 # Used to initialize weights for policy and value output layers (Do we need to use that? Maybe not now)
 def normalized_columns_initializer(std=1.0):
