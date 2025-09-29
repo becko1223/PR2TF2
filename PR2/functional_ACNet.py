@@ -86,8 +86,12 @@ def createmodel():
         S = tf.shape(obs_shape)[1]
         F = RNN_SIZE
         return tf.reshape(t, (B, S, F))
+
+    B_S_shape=layers.Lambda(lambda t: tf.shape(t)[:2])(ob_inputs)
+    x_lstm=layers.Lambda(lambda t:tf.reshape(t[0],[t[1][0],t[1][1],RNN_SIZE]))([x_combined,B_S_shape])
         
-    x_lstm = layers.Lambda(lambda t: reshape_to_lstm_input(t, ob_inputs),output_shape=(None,RNN_SIZE))(x_combined)
+    #x_lstm = layers.Lambda(lambda t: reshape_to_lstm_input(t, ob_inputs),output_shape=(None,RNN_SIZE))(x_combined)
+    
 
     lstm_out, state_h, state_c=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)(x_lstm,initial_state=[rnn_state_h_input,rnn_state_c_input])
 
