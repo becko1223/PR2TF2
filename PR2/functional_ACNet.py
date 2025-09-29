@@ -64,7 +64,7 @@ def createmodel():
 
 
     #y = layers.Lambda(lambda t: tf.reshape(t,[-1,3]))(goal_inputs)
-    y = layers.Dense(units=GOAL_REPR_SIZE, activation='relu', name='goal_dense')(y)
+    y = layers.Dense(units=GOAL_REPR_SIZE, activation='relu', name='goal_dense')(goal_inputs)
 
 
     x_combined = layers.Concatenate(axis=-1)([x, y])
