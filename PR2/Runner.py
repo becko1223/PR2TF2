@@ -186,6 +186,11 @@ class Runner(object):
                 print(f"gradient[{i}] is None")
             else:
                 print(f"gradient[{i}] length: {len(grads)}")
+
+
+        #jobResults=tf.convert_to_tensor(jobResults)
+        #jobResults=tf.reduce_sum(jobResults,axis=0)
+        #jobResults=tf.make_ndarray(jobResults).tolist()
         
         return jobResults, all_metrics, is_imitation
     
@@ -238,6 +243,10 @@ class Runner(object):
                 "episode_number": episodeNumber,
                 "is_imitation": is_imitation
             }
+
+            jobResults=tf.convert_to_tensor(jobResults)
+            jobResults=tf.reduce_sum(jobResults,axis=0)
+            jobResults=tf.make_ndarray(jobResults).tolist()
 
             result= jobResults, metrics, info
             return {"ok": True, "result": result}
