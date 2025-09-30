@@ -46,26 +46,26 @@ def createmodel():
     rnn_state_c_input = keras.Input(shape=(RNN_SIZE,))
 
     x = layers.Lambda(lambda t: tf.transpose(t, perm=[0, 1, 3, 4, 2]), output_shape=(None, 11,11,11), name='transpose_5d')(ob_inputs)
-    #x = layers.Lambda(lambda t: tf.reshape(t, (-1, t.shape[2], t.shape[3], t.shape[4])))(x)
+    x = layers.Lambda(lambda t: tf.reshape(t, (-1, t.shape[2], t.shape[3], t.shape[4])))(x)
 
 
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.MaxPool2D(2))(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.MaxPool2D(2)(x)
 
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
-    x=layers.TimeDistributed(layers.MaxPool2D(2))(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
+    x=layers.MaxPool2D(2)(x)
 
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None))(x)
+    x=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None))(x)
 
-    x = layers.TimeDistributed(layers.Flatten())(x) 
+    x = layers.Flatten()(x) 
     x = layers.ReLU()(x)
 
 
-    #y = layers.Lambda(lambda t: tf.reshape(t,[-1,3]))(goal_inputs)
+    y = layers.Lambda(lambda t: tf.reshape(t,[-1,3]))(goal_inputs)
     y = layers.Dense(units=GOAL_REPR_SIZE, activation='relu', name='goal_dense')(goal_inputs)
 
 
@@ -89,8 +89,8 @@ def createmodel():
         F = RNN_SIZE
         return tf.reshape(t, (B, S, F))
 
-    #B_S_shape=layers.Lambda(lambda t: tf.shape(t)[:2])(ob_inputs)
-    #x_lstm=layers.Lambda(lambda t:tf.reshape(t[0],[t[1][0],t[1][1],RNN_SIZE]))([x_combined,B_S_shape])
+    B_S_shape=layers.Lambda(lambda t: tf.shape(t)[:2])(ob_inputs)
+    x_lstm=layers.Lambda(lambda t:tf.reshape(t[0],[t[1][0],t[1][1],RNN_SIZE]))([x_combined,B_S_shape])
         
     #x_lstm = layers.Lambda(lambda t: reshape_to_lstm_input(t, ob_inputs),output_shape=(None,RNN_SIZE))(x_combined)
     
