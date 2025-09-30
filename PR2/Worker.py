@@ -63,18 +63,35 @@ class Worker():
 
         h_state = tf.zeros((1,512))
         c_state = tf.zeros((1,512))
+
+        accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
+        rollout_length = np.stack(rollout[:, 0]).shape[0]
+        BATCH_SIZE = 8
+        total_loss=0.0
+        total_batches=0
+
+
+        for start_idx in range(0, rollout_length, BATCH_SIZE):
+            end_idx = min(start_idx + BATCH_SIZE, rollout_length)
         
-        with tf.GradientTape() as tape:
-            policy,_,_,_,_=self.local_AC([tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),h_state,c_state])
+            with tf.GradientTape() as tape:
+                policy,_,_,h_states,c_states=self.local_AC([tf.expand_dims(np.stack(rollout[start_idx:end_idx, 0]),0),tf.expand_dims(np.stack(rollout[start_idx:end_idx, 1]),0),h_state,c_state])
 
-            optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
+                h_state=h_states[-1]
+                c_state=c_states[-1]
+                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[start_idx:end_idx, 2]),0), a_size, dtype=tf.float32)
 
-            loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
+                loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
-        i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
+            grads = tape.gradient(loss,self.local_AC.trainable_variables)
+            accumulated_grads = [tf.add(acc_g, g) for acc_g, g in zip(accumulated_grads, grads)]
+            total_loss+=loss
+            total_batches+=1
+        i_grads= [g / total_batches for g in accumulated_grads]
+        total_loss=total_loss/total_batches
+        
 
-
-        return [loss], i_grads
+        return [total_loss], i_grads
 
     def calculateGradient(self, rollout, bootstrap_value, episode_count, rnn_state0):
         # ([s,a,r,s1,v[0,0]])
