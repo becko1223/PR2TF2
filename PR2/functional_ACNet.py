@@ -95,7 +95,7 @@ def createmodel():
     #x_lstm = layers.Lambda(lambda t: reshape_to_lstm_input(t, ob_inputs),output_shape=(None,RNN_SIZE))(x_combined)
     
 
-    lstm_out, state_h, state_c=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)(x_combined,initial_state=[rnn_state_h_input,rnn_state_c_input])
+    lstm_out, state_h, state_c=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)(x_lstm,initial_state=[rnn_state_h_input,rnn_state_c_input])
 
     policy_layer = layers.Dense(units=A_SIZE, kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))(lstm_out)
     policy = layers.Softmax(name='policy_output')(policy_layer)
