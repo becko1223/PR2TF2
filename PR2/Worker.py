@@ -64,7 +64,8 @@ class Worker():
         h_state = tf.zeros((1,512))
         c_state = tf.zeros((1,512))
 
-        accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
+        with tf.device('/cpu:0'):
+            accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
         rollout_length = np.stack(rollout[:, 0]).shape[0]
         BATCH_SIZE = 8
         total_loss=0.0
