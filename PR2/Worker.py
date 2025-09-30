@@ -113,10 +113,10 @@ class Worker():
 
     def calculateGradient(self, rollout, bootstrap_value, episode_count, rnn_state0):
         # ([s,a,r,s1,v[0,0]])
-        step=rollout.shape[0]
+        
 
         rollout = np.array(rollout, dtype=object)
-        step=rollout.shape[0]
+        #step=rollout.shape[0]
         observations = rollout[:, 0]
         goals = rollout[:, -3]
         actions = rollout[:, 1]
