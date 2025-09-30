@@ -59,7 +59,7 @@ def createmodel():
     x=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')(x)
     x=layers.MaxPool2D(2)(x)
 
-    x=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None))(x)
+    x=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)(x)
 
     x = layers.Flatten()(x) 
     x = layers.ReLU()(x)
