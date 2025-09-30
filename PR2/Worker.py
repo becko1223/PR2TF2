@@ -64,8 +64,10 @@ class Worker():
         h_state = tf.zeros((1,512))
         c_state = tf.zeros((1,512))
 
-        with tf.device('/cpu:0'):
-            accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
+
+        """
+        ミニバッチ版
+        accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
         rollout_length = np.stack(rollout[:, 0]).shape[0]
         BATCH_SIZE = 8
         total_loss=0.0
@@ -90,6 +92,21 @@ class Worker():
             total_batches+=1
         i_grads= [g / total_batches for g in accumulated_grads]
         total_loss=total_loss/total_batches
+
+        """
+
+
+        with tf.GradientTape() as tape:
+                policy,_,_,h_states,c_states=self.local_AC([tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),h_state,c_state])
+
+                h_state=h_states[-1]
+                c_state=c_states[-1]
+                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
+
+                total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
+
+                i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
+        
         
 
         return [total_loss], i_grads
