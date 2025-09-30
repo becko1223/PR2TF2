@@ -62,7 +62,7 @@ def createmodel():
     x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None))(x)
 
     x = layers.TimeDistributed(layers.Flatten())(x) 
-    x = layers.ReLU()(x)
+    x = layers.TimeDistributed(layers.ReLU())(x)
 
 
     #y = layers.Lambda(lambda t: tf.reshape(t,[-1,3]))(goal_inputs)
