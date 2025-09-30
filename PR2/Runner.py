@@ -109,7 +109,7 @@ class Runner(object):
 
 
         
-    def multiThreadedJob(self, episodeNumber):
+    def multiThreadedJob(self, episodeNumber,global_weights):
         workers = []
         worker_threads = []
         workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]
@@ -121,8 +121,11 @@ class Runner(object):
         for a in range(NUM_THREADS):
             agentID = a + 1
 
+            worker_network=createmodel()
+            worker_network.set_weights(global_weights)
+
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                                  self.env, self.localNetwork,
+                                  self.env, worker_network,
                                   groupLock,learningAgent=True))
 
         for w in workers:
@@ -195,14 +198,17 @@ class Runner(object):
         return jobResults, all_metrics, is_imitation
     
 
-    def imitationLearningJob(self, episodeNumber):
+    def imitationLearningJob(self, episodeNumber,global_weights):
         workersPerMetaAgent = NUM_THREADS
         agentID=None
         groupLock = None
 
+        worker_network=createmodel()
+        worker_network.set_weights(global_weights)
+
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                        self.env, self.localNetwork,
+                        self.env, worker_network,
                         None, learningAgent=True)
 
         
@@ -225,10 +231,10 @@ class Runner(object):
             # set first `NUM_IL_META_AGENTS` to perform imitation learning
             if self.metaAgentID < NUM_IL_META_AGENTS:
                 print("running imitation job")
-                jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
+                jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber,global_weights)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-                jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber)
+                jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber,global_weights)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
                 print("not implemented")
