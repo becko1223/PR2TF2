@@ -49,7 +49,7 @@ def createmodel():
     #x = layers.Lambda(lambda t: tf.reshape(t, (-1, t.shape[2], t.shape[3], t.shape[4])))(x)
 
 
-    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
+    x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(ob_inputs)
     x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
     x=layers.TimeDistributed(layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))(x)
     x=layers.TimeDistributed(layers.MaxPool2D(2))(x)
