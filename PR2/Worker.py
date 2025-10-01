@@ -97,7 +97,10 @@ class Worker():
 
 
         with tf.GradientTape() as tape:
-                policy,_,_,h_states,c_states=self.local_AC([tf.expand_dims(np.stack(rollout[:, 0]),0),tf.expand_dims(np.stack(rollout[:, 1]),0),h_state,c_state])
+                obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
+                obs=tf.transpose(obs,[0,1,3,4,2])
+                goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
+                policy,_,_,h_states,c_states=self.local_AC([obs,goals,h_state,c_state])
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
@@ -105,7 +108,7 @@ class Worker():
 
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
-                i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
+                i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
         
         
 
@@ -159,6 +162,7 @@ class Worker():
         with tf.GradientTape() as tape:
             print("xshape: ",np.stack(observations).shape)
             obs_array = tf.expand_dims(np.stack(observations) ,0)
+            obs_array=tf.transpose(obs_array,[0,1,3,4,2])
             goals_array=tf.expand_dims(np.stack(goals),0)
             
             policy,policy_sig,value,state_h,state_c=self.local_AC([obs_array,goals_array,rnn_state0[0],rnn_state0[1]])
@@ -265,6 +269,7 @@ class Worker():
                 self.env.finished = False
                 while not self.env.finished:
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
+                    obs=tf.transpose(obs,[0,1,3,4,2])
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     print("obs:",s[0].shape)
                     a_dist,_,v,h_state,c_state=self.local_AC([obs,goal,rnn_state[0],rnn_state[1]])
@@ -356,7 +361,10 @@ class Worker():
                         else:
                             
                             print("s1value!!!!!!")
-                            _,_,s1Value_array,_,_=self.local_AC([tf.expand_dims(tf.expand_dims(s[0],0),0),tf.expand_dims(tf.expand_dims(s[1],0),0),rnn_state[0],rnn_state[1]])
+                            ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
+                            ob=tf.transpose(ob,[0,1,3,4,2])
+                            goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                            _,_,s1Value_array,_,_=self.local_AC([ob,goal,rnn_state[0],rnn_state[1]])
                             s1Value=s1Value_array[0,0]
 
                         
