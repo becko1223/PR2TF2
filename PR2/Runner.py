@@ -253,9 +253,9 @@ class Runner(object):
                 "is_imitation": is_imitation
             }
 
-            jobResults=tf.convert_to_tensor(jobResults)
-            jobResults=tf.reduce_sum(jobResults,axis=0)
-            jobResults=jobResults.numpy().tolist()
+            #jobResults=tf.convert_to_tensor(jobResults)
+            #jobResults=tf.reduce_sum(jobResults,axis=0)
+            #jobResults=jobResults.numpy().tolist()
 
             result= jobResults, metrics, info
             return {"ok": True, "result": result}
