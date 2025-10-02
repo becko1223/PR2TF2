@@ -254,7 +254,7 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            rnn_state = [tf.zeros((1,RNN_SIZE)),tf.zeros((1,RNN_SIZE))]
+            rnn_state = [tf.zeros((1,RNN_SIZE),dtype=tf.float16),tf.zeros((1,RNN_SIZE),tf.float16)]
             rnn_state0 = rnn_state
 
             self.synchronize()  # synchronize starting time of the threads
