@@ -208,6 +208,7 @@ class Worker():
         return [value_loss, policy_loss, valid_loss, entropy, grad_norms, var_norms], grads
 
     def imitation_learning_only(self, episode_count):
+        print("imi worker")
         self.env._reset()
         rollouts, targets_done = self.parse_path(episode_count)
 
@@ -452,6 +453,8 @@ class Worker():
         '''
         Interacts with the environment. The agent gets either gradients or experience buffer
         '''
+
+        print("rl worker")
         self.currEpisode = currEpisode
 
         if COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
