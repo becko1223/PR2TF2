@@ -124,8 +124,8 @@ class Runner(object):
         for a in range(NUM_THREADS):
             agentID = a + 1
 
-            worker_network=createmodel()
-            worker_network.set_weights(global_weights)
+            #worker_network=createmodel()
+            #worker_network.set_weights(global_weights)
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
