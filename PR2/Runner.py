@@ -77,7 +77,9 @@ class Runner(object):
 
                             [tf.config.LogicalDeviceConfiguration(memory_limit=fraction * total_memory)]
                         )
-                    
+                    for gpu in gpus:
+                        tf.config.experimental.set_memory_growth(gpu, True)
+                                
                     
                     #for gpu in gpus:
                     #    tf.config.experimental.set_memory_growth(gpu, True)
