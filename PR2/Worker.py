@@ -33,6 +33,18 @@ class Worker():
         
         print("worker dummy")
         self.local_AC = localNetwork
+
+
+        self.wrapped_local_AC = tf.function(
+            lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
+            # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
+            input_signature=[
+                tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, D, H, W)
+                tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+            ]
+        )
         
 
         self.learningAgent=learningAgent
@@ -101,7 +113,7 @@ class Worker():
                 obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
                 goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
-                policy,_,_,h_states,c_states=self.local_AC([obs,goals,h_state,c_state])
+                policy,_,_,h_states,c_states=self.wrapped_local_AC([obs,goals,h_state,c_state])
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
@@ -166,7 +178,7 @@ class Worker():
             obs_array=tf.transpose(obs_array,[0,1,3,4,2])
             goals_array=tf.expand_dims(np.stack(goals),0)
             with self.inferenceLock:
-                policy,policy_sig,value,state_h,state_c=self.local_AC([obs_array,goals_array,rnn_state0[0],rnn_state0[1]])
+                policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC([obs_array,goals_array,rnn_state0[0],rnn_state0[1]])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
@@ -274,7 +286,7 @@ class Worker():
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     print("obs:",s[0].shape)
                     with self.inferenceLock:
-                        a_dist,_,v,h_state,c_state=self.local_AC([obs,goal,rnn_state[0],rnn_state[1]])
+                        a_dist,_,v,h_state,c_state=self.wrapped_local_AC([obs,goal,rnn_state[0],rnn_state[1]])
                     rnn_state=[h_state,c_state]
 
                     print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
@@ -369,7 +381,7 @@ class Worker():
                             print("lastob:",ob.shape)
                             print("lastgoal",goal.shape)
                             with self.inferenceLock:
-                                _,_,s1Value_array,_,_=self.local_AC([ob,goal,rnn_state[0],rnn_state[1]])
+                                _,_,s1Value_array,_,_=self.wrapped_local_AC([ob,goal,rnn_state[0],rnn_state[1]])
                             s1Value=s1Value_array[0,0]
 
                         
