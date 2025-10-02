@@ -156,14 +156,14 @@ class Worker():
         #if not isinstance(bootstrap_value,int):
         #    bootstrap_scalar = bootstrap_value.numpy().item()
         rewards_array = np.array([float(r) for r in rewards])
-        self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
+        self.rewards_plus = np.concatenate([rewards_array, bootstrap_value])
         #self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
         discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
 
         #self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
 
         values_array = np.array([v.numpy().item() for v in values])
-        self.value_plus = np.concatenate([values_array, [bootstrap_value]])
+        self.value_plus = np.concatenate([values_array, bootstrap_value])
         
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
@@ -184,7 +184,7 @@ class Worker():
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
-            value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value, shape=[-1])))
+            value_loss=0.1*tf.reduce_mean(train_value*tf.square(np.stack(discounted_rewards)-tf.reshape(value[0], shape=[-1])))
 
             entropy     = - tf.reduce_mean(policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
