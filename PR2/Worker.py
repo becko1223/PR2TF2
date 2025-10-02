@@ -289,8 +289,8 @@ class Worker():
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     goal=tf.cast(goal,dtype=tf.float32)
                     print("obs:",s[0].shape)
-                    with self.inferenceLock:
-                        a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
+                    #with self.inferenceLock:
+                    a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[h_state,c_state]
 
                     print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
@@ -386,8 +386,8 @@ class Worker():
                             goal=tf.cast(goal,dtype=tf.float32)
                             print("lastob:",ob.shape)
                             print("lastgoal",goal.shape)
-                            with self.inferenceLock:
-                                _,_,s1Value_array,_,_=self.wrapped_local_AC(ob,goal,rnn_state[0],rnn_state[1])
+                            #with self.inferenceLock:
+                            _,_,s1Value_array,_,_=self.wrapped_local_AC(ob,goal,rnn_state[0],rnn_state[1])
                             s1Value=s1Value_array[0,0]
 
                         
