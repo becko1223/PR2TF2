@@ -290,12 +290,12 @@ class Worker():
                     obs = tf.cast(obs, dtype=tf.float16)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     goal=tf.cast(goal,dtype=tf.float16)
-                    print("obs:",s[0].shape)
+                    #print("obs:",s[0].shape)
                     #with self.inferenceLock:
                     a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[h_state,c_state]
 
-                    print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
+                    #print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
 
                     skipping_state = False
                     train_policy = train_val = 1
@@ -316,12 +316,12 @@ class Worker():
                         valid_dist = np.array([tf.gather(a_dist[0,0], validActionstensor)])
                         valid_dist /= np.sum(valid_dist)
 
-                        print("valid_dist=",valid_dist)
+                        #print("valid_dist=",valid_dist)
                         #print("valid_dist.ravel = ",valid_dist.ravel())
-                        print("validactions = ",validActions)
+                        #print("validactions = ",validActions)
 
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
-                        print("selected_action = ",a)
+                        #print("selected_action = ",a)
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
                             episode_stop_count += 1
@@ -380,14 +380,14 @@ class Worker():
 
                         else:
                             
-                            print("s1value!!!!!!")
+                            #print("s1value!!!!!!")
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
                             ob=tf.transpose(obs,[0,1,3,4,2])
                             ob = tf.cast(obs, dtype=tf.float16)
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                             goal=tf.cast(goal,dtype=tf.float16)
-                            print("lastob:",ob.shape)
-                            print("lastgoal",goal.shape)
+                            #print("lastob:",ob.shape)
+                            #print("lastgoal",goal.shape)
                             #with self.inferenceLock:
                             _,_,s1Value_array,_,_=self.wrapped_local_AC(ob,goal,rnn_state[0],rnn_state[1])
                             s1Value=s1Value_array[0,0]
