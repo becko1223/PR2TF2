@@ -364,6 +364,8 @@ class Worker():
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
                             ob=tf.transpose(ob,[0,1,3,4,2])
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                            print("lastob:",ob.shape)
+                            print("lastgoal",goal.shape)
                             _,_,s1Value_array,_,_=self.local_AC([ob,goal,rnn_state[0],rnn_state[1]])
                             s1Value=s1Value_array[0,0]
 
