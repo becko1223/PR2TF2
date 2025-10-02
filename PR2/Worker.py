@@ -371,7 +371,7 @@ class Worker():
                             train_buffer = episode_buffer[:]
 
                         if joint_done[self.metaAgentID][self.agentID]:
-                            s1Value = 0  # Terminal state
+                            s1Value = tf.convert_to_tensor([0])  # Terminal state
                             episode_buffer = []
                             joint_done[self.metaAgentID][self.agentID] = False
                             targets_done += 1
