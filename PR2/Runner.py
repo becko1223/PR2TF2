@@ -254,7 +254,7 @@ class Runner(object):
 
             jobResults=tf.convert_to_tensor(jobResults)
             jobResults=tf.reduce_sum(jobResults,axis=0)
-            jobResults=tf.make_ndarray(jobResults).tolist()
+            jobResults=jobResults.numpy().tolist()
 
             result= jobResults, metrics, info
             return {"ok": True, "result": result}

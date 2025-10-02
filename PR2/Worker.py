@@ -176,7 +176,9 @@ class Worker():
             print("xshape: ",np.stack(observations).shape)
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             obs_array=tf.transpose(obs_array,[0,1,3,4,2])
+            obs_array = tf.convert_to_tensor(obs_array, dtype=tf.float32)
             goals_array=tf.expand_dims(np.stack(goals),0)
+            goals_array = tf.convert_to_tensor(goals_array, dtype=tf.float32)
             with self.inferenceLock:
                 policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
@@ -283,7 +285,9 @@ class Worker():
                 while not self.env.finished:
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     obs=tf.transpose(obs,[0,1,3,4,2])
+                    obs = tf.convert_to_tensor(obs, dtype=tf.float32)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                    goal=tf.convert_to_tensor(goal,dtype=tf.float32)
                     print("obs:",s[0].shape)
                     with self.inferenceLock:
                         a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
@@ -376,8 +380,10 @@ class Worker():
                             
                             print("s1value!!!!!!")
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
-                            ob=tf.transpose(ob,[0,1,3,4,2])
+                            ob=tf.transpose(obs,[0,1,3,4,2])
+                            ob = tf.convert_to_tensor(obs, dtype=tf.float32)
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
+                            goal=tf.convert_to_tensor(goal,dtype=tf.float32)
                             print("lastob:",ob.shape)
                             print("lastgoal",goal.shape)
                             with self.inferenceLock:
