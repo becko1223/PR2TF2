@@ -39,10 +39,10 @@ class Worker():
             lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
             # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
             input_signature=[
-                tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, D, H, W)
-                tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
-                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
-                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+                tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float16),  # obs (B, S, D, H, W)
+                tf.TensorSpec(shape=[1, None, 3], dtype=tf.float16),          # goal (B, S, F)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float16),              # h_state (B, RNN_SIZE)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float16),              # c_state (B, RNN_SIZE)
             ]
         )
         
@@ -117,7 +117,7 @@ class Worker():
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
-                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
+                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float16)
 
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
@@ -169,16 +169,16 @@ class Worker():
         advantages = discount(advantages, gamma)
 
 
-        actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float32)
+        actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float16)
         
 
         with tf.GradientTape() as tape:
             print("xshape: ",np.stack(observations).shape)
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             obs_array=tf.transpose(obs_array,[0,1,3,4,2])
-            obs_array = tf.cast(obs_array, dtype=tf.float32)
+            obs_array = tf.cast(obs_array, dtype=tf.float16)
             goals_array=tf.expand_dims(np.stack(goals),0)
-            goals_array = tf.cast(goals_array, dtype=tf.float32)
+            goals_array = tf.cast(goals_array, dtype=tf.float16)
             with self.inferenceLock:
                 policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
@@ -285,9 +285,9 @@ class Worker():
                 while not self.env.finished:
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     obs=tf.transpose(obs,[0,1,3,4,2])
-                    obs = tf.cast(obs, dtype=tf.float32)
+                    obs = tf.cast(obs, dtype=tf.float16)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
-                    goal=tf.cast(goal,dtype=tf.float32)
+                    goal=tf.cast(goal,dtype=tf.float16)
                     print("obs:",s[0].shape)
                     #with self.inferenceLock:
                     a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
@@ -381,9 +381,9 @@ class Worker():
                             print("s1value!!!!!!")
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
                             ob=tf.transpose(obs,[0,1,3,4,2])
-                            ob = tf.cast(obs, dtype=tf.float32)
+                            ob = tf.cast(obs, dtype=tf.float16)
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
-                            goal=tf.cast(goal,dtype=tf.float32)
+                            goal=tf.cast(goal,dtype=tf.float16)
                             print("lastob:",ob.shape)
                             print("lastgoal",goal.shape)
                             #with self.inferenceLock:

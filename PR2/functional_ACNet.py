@@ -11,7 +11,7 @@ RNN_SIZE = 512
 GOAL_REPR_SIZE = 12
 A_SIZE=5
 
-tf.keras.backend.set_floatx('float32')
+tf.keras.backend.set_floatx('float16')
 
 
 # Used to initialize weights for policy and value output layers (Do we need to use that? Maybe not now)
