@@ -31,7 +31,7 @@ def discount(x, gamma):
 class Worker():
     def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork,groupLock,inferenceLock,learningAgent):
         
-        print("worker dummy")
+        
         self.local_AC = localNetwork
 
 
@@ -74,8 +74,8 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
-        h_state = tf.zeros((1,512))
-        c_state = tf.zeros((1,512))
+        h_state = tf.zeros((1,512),dtype=tf.float16)
+        c_state = tf.zeros((1,512),dtype=tf.float16)
 
 
         """
@@ -112,7 +112,9 @@ class Worker():
         with tf.GradientTape() as tape:
                 obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
+                obs=tf.cast(obs,dtype=tf.float16)
                 goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
+                goals=tf.cast(goals,dtype=tf.float16)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 h_state=h_states[-1]
