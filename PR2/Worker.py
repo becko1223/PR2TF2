@@ -313,7 +313,7 @@ class Worker():
                     self.synchronize()
 
                     if self.agentID == 1:
-                        print("step forward")
+                        print("step forward, step:",episode_step_count)
                         all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
