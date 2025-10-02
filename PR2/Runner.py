@@ -113,7 +113,9 @@ class Runner(object):
         workers = []
         worker_threads = []
         workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]
-        groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO        
+        groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO   
+
+        inference_lock = threading.Lock() 
 
         workersPerMetaAgent = NUM_THREADS
 
@@ -125,8 +127,8 @@ class Runner(object):
             worker_network.set_weights(global_weights)
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                                  self.env, worker_network,
-                                  groupLock,learningAgent=True))
+                                  self.env, self.localNetwork,
+                                  groupLock,inference_lock,learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -209,7 +211,7 @@ class Runner(object):
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                         self.env, worker_network,
-                        None, learningAgent=True)
+                        None, None,learningAgent=True)
 
         
         gradients, losses = worker.imitation_learning_only(episodeNumber)

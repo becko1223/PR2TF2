@@ -29,7 +29,7 @@ def discount(x, gamma):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork,groupLock,learningAgent):
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork,groupLock,inferenceLock,learningAgent):
         
         print("worker dummy")
         self.local_AC = localNetwork
@@ -47,6 +47,7 @@ class Worker():
         self.env = env
         #self.local_AC = localNetwork
         self.groupLock = groupLock
+        self.inferenceLock = inferenceLock
         
         self.allGradients = []
         self.loss_metrics =[]
@@ -164,8 +165,8 @@ class Worker():
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             obs_array=tf.transpose(obs_array,[0,1,3,4,2])
             goals_array=tf.expand_dims(np.stack(goals),0)
-            
-            policy,policy_sig,value,state_h,state_c=self.local_AC([obs_array,goals_array,rnn_state0[0],rnn_state0[1]])
+            with self.inferenceLock:
+                policy,policy_sig,value,state_h,state_c=self.local_AC([obs_array,goals_array,rnn_state0[0],rnn_state0[1]])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
@@ -272,7 +273,8 @@ class Worker():
                     obs=tf.transpose(obs,[0,1,3,4,2])
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                     print("obs:",s[0].shape)
-                    a_dist,_,v,h_state,c_state=self.local_AC([obs,goal,rnn_state[0],rnn_state[1]])
+                    with self.inferenceLock:
+                        a_dist,_,v,h_state,c_state=self.local_AC([obs,goal,rnn_state[0],rnn_state[1]])
                     rnn_state=[h_state,c_state]
 
                     print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
@@ -366,7 +368,8 @@ class Worker():
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
                             print("lastob:",ob.shape)
                             print("lastgoal",goal.shape)
-                            _,_,s1Value_array,_,_=self.local_AC([ob,goal,rnn_state[0],rnn_state[1]])
+                            with self.inferenceLock:
+                                _,_,s1Value_array,_,_=self.local_AC([ob,goal,rnn_state[0],rnn_state[1]])
                             s1Value=s1Value_array[0,0]
 
                         
