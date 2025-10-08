@@ -321,6 +321,9 @@ class Worker():
                         #print("valid_dist.ravel = ",valid_dist.ravel())
                         #print("validactions = ",validActions)
 
+                        print("valid_dist content:", valid_dist) 
+                        print("Any NaNs in valid_dist:", np.isnan(valid_dist).any())
+
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
                         #print("selected_action = ",a)
                         joint_actions[self.metaAgentID][self.agentID] = a
