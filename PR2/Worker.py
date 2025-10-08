@@ -324,6 +324,7 @@ class Worker():
                         print("valid_dist content:", valid_dist) 
                         print("Any NaNs in valid_dist:", np.isnan(valid_dist).any())
 
+
                         a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
                         #print("selected_action = ",a)
                         joint_actions[self.metaAgentID][self.agentID] = a
@@ -410,7 +411,7 @@ class Worker():
                     if episode_step_count >= max_episode_length:
                         break
 
-                    print("roop")
+                    
 
                 episode_lengths[self.metaAgentID].append(episode_step_count)
                 episode_mean_values[self.metaAgentID].append(np.nanmean(episode_values))
