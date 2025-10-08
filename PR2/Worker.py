@@ -314,7 +314,7 @@ class Worker():
                         #print("a_dist.shape =", a_dist.shape)
                         #print("a_dist[0].shape =", a_dist[0].shape)
 
-                        valid_dist = np.array([tf.gather(a_dist[0,0], validActionstensor)])
+                        valid_dist = np.array([tf.gather(a_dist[0,0], validActions)])
                         valid_dist /= np.sum(valid_dist)
 
                         #print("valid_dist=",valid_dist)
