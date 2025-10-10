@@ -80,6 +80,9 @@ else:
 
 
 def apply_gradients(global_network, gradients, optimizer, curr_episode):
+    #勾配クリッピング
+    gradients, _ = tf.clip_by_global_norm(gradients, clip_norm=40.0) 
+
     optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)

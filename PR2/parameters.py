@@ -74,6 +74,8 @@ joint_observations      =[{} for _ in range(NUM_META_AGENTS)]
 joint_rewards           = [{} for _ in range(NUM_META_AGENTS)]
 joint_done              = [{} for _ in range(NUM_META_AGENTS)]
 
+joint_isNan             =False
+
 
 env_params              = [[ [WALL_COMPONENTS[0], WALL_COMPONENTS[1]] , [OBSTACLE_DENSITY[0],OBSTACLE_DENSITY[1]]]  for _ in range(NUM_META_AGENTS)]
 

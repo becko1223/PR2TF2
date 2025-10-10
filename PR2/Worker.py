@@ -283,6 +283,9 @@ class Worker():
                     GIF_episode = int(episode_count)
                     GIF_frames = [self.env._render()]
 
+
+                joint_isNan=False
+
                 # start RL
                 self.env.finished = False
                 while not self.env.finished:
@@ -325,7 +328,8 @@ class Worker():
                         print("Any NaNs in valid_dist:", np.isnan(valid_dist).any())
 
                         if(np.isnan(valid_dist).any()):
-                            a=0
+                            a=None
+                            joint_isNan=True
                             print("nan appear!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         else:
                             a = validActions[np.random.choice(range(valid_dist.shape[1]), p=valid_dist.ravel())]
@@ -341,6 +345,11 @@ class Worker():
                     # Make A Single Agent Gather All Information
 
                     self.synchronize()
+                    if(joint_isNan):
+                        self.loss_metrics=[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]
+                        perf_metrics=[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]
+                        return perf_metrics
+
 
                     if self.agentID == 1:
                         print("step forward, episode,step:",episode_count,",", episode_step_count)

@@ -160,7 +160,7 @@ class Runner(object):
 
         for i, x in enumerate(loss_metrics):
             print(i, type(x), np.shape(x))
-        avg_loss_metrics = list(np.mean(np.array(loss_metrics), axis=0))
+        avg_loss_metrics = list(np.nanmean(np.array(loss_metrics), axis=0))
 
 
         if not is_imitation:
@@ -177,9 +177,9 @@ class Runner(object):
 
             
             perf_metrics = np.array(perf_metrics)
-            avg_perf_metrics = np.mean(perf_metrics[:, :4], axis=0)
-            episode_reward = np.sum(perf_metrics[:,4])
-            targets_done = np.sum(perf_metrics[:, 5])
+            avg_perf_metrics = np.nanmean(perf_metrics[:, :4], axis=0)
+            episode_reward = np.nansum(perf_metrics[:,4])
+            targets_done = np.nansum(perf_metrics[:, 5])
             avg_perf_metrics = list(avg_perf_metrics) + [episode_reward, targets_done]            
             all_metrics = avg_loss_metrics + avg_perf_metrics
         else:
