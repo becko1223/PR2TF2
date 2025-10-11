@@ -39,10 +39,10 @@ class Worker():
             lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
             # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
             input_signature=[
-                tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float16),  # obs (B, S, D, H, W)
-                tf.TensorSpec(shape=[1, None, 3], dtype=tf.float16),          # goal (B, S, F)
-                tf.TensorSpec(shape=[1, 512], dtype=tf.float16),              # h_state (B, RNN_SIZE)
-                tf.TensorSpec(shape=[1, 512], dtype=tf.float16),              # c_state (B, RNN_SIZE)
+                tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.floa32),  # obs (B, S, D, H, W)
+                tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
             ]
         )
         
@@ -74,8 +74,8 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
-        h_state = tf.zeros((1,512),dtype=tf.float16)
-        c_state = tf.zeros((1,512),dtype=tf.float16)
+        h_state = tf.zeros((1,512),dtype=tf.float32)
+        c_state = tf.zeros((1,512),dtype=tf.float32)
 
 
         """
@@ -112,14 +112,14 @@ class Worker():
         with tf.GradientTape() as tape:
                 obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
-                obs=tf.cast(obs,dtype=tf.float16)
+                #obs=tf.cast(obs,dtype=tf.float16)
                 goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
-                goals=tf.cast(goals,dtype=tf.float16)
+                #goals=tf.cast(goals,dtype=tf.float16)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
-                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float16)
+                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
 
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
@@ -171,18 +171,18 @@ class Worker():
         advantages = discount(advantages, gamma)
 
 
-        actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float16)
+        actions_onehot=tf.one_hot(actions, a_size, dtype=tf.float32)
         
 
         with tf.GradientTape() as tape:
             print("xshape: ",np.stack(observations).shape)
             obs_array = tf.expand_dims(np.stack(observations) ,0)
             obs_array=tf.transpose(obs_array,[0,1,3,4,2])
-            obs_array = tf.cast(obs_array, dtype=tf.float16)
+            obs_array = tf.cast(obs_array, dtype=tf.float32)
             goals_array=tf.expand_dims(np.stack(goals),0)
-            goals_array = tf.cast(goals_array, dtype=tf.float16)
-            with self.inferenceLock:
-                policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
+            goals_array = tf.cast(goals_array, dtype=tf.float32)
+            
+            policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
@@ -257,7 +257,7 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            rnn_state = [tf.zeros((1,RNN_SIZE),dtype=tf.float16),tf.zeros((1,RNN_SIZE),tf.float16)]
+            rnn_state = [tf.zeros((1,RNN_SIZE),dtype=tf.float32),tf.zeros((1,RNN_SIZE),tf.float32)]
             rnn_state0 = rnn_state
 
             self.synchronize()  # synchronize starting time of the threads
@@ -291,9 +291,9 @@ class Worker():
                 while not self.env.finished:
                     obs=tf.expand_dims(tf.expand_dims(s[0],0),0)
                     obs=tf.transpose(obs,[0,1,3,4,2])
-                    obs = tf.cast(obs, dtype=tf.float16)
+                    obs = tf.cast(obs, dtype=tf.float32)
                     goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
-                    goal=tf.cast(goal,dtype=tf.float16)
+                    goal=tf.cast(goal,dtype=tf.float32)
                     #print("obs:",s[0].shape)
                     #with self.inferenceLock:
                     a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
@@ -404,9 +404,9 @@ class Worker():
                             #print("s1value!!!!!!")
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
                             ob=tf.transpose(obs,[0,1,3,4,2])
-                            ob = tf.cast(obs, dtype=tf.float16)
+                            #ob = tf.cast(obs, dtype=tf.float16)
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
-                            goal=tf.cast(goal,dtype=tf.float16)
+                            #goal=tf.cast(goal,dtype=tf.float16)
                             #print("lastob:",ob.shape)
                             #print("lastgoal",goal.shape)
                             #with self.inferenceLock:
