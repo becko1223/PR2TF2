@@ -112,9 +112,9 @@ class Worker():
         with tf.GradientTape() as tape:
                 obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
-                #obs=tf.cast(obs,dtype=tf.float16)
+                obs=tf.cast(obs,dtype=tf.float32)
                 goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
-                #goals=tf.cast(goals,dtype=tf.float16)
+                goals=tf.cast(goals,dtype=tf.float32)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 h_state=h_states[-1]
@@ -404,9 +404,9 @@ class Worker():
                             #print("s1value!!!!!!")
                             ob=tf.expand_dims(tf.expand_dims(s[0],0),0)
                             ob=tf.transpose(obs,[0,1,3,4,2])
-                            #ob = tf.cast(obs, dtype=tf.float16)
+                            ob = tf.cast(obs, dtype=tf.float32)
                             goal=tf.expand_dims(tf.expand_dims(s[1],0),0)
-                            #goal=tf.cast(goal,dtype=tf.float16)
+                            goal=tf.cast(goal,dtype=tf.float32)
                             #print("lastob:",ob.shape)
                             #print("lastgoal",goal.shape)
                             #with self.inferenceLock:
