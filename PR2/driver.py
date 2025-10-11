@@ -43,6 +43,7 @@ if gpus:
         
         fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
         for gpu in gpus:
+            '''
             tf.config.set_logical_device_configuration(
                 gpu,
                 #[tf.config.experimental.VirtualDeviceConfiguration(memory_limit=fraction * tf.config.experimental.get_device_details(gpu)['memory_size'])]
@@ -50,7 +51,8 @@ if gpus:
 
                 [tf.config.LogicalDeviceConfiguration(memory_limit=fraction * total_memory)]
             )
-        
+            '''
+            tf.config.experimental.set_memory_growth(gpu, True)
       
         
         
