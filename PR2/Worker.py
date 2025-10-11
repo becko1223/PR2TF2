@@ -181,8 +181,9 @@ class Worker():
             obs_array = tf.cast(obs_array, dtype=tf.float32)
             goals_array=tf.expand_dims(np.stack(goals),0)
             goals_array = tf.cast(goals_array, dtype=tf.float32)
-            
-            policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
+            with self.inferenceLock:
+
+                policy,policy_sig,value,state_h,state_c=self.wrapped_local_AC(obs_array,goals_array,rnn_state0[0],rnn_state0[1])
             responsible_outputs = tf.reduce_sum(policy * actions_onehot, axis=-1)
 
             #train_valueはinvalid actionをとったかどうかのラベル
