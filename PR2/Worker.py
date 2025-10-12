@@ -109,7 +109,7 @@ class Worker():
         rollout_actions = np.stack(rollout[:, 2])
 
 
-        """
+        
         ミニバッチ版
         accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
         rollout_length = np.stack(rollout[:, 0]).shape[0]
@@ -158,7 +158,7 @@ class Worker():
 
                 i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
         
-        
+        """
 
         return [total_loss], i_grads
 
