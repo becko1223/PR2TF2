@@ -92,7 +92,11 @@ class Runner(object):
 
         trainer = None
         print("runner dummy")
-        self.localNetwork = createmodel()
+        if self.metaAgentID < NUM_IL_META_AGENTS:
+             with tf.device("/cpu:0"): # CPUでのモデル構築を強制
+                 self.localNetwork = createmodel()
+        else:
+             self.localNetwork = createmodel()
        
        
         
