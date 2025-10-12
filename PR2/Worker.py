@@ -77,6 +77,10 @@ class Worker():
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
+        rollout_obs = np.stack(rollout[:, 0])
+        rollout_goals = np.stack(rollout[:, 1])
+        rollout_actions = np.stack(rollout[:, 2])
+
 
         """
         ミニバッチ版
@@ -110,11 +114,13 @@ class Worker():
 
 
         with tf.GradientTape() as tape:
+                obs = tf.convert_to_tensor(rollout_obs, dtype=tf.float32)
+                goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
+                
+
                 obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
-                obs=tf.cast(obs,dtype=tf.float32)
                 goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
-                goals=tf.cast(goals,dtype=tf.float32)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 h_state=h_states[-1]

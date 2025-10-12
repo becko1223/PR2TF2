@@ -61,17 +61,7 @@ class Runner(object):
             tf.config.set_visible_devices([], 'GPU')
             self.coord = None
 
-            cpus = tf.config.list_physical_devices('CPU')
-            if cpus:
-                try:
-                    # CPUメモリを制限する（例: 2GB）
-                    # 50GB環境で2GBは小さいように見えるが、クラッシュしているため試す価値あり
-                    tf.config.set_logical_device_configuration(
-                        cpus[0],
-                        [tf.config.LogicalDeviceConfiguration(memory_limit=2048)]
-                    )
-                except RuntimeError as e:
-                    print(f"CPU config error: {e}")
+            
 
             
             
