@@ -101,7 +101,12 @@ class Worker():
 
         
         #ミニバッチ版
-        accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
+        accumulated_grads = []
+        for v in self.local_AC.trainable_variables:
+            # 変数vの形状を取得し、CPU上でNumPyゼロ配列を作成
+            np_zeros = np.zeros(v.shape, dtype=np.float32)
+            # それをTensorFlowの定数テンソルとしてリストに追加
+            accumulated_grads.append(tf.constant(np_zeros))
         rollout_length = np.stack(rollout[:, 0]).shape[0]
         BATCH_SIZE = 8
         total_loss=0.0
