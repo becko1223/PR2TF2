@@ -112,8 +112,7 @@ class Worker():
         total_loss=0.0
         total_batches=0
 
-        obs = tf.convert_to_tensor(rollout_obs, dtype=tf.float32)
-        goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
+      
         
 
         
@@ -121,13 +120,17 @@ class Worker():
 
         for start_idx in range(0, rollout_length, BATCH_SIZE):
             end_idx = min(start_idx + BATCH_SIZE, rollout_length)
+
+
+            batch_obs = tf.convert_to_tensor(rollout_obs[start_idx:end_idx], dtype=tf.float32)
+            batch_goals = tf.convert_to_tensor(rollout_goals[start_idx:end_idx], dtype=tf.float32)
         
             with tf.GradientTape() as tape:
                 
 
 
 
-                policy,_,_,h_states,c_states=self.wrapped_local_AC((tf.expand_dims(obs[start_idx:end_idx]),0),tf.expand_dims(goals[start_idx:end_idx],0),h_state,c_state)
+                policy,_,_,h_states,c_states=self.wrapped_local_AC(tf.expand_dims(batch_obs,0),tf.expand_dims(batch_goals,0),h_state,c_state)
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
