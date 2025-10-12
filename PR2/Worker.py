@@ -118,6 +118,7 @@ class Worker():
 
 
             batch_obs = tf.convert_to_tensor(rollout_obs[start_idx:end_idx], dtype=tf.float32)
+            batch_obs=tf.transpose(batch_obs,[0,2,3,1])
             batch_goals = tf.convert_to_tensor(rollout_goals[start_idx:end_idx], dtype=tf.float32)
         
             with tf.GradientTape() as tape:
