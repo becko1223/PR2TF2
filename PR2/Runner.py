@@ -64,11 +64,16 @@ class Runner(object):
             cpus = tf.config.list_physical_devices('CPU')
             if cpus:
                 try:
-                    # 2. CPUのメモリ成長 (必要に応じてメモリを割り当てる) を設定
-                    #    これにより、起動時の全メモリ確保を防ぐ
-                    tf.config.experimental.set_memory_growth(cpus[0], True)
+                    # CPUメモリを制限する（例: 2GB）
+                    # 50GB環境で2GBは小さいように見えるが、クラッシュしているため試す価値あり
+                    tf.config.set_logical_device_configuration(
+                        cpus[0],
+                        [tf.config.LogicalDeviceConfiguration(memory_limit=2048)]
+                    )
                 except RuntimeError as e:
-                    print(e)
+                    print(f"CPU config error: {e}")
+
+            
             
 
         else:
