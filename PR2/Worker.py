@@ -99,7 +99,7 @@ class Worker():
         rollout_actions = np.stack(rollout[:, 2])
 
 
-        """
+        
         #ミニバッチ版
         accumulated_grads = [tf.zeros_like(v) for v in self.local_AC.trainable_variables]
         rollout_length = np.stack(rollout[:, 0]).shape[0]
@@ -107,12 +107,22 @@ class Worker():
         total_loss=0.0
         total_batches=0
 
+        obs = tf.convert_to_tensor(rollout_obs, dtype=tf.float32)
+        goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
+        
+
+        
+
 
         for start_idx in range(0, rollout_length, BATCH_SIZE):
             end_idx = min(start_idx + BATCH_SIZE, rollout_length)
         
             with tf.GradientTape() as tape:
-                policy,_,_,h_states,c_states=self.wrapped_local_AC([tf.expand_dims(np.stack(rollout[start_idx:end_idx, 0]),0),tf.expand_dims(np.stack(rollout[start_idx:end_idx, 1]),0),h_state,c_state])
+                
+
+
+
+                policy,_,_,h_states,c_states=self.wrapped_local_AC((tf.expand_dims(obs[start_idx:end_idx]),0),tf.expand_dims(goals[start_idx:end_idx],0),h_state,c_state)
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
@@ -148,7 +158,7 @@ class Worker():
 
                 i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
         
-        
+        """
 
         return [total_loss], i_grads
 
