@@ -281,7 +281,7 @@ class RLRunner(Runner):
         super().__init__(metaAgentID)
 
 
-@ray.remote(num_cpus=1, num_gpus=0,memory=12_000_000_000)
+@ray.remote(num_cpus=1, num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
