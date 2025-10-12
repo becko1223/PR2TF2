@@ -60,6 +60,15 @@ class Runner(object):
         if self.metaAgentID < NUM_IL_META_AGENTS:
             tf.config.set_visible_devices([], 'GPU')
             self.coord = None
+
+            cpus = tf.config.list_physical_devices('CPU')
+            if cpus:
+                try:
+                    # 2. CPUのメモリ成長 (必要に応じてメモリを割り当てる) を設定
+                    #    これにより、起動時の全メモリ確保を防ぐ
+                    tf.config.experimental.set_memory_growth(cpus[0], True)
+                except RuntimeError as e:
+                    print(e)
             
 
         else:
