@@ -13,8 +13,8 @@ from parameters import *
 import random
 
 
-RAY_OBJECT_STORE_MB = 10000 # 例: 10GB (10000MB)を確保
-ray.init(num_gpus=1, object_store_memory=RAY_OBJECT_STORE_MB * 1024 * 1024) 
+
+ray.init(num_gpus=1) 
 
 tf.keras.backend.set_floatx('float32')
 
