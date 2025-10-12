@@ -35,6 +35,32 @@ class Worker():
         self.local_AC = localNetwork
 
 
+        if self.metaAgentID < NUM_IL_META_AGENTS: # imitationRunnerの場合
+            with tf.device("/cpu:0"):
+                self.wrapped_local_AC = tf.function(
+                    lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
+                    # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
+                    input_signature=[
+                        tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, D, H, W)
+                        tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                        tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                        tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+                    ]
+                )
+        else: # RLRunnerの場合
+            self.wrapped_local_AC = tf.function(
+                lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
+                # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
+                input_signature=[
+                    tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, D, H, W)
+                    tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                    tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                    tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+                ]
+            )
+    
+
+
         self.wrapped_local_AC = tf.function(
             lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
             # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
@@ -68,6 +94,7 @@ class Worker():
 
 
     def calculateImitationGradient(self, rollout, episode_count):
+        
         rollout = np.array(rollout, dtype=object)
         step=rollout.shape[0]
         # we calculate the loss differently for imitation
@@ -95,7 +122,7 @@ class Worker():
             end_idx = min(start_idx + BATCH_SIZE, rollout_length)
         
             with tf.GradientTape() as tape:
-                policy,_,_,h_states,c_states=self.local_AC([tf.expand_dims(np.stack(rollout[start_idx:end_idx, 0]),0),tf.expand_dims(np.stack(rollout[start_idx:end_idx, 1]),0),h_state,c_state])
+                policy,_,_,h_states,c_states=self.wrapped_local_AC([tf.expand_dims(np.stack(rollout[start_idx:end_idx, 0]),0),tf.expand_dims(np.stack(rollout[start_idx:end_idx, 1]),0),h_state,c_state])
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
