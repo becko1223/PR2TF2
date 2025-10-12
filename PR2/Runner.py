@@ -206,12 +206,11 @@ class Runner(object):
         agentID=None
         groupLock = None
 
-        worker_network=createmodel()
-        worker_network.set_weights(global_weights)
+        
 
 
         worker = Worker(self.metaAgentID, agentID, workersPerMetaAgent,
-                        self.env, worker_network,
+                        self.env, self.localNetwork,
                         None, None,learningAgent=True)
 
         
