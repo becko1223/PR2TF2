@@ -218,6 +218,7 @@ class Worker():
 
         gradients = []
         losses = []
+        print("calc loss in imitation")
         for i in range(self.num_workers):
             train_buffer = rollouts[i]
             
