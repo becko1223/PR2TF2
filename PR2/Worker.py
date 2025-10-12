@@ -35,7 +35,7 @@ class Worker():
         self.local_AC = localNetwork
 
 
-        if self.metaAgentID < NUM_IL_META_AGENTS: # imitationRunnerの場合
+        if metaAgentID < NUM_IL_META_AGENTS: # imitationRunnerの場合
             with tf.device("/cpu:0"):
                 self.wrapped_local_AC = tf.function(
                     lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
