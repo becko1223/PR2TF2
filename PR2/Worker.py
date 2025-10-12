@@ -101,12 +101,7 @@ class Worker():
 
         
         #ミニバッチ版
-        accumulated_grads = []
-        for v in self.local_AC.trainable_variables:
-            # 変数vの形状を取得し、CPU上でNumPyゼロ配列を作成
-            np_zeros = np.zeros(v.shape, dtype=np.float32)
-            # それをTensorFlowの定数テンソルとしてリストに追加
-            accumulated_grads.append(tf.constant(np_zeros))
+        accumulated_grads = None
         rollout_length = np.stack(rollout[:, 0]).shape[0]
         BATCH_SIZE = 8
         total_loss=0.0
@@ -139,7 +134,10 @@ class Worker():
                 loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
             grads = tape.gradient(loss,self.local_AC.trainable_variables)
-            accumulated_grads = [tf.add(acc_g, g) for acc_g, g in zip(accumulated_grads, grads)]
+            if accumulated_grads is None:
+                accumulated_grads = grads
+            else:
+                accumulated_grads = [tf.add(acc_g, g) for acc_g, g in zip(accumulated_grads, grads)]
             total_loss+=loss
             total_batches+=1
         i_grads= [g / total_batches for g in accumulated_grads]

@@ -61,22 +61,7 @@ class Runner(object):
             tf.config.set_visible_devices([], 'GPU')
             self.coord = None
 
-            cpus = tf.config.list_physical_devices('CPU')
-            if cpus:
-                try:
-                    # Rayで8GBを確保しているため、TFに7GB程度を許可する
-                    # memory_limit は MB 単位
-                    memory_limit_mb = 7000 
-                    
-                    tf.config.set_logical_device_configuration(
-                        cpus[0],
-                        [tf.config.LogicalDeviceConfiguration(memory_limit=memory_limit_mb)]
-                    )
-                    # メモリの増殖（growth）設定も併用すると、最初は少なく確保し、必要に応じて増やす
-                    # ただし、今回は明示的な制限が目的なので、LogicalDeviceConfigurationを優先
-                    
-                except RuntimeError as e:
-                    print(f"Could not set CPU memory limit: {e}")
+            
 
             
 
