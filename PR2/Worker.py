@@ -118,9 +118,9 @@ class Worker():
                 goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
                 
 
-                obs=tf.expand_dims(np.stack(rollout[:, 0]),0)
+                obs=tf.expand_dims(obs,0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
-                goals=tf.expand_dims(np.stack(rollout[:, 1]),0)
+                goals=tf.expand_dims(goals,0)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 h_state=h_states[-1]
