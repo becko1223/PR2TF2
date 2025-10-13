@@ -90,7 +90,7 @@ class Worker():
         # we calculate the loss differently for imitation
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
-        B, S = rollout.shape[0], rollout.shape[1] 
+        S = rollout.shape[1] 
 
         rollout_obs_list = rollout[:,:, 0].flatten()
         rollout_goals_list = rollout[:,:, 1].flatten()
@@ -175,11 +175,11 @@ class Worker():
         rollout_goals = np.stack(processed_goals).astype(np.float32)
         rollout_actions = np.stack(processed_actions).astype(np.int32)
 
-        rollout_obs = rollout_obs.reshape((B, S) + rollout_obs.shape[1:])
-        rollout_goals = rollout_goals.reshape((B, S) + rollout_goals.shape[1:])
-        rollout_actions = rollout_actions.reshape((B, S) + rollout_actions.shape[1:])
+        rollout_obs = rollout_obs.reshape((NUM_THREADS, S) + rollout_obs.shape[1:])  #[b,s,c,h,w]
+        rollout_goals = rollout_goals.reshape((NUM_THREADS, S) + rollout_goals.shape[1:])
+        rollout_actions = rollout_actions.reshape((NUM_THREADS, S) + rollout_actions.shape[1:])
 
-        rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2))
+        rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2)) #[c,h,w] to [h,w,c]
         
         
         print("gradient calc")
