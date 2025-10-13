@@ -177,7 +177,7 @@ class Worker():
 
         rollout_obs = rollout_obs.reshape((B, S) + rollout_obs.shape[1:])
         rollout_goals = rollout_goals.reshape((B, S) + rollout_goals.shape[1:])
-        rollout_actions = rollout_obs.reshape((B, S) + rollout_actions.shape[1:])
+        rollout_actions = rollout_actions.reshape((B, S) + rollout_actions.shape[1:])
         
         
         print("gradient calc")
