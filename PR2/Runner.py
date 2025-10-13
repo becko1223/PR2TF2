@@ -58,8 +58,11 @@ class Runner(object):
 
         # first `NUM_IL_META_AGENTS` only use IL and don't need gpu/tensorflow
         if self.metaAgentID < NUM_IL_META_AGENTS:
-            #tf.config.set_visible_devices([], 'GPU')
+            tf.config.set_visible_devices([], 'GPU')
             self.coord = None
+
+
+            """
             gpus = tf.config.list_physical_devices('GPU')
             if gpus:
                 try:
@@ -80,6 +83,9 @@ class Runner(object):
                     
                 except RuntimeError as e:
                     print(e)
+
+
+            """
 
         else:
             # set up tf session
@@ -112,7 +118,7 @@ class Runner(object):
         trainer = None
         print("runner dummy")
         if self.metaAgentID < NUM_IL_META_AGENTS:
-             #with tf.device("/cpu:0"): # CPUでのモデル構築を強制
+             with tf.device("/cpu:0"): # CPUでのモデル構築を強制
                  self.localNetwork = createmodel()
         else:
              self.localNetwork = createmodel()
@@ -236,8 +242,8 @@ class Runner(object):
                         self.env, self.localNetwork,
                         None, None,learningAgent=True)
 
-        #with tf.device("/cpu:0"):
-        gradients, imitation_loss = worker.imitation_learning_only(episodeNumber)
+        with tf.device("/cpu:0"):
+            gradients, imitation_loss = worker.imitation_learning_only(episodeNumber)
         mean_imitation_loss = imitation_loss
 
         is_imitation = True
@@ -294,13 +300,13 @@ class Runner(object):
 import multiprocessing
 cpu=multiprocessing.cpu_count()
 
-@ray.remote(num_cpus=1, num_gpus= 1.0 / (NUM_META_AGENTS+ 1))
+@ray.remote(num_cpus=1, num_gpus= 1.0 / (NUM_META_AGENTS-NUM_IL_META_AGENTS+ 1))
 class RLRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
 
 
-@ray.remote(num_cpus=1, num_gpus=1.0 / (NUM_META_AGENTS+ 1))
+@ray.remote(num_cpus=1, num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)

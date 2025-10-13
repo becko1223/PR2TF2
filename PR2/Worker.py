@@ -38,7 +38,7 @@ class Worker():
 
 
         if metaAgentID < NUM_IL_META_AGENTS: # imitationRunnerの場合
-            #with tf.device("/cpu:0"):
+            with tf.device("/cpu:0"):
                 self.wrapped_local_AC = tf.function(
                     lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
                     # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
