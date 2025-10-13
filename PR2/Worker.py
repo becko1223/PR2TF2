@@ -92,6 +92,12 @@ class Worker():
         # [o[0],o[1],optimal_actions]
 
         rollout_obs_list = rollout[:,:, 0]
+        rollout_goals_list = rollout[:,:, 1]
+        rollout_actions_list = rollout[:,:, 2]
+
+
+        """
+        #ロールアウトデバッグ調査
 
         # リストの要素数を確認 (問題なし: 8 * 51 = 408個 の要素が出力されるはず)
         print("rollout_obs_list length:", len(rollout_obs_list.flatten())) 
@@ -149,15 +155,21 @@ class Worker():
             print(f"Error: {e}")
             print("This confirms a fundamental shape/content mismatch that MUST be debugged at the data collection stage.")
             raise # 再度エラーを発生させる
+            
+
+
+        """
 
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
-        rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[b,s,c,h,w]
-        rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
-        rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
+        #rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[b,s,c,h,w]
+        #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
+        #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-
+        rollout_obs = np.stack([obs for obs in rollout_obs_list]).astype(np.float32)
+        rollout_goals = np.stack([goals for goals in rollout_goals_list]).astype(np.float32)
+        rollout_actions = np.stack([actions for actions in rollout_actions_list]).astype(np.int32)
         
         
         print("gradient calc")
