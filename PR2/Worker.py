@@ -215,14 +215,14 @@ class Worker():
         gradients = []
         losses = []
         print("calc loss in imitation")
-        for i in range(0):
-            print("imi roop")
-            train_buffer = rollouts[i]
-            
-            
-            imitation_loss, grads = self.calculateImitationGradient(rollouts, episode_count)
+        #for i in range(0):
+        #print("imi roop")
+        train_buffer = rollouts[i]
+        
+        
+        imitation_loss, grads = self.calculateImitationGradient(rollouts, episode_count)
 
-            gradients.append(grads)
+        gradients.append(grads)
             
 
         return gradients, imitation_loss
