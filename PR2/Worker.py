@@ -119,7 +119,7 @@ class Worker():
         # これにより、rollout_obs_list_float32という一時的な大規模リストの作成を回避
         for i, obs in enumerate(rollout_obs_list):
             rollout_obs[i] = np.asarray(obs, dtype=np.float32) 
-            
+
 
         del rollout
         gc.collect()
@@ -196,7 +196,7 @@ class Worker():
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-        rollout_obs = np.stack(rollout_obs_list_float32).astype(np.float32)
+        #rollout_obs = np.stack(rollout_obs_list_float32).astype(np.float32)
         rollout_goals = np.stack(rollout_goals_list_float32).astype(np.float32)
         rollout_actions = np.stack(rollout_actions_list).astype(np.int32)
 
