@@ -207,6 +207,7 @@ class Worker():
                     print("rollout_obs[i].shape before expand:", rollout_obs[i].shape)
                     
                     time.sleep(3)
+                    gc.collect()
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
                 
