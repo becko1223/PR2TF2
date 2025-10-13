@@ -41,7 +41,7 @@ class Worker():
                     lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
                     # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
                     input_signature=[
-                        tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, C, H, W)
+                        tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
                         tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
                         tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
                         tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
@@ -52,7 +52,7 @@ class Worker():
                 lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
                 # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
                 input_signature=[
-                    tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, C, H, W)
+                    tf.TensorSpec(shape=[1, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
                     tf.TensorSpec(shape=[1, None, 3], dtype=tf.float32),          # goal (B, S, F)
                     tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
                     tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
