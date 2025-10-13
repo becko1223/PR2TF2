@@ -186,6 +186,15 @@ class Worker():
         grads=[]
         total_loss=0
 
+
+         #実験的にこの位置でモデル動かしたら動いてくれる。ここより後だとメモリエラーが出る。
+        dummy_obs=tf.zeros((1,1,11,11,11))
+        dummy_goals=tf.zeros((1,1,3))
+        dummy_hstate=tf.zeros((1,512))
+        dummy_cstate=(tf.zeros((1,512)))
+        policy,_,_,h_states,c_states=self.wrapped_local_AC(dummy_obs,dummy_goals,dummy_hstate,dummy_cstate)
+        print("dummy_policy",policy)
+
         for i in range(NUM_THREADS):
 
             with tf.GradientTape() as tape:
@@ -311,13 +320,7 @@ class Worker():
        
         print("imi worker")
         self.env._reset()
-         #実験的にこの位置でモデル動かしたら動いてくれる。ここより後だとメモリエラーが出る。
-        dummy_obs=tf.zeros((1,1,11,11,11))
-        dummy_goals=tf.zeros((1,1,3))
-        dummy_hstate=tf.zeros((1,512))
-        dummy_cstate=(tf.zeros((1,512)))
-        policy,_,_,h_states,c_states=self.wrapped_local_AC(dummy_obs,dummy_goals,dummy_hstate,dummy_cstate)
-        print("dummy_policy",policy)
+        
         rollouts, targets_done = self.parse_path(episode_count)
 
 
