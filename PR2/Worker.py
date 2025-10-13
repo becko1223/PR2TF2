@@ -344,6 +344,7 @@ class Worker():
                     #with self.inferenceLock:
                     a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[h_state,c_state]
+                    print("rnn_state shape",rnn_state.shape)
 
                     #print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
 
