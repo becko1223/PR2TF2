@@ -86,7 +86,7 @@ class Worker():
     def calculateImitationGradient(self, rollout, episode_count):
         
         rollout = np.array(rollout, dtype=object)
-        step=rollout.shape[0]
+        print("rollout shape", rollout.shape)
         # we calculate the loss differently for imitation
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
@@ -94,7 +94,7 @@ class Worker():
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
-        rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[s,c,h,w]
+        rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[b,s,c,h,w]
         rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
