@@ -102,6 +102,36 @@ class Worker():
         if isinstance(rollout_obs_list[0, 0], np.ndarray):
             print("Shape of first element:", rollout_obs_list[0, 0].shape)
 
+
+
+
+        rollout_obs_list = rollout[:,:, 0].flatten()
+
+        # 全要素をチェック
+        for i, obs in enumerate(rollout_obs_list):
+            # obsがnumpy配列であることを確認（dtype=objectのため必須）
+            if isinstance(obs, np.ndarray):
+                current_shape = obs.shape
+            elif isinstance(obs, list):
+                # リストの場合は、要素をnp.arrayに変換して形状を確認するなどの処理が必要になる場合があります
+                # ここでは、リストとして格納されていること自体が問題である可能性も考慮
+                current_shape = f"List: {len(obs)} elements"
+            else:
+                current_shape = f"Unknown Type: {type(obs)}"
+
+            # 形状が期待値と異なる、または空配列の場合
+            if current_shape != (11, 11, 11):
+                # (11, 11, 11)以外の要素を見つけた！
+                print(f"\n--- ERROR DETECTED ---")
+                print(f"Index: {i}")
+                print(f"Shape: {current_shape}")
+                # バッチとシーケンスのインデックスに変換（デバッグ用）
+                b = i // rollout.shape[1] # バッチインデックス (0-7)
+                s = i % rollout.shape[1]  # シーケンスインデックス (0-64)
+                print(f"Batch Index (B): {b}, Step Index (S): {s}")
+                print(f"First 10 elements: {obs.flatten()[:10]}")
+                print(f"--- END ERROR ---")
+
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
