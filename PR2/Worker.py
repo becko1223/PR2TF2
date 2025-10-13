@@ -90,13 +90,14 @@ class Worker():
         # we calculate the loss differently for imitation
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
+        B, S = rollout.shape[0], rollout.shape[1] 
 
-        rollout_obs_list = rollout[:,:, 0]
-        rollout_goals_list = rollout[:,:, 1]
-        rollout_actions_list = rollout[:,:, 2]
+        rollout_obs_list = rollout[:,:, 0].flatten()
+        rollout_goals_list = rollout[:,:, 1].flatten()
+        rollout_actions_list = rollout[:,:, 2].flatten()
 
 
-        
+        """
         #ロールアウトデバッグ調査
 
         # リストの要素数を確認 (問題なし: 8 * 51 = 408個 の要素が出力されるはず)
@@ -158,7 +159,7 @@ class Worker():
             
 
 
-        
+        """
 
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
@@ -173,6 +174,10 @@ class Worker():
         rollout_obs = np.stack(processed_obs).astype(np.float32)
         rollout_goals = np.stack(processed_goals).astype(np.float32)
         rollout_actions = np.stack(processed_actions).astype(np.int32)
+
+        rollout_obs = rollout_obs.reshape((B, S) + rollout_obs.shape[1:])
+        rollout_goals = rollout_goals.reshape((B, S) + rollout_goals.shape[1:])
+        rollout_actions = rollout_obs.reshape((B, S) + rollout_actions.shape[1:])
         
         
         print("gradient calc")
