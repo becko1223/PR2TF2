@@ -167,9 +167,12 @@ class Worker():
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-        rollout_obs = np.stack([obs for obs in rollout_obs_list]).astype(np.float32)
-        rollout_goals = np.stack([goals for goals in rollout_goals_list]).astype(np.float32)
-        rollout_actions = np.stack([actions for actions in rollout_actions_list]).astype(np.int32)
+        processed_obs=[obs for obs in rollout_obs_list]
+        processed_goals=[goals for goals in rollout_goals_list]
+        processed_actions=[actions for actions in rollout_actions_list]
+        rollout_obs = np.stack(processed_obs).astype(np.float32)
+        rollout_goals = np.stack(processed_goals).astype(np.float32)
+        rollout_actions = np.stack(processed_actions).astype(np.int32)
         
         
         print("gradient calc")
