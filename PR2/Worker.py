@@ -100,54 +100,7 @@ class Worker():
 
 
         
-        #ミニバッチ版
-        accumulated_grads = None
-        rollout_length = np.stack(rollout[:, 0]).shape[0]
-        STEP_SIZE = 8
-        total_loss=0.0
-        total_batches=0
-
-      
         
-
-        
-
-
-        for start_idx in range(0, rollout_length, STEP_SIZE):
-            end_idx = min(start_idx + STEP_SIZE, rollout_length)
-
-
-            batch_obs = tf.convert_to_tensor(rollout_obs[start_idx:end_idx], dtype=tf.float32)
-            batch_obs=tf.expand_dims(batch_obs,0)
-            #(C,H,W) to (H,W,C)
-            batch_obs=tf.transpose(batch_obs,[0,1,3,4,2])
-            batch_goals = tf.convert_to_tensor(rollout_goals[start_idx:end_idx], dtype=tf.float32)
-            batch_goals=tf.expand_dims(batch_goals,0)
-        
-            with tf.GradientTape() as tape:
-                
-
-
-                
-                policy,_,_,h_new_state,c_new_state=self.local_AC([batch_obs,batch_goals,h_state,c_state])
-
-                h_state=h_new_state
-                c_state=c_new_state
-                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[start_idx:end_idx, 2]),0), a_size, dtype=tf.float32)
-
-                loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
-
-            grads = tape.gradient(loss,self.local_AC.trainable_variables)
-            if accumulated_grads is None:
-                accumulated_grads = grads
-            else:
-                accumulated_grads = [tf.add(acc_g, g) for acc_g, g in zip(accumulated_grads, grads)]
-            total_loss+=loss
-            total_batches+=1
-        i_grads= [g / total_batches for g in accumulated_grads]
-        total_loss=total_loss/total_batches
-
-        """
 
 
         with tf.GradientTape() as tape:
@@ -160,15 +113,14 @@ class Worker():
                 goals=tf.expand_dims(goals,0)
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
-                h_state=h_states[-1]
-                c_state=c_states[-1]
+              
                 optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
 
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
                 i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
         
-        """
+        
 
         return [total_loss], i_grads
 
