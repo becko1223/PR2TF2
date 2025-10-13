@@ -317,6 +317,7 @@ class Worker():
         dummy_hstate=tf.zeros((1,512))
         dummy_cstate=(tf.zeros((1,512)))
         policy,_,_,h_states,c_states=self.wrapped_local_AC(dummy_obs,dummy_goals,dummy_hstate,dummy_cstate)
+        print("dummy_policy",policy)
         rollouts, targets_done = self.parse_path(episode_count)
 
 
