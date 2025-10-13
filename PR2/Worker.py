@@ -220,10 +220,11 @@ class Worker():
                     
 
                     time.sleep(3)
-                    total_loss+=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
+                    loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
-                    i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
-                    grads.append(i_grads)
+                    i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
+            total_loss+=loss
+            grads.append(i_grads)
         
         
 
@@ -309,6 +310,7 @@ class Worker():
         return [value_loss, policy_loss, valid_loss, entropy, grad_norms, var_norms], grads
 
     def imitation_learning_only(self, episode_count):
+        #実験的にこの位置でモデル動かしたら動いてくれる。ここより後だとメモリエラーが出る。
         dummy_obs=tf.zeros((1,1,11,11,11))
         dummy_goals=tf.zeros((1,1,3))
         dummy_hstate=tf.zeros((1,512))
