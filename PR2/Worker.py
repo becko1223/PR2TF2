@@ -178,6 +178,8 @@ class Worker():
         rollout_obs = rollout_obs.reshape((B, S) + rollout_obs.shape[1:])
         rollout_goals = rollout_goals.reshape((B, S) + rollout_goals.shape[1:])
         rollout_actions = rollout_actions.reshape((B, S) + rollout_actions.shape[1:])
+
+        rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2))
         
         
         print("gradient calc")
@@ -187,8 +189,6 @@ class Worker():
                 goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
                 
 
-                
-                obs=tf.transpose(obs,[0,1,3,4,2])
 
                 import time #出力文確認用
                 
