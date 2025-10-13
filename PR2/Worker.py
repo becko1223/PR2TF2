@@ -342,6 +342,20 @@ class Worker():
     def imitation_learning_only(self, episode_count):
        
         print("imi worker")
+
+
+        try:
+            import resource
+            # RLIMIT_AS (Address Space)の上限を出力
+            soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+            print(f"RLIMIT_AS (Soft Limit): {soft / (1024**3):.2f} GB")
+            print(f"RLIMIT_AS (Hard Limit): {hard / (1024**3):.2f} GB")
+        except Exception as e:
+            print(f"Could not check RLIMIT_AS: {e}")
+
+
+
+
         self.env._reset()
 
          #実験的にこの位置でモデル動かしたら動いてくれる。parse_pathより後だとメモリエラーが出る。
