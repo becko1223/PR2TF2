@@ -41,10 +41,10 @@ class Worker():
                     lambda obs, goal, h, c: self.local_AC([obs, goal, h, c]),
                     # tf.function のトレースが毎回再実行されないように、入力の型と形状を明示
                     input_signature=[
-                        tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
-                        tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
-                        tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
-                        tf.TensorSpec(shape=[1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+                        tf.TensorSpec(shape=[NUM_THREADS, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
+                        tf.TensorSpec(shape=[NUM_THREADS, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                        tf.TensorSpec(shape=[NUM_THREADS, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                        tf.TensorSpec(shape=[NUM_THREADS, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
                     ]
                 )
         else: # RLRunnerの場合
@@ -161,8 +161,8 @@ class Worker():
 
         """
 
-        h_state = tf.zeros((1,512),dtype=tf.float32)
-        c_state = tf.zeros((1,512),dtype=tf.float32)
+        h_state = tf.zeros((NUM_THREADS,512),dtype=tf.float32)
+        c_state = tf.zeros((NUM_THREADS,512),dtype=tf.float32)
 
         #rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[b,s,c,h,w]
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
@@ -194,7 +194,7 @@ class Worker():
                 
                 print("before model calc")
                 time.sleep(3)
-                policy,_,_,h_states,c_states=self.local_AC([obs,goals,h_state,c_state])
+                policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
               
                 optimal_actions_onehot = tf.one_hot(rollout_actions, a_size, dtype=tf.float32)
