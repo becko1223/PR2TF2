@@ -94,14 +94,14 @@ class Worker():
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
-        rollout_obs = np.stack(rollout[:, 0]).astype(np.float32)
+        rollout_obs = np.stack(rollout[:, 0]).astype(np.float32)  #[s,c,h,w]
         rollout_goals = np.stack(rollout[:, 1]).astype(np.float32)
         rollout_actions = np.stack(rollout[:, 2]).astype(np.int32)
 
 
         
         
-
+        print("gradient calc")
 
         with tf.GradientTape() as tape:
                 obs = tf.convert_to_tensor(rollout_obs, dtype=tf.float32)
@@ -111,11 +111,12 @@ class Worker():
                 obs=tf.expand_dims(obs,0)
                 obs=tf.transpose(obs,[0,1,3,4,2])
                 goals=tf.expand_dims(goals,0)
+                print("model calc")
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
               
                 optimal_actions_onehot = tf.one_hot(tf.expand_dims(rollout_actions,0), a_size, dtype=tf.float32)
-
+                print("loss calc")
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
                 i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
