@@ -99,8 +99,27 @@ class Worker():
         rollout_goals_list = rollout[:,:, 1].flatten()
         rollout_actions_list = rollout[:,:, 2].flatten()
 
-        rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
+        #rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
         rollout_goals_list_float32 = [np.asarray(goal, dtype=np.float32) for goal in rollout_goals_list]
+
+
+        total_elements = len(rollout_obs_list) # 520
+        if total_elements == 0:
+            raise ValueError("Rollout observations list is empty.")
+            
+        # 最初の要素の形状を取得 (例: (11, 11, 11))
+        first_obs = rollout_obs_list[0]
+        obs_shape = np.asarray(first_obs, dtype=np.float32).shape 
+
+        # 2. 最終的な観測データの配列のメモリを一度に確保 (np.empty)
+        # これが問題の2.64MiBの連続領域の確保要求を担います。
+        rollout_obs = np.empty((total_elements,) + obs_shape, dtype=np.float32)
+        
+        # 3. データをリストから直接、確保済みの配列にコピー
+        # これにより、rollout_obs_list_float32という一時的な大規模リストの作成を回避
+        for i, obs in enumerate(rollout_obs_list):
+            rollout_obs[i] = np.asarray(obs, dtype=np.float32) 
+            
 
         del rollout
         gc.collect()
