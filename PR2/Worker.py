@@ -225,7 +225,7 @@ class Worker():
                     
 
                     time.sleep(3)
-                    loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
+                    loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy[0]))
 
                     i_grads = tape.gradient(loss,self.local_AC.trainable_variables)
             total_loss+=loss
