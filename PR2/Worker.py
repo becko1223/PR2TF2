@@ -168,12 +168,9 @@ class Worker():
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-        processed_obs=[obs for obs in rollout_obs_list]
-        processed_goals=[goals for goals in rollout_goals_list]
-        processed_actions=[actions for actions in rollout_actions_list]
-        rollout_obs = np.stack(processed_obs).astype(np.float32)
-        rollout_goals = np.stack(processed_goals).astype(np.float32)
-        rollout_actions = np.stack(processed_actions).astype(np.int32)
+        rollout_obs = np.stack(rollout_obs_list).astype(np.float32)
+        rollout_goals = np.stack(rollout_goals_list).astype(np.float32)
+        rollout_actions = np.stack(rollout_actions_list).astype(np.int32)
 
         rollout_obs = rollout_obs.reshape((NUM_THREADS, S) + rollout_obs.shape[1:])  #[b,s,c,h,w]
         rollout_goals = rollout_goals.reshape((NUM_THREADS, S) + rollout_goals.shape[1:])
@@ -200,7 +197,6 @@ class Worker():
                     import time #出力文確認用
                     
                     print("before model calc")
-                    print("obs:",obs.shape,"  goals:",goals.shape)
                     time.sleep(3)
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
