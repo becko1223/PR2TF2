@@ -94,9 +94,9 @@ class Worker():
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
-        rollout_obs = np.stack(rollout[:, 0])
-        rollout_goals = np.stack(rollout[:, 1])
-        rollout_actions = np.stack(rollout[:, 2])
+        rollout_obs = np.stack(rollout[:, 0]).astype(np.float32)
+        rollout_goals = np.stack(rollout[:, 1]).astype(np.float32)
+        rollout_actions = np.stack(rollout[:, 2]).astype(np.int32)
 
 
         
@@ -114,7 +114,7 @@ class Worker():
                 policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
               
-                optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[:, 2]),0), a_size, dtype=tf.float32)
+                optimal_actions_onehot = tf.one_hot(tf.expand_dims(rollout_actions,0), a_size, dtype=tf.float32)
 
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
