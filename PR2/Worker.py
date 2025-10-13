@@ -99,7 +99,10 @@ class Worker():
         rollout_goals_list = rollout[:,:, 1].flatten()
         rollout_actions_list = rollout[:,:, 2].flatten()
 
-        #rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
+        del rollout
+        gc.collect()
+
+        rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
         rollout_goals_list_float32 = [np.asarray(goal, dtype=np.float32) for goal in rollout_goals_list]
 
 
@@ -107,22 +110,10 @@ class Worker():
         if total_elements == 0:
             raise ValueError("Rollout observations list is empty.")
             
-        # 最初の要素の形状を取得 (例: (11, 11, 11))
-        first_obs = rollout_obs_list[0]
-        obs_shape = np.asarray(first_obs, dtype=np.float32).shape 
-
-        # 2. 最終的な観測データの配列のメモリを一度に確保 (np.empty)
-        # これが問題の2.64MiBの連続領域の確保要求を担います。
-        rollout_obs = np.empty((total_elements,) + obs_shape, dtype=np.float32)
-        
-        # 3. データをリストから直接、確保済みの配列にコピー
-        # これにより、rollout_obs_list_float32という一時的な大規模リストの作成を回避
-        for i, obs in enumerate(rollout_obs_list):
-            rollout_obs[i] = np.asarray(obs, dtype=np.float32) 
+       
 
 
-        del rollout
-        gc.collect()
+    
 
 
         """
@@ -196,7 +187,7 @@ class Worker():
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-        #rollout_obs = np.stack(rollout_obs_list_float32).astype(np.float32)
+        rollout_obs = np.stack(rollout_obs_list_float32).astype(np.float32)
         rollout_goals = np.stack(rollout_goals_list_float32).astype(np.float32)
         rollout_actions = np.stack(rollout_actions_list).astype(np.int32)
 
@@ -207,7 +198,7 @@ class Worker():
         rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2)) #[c,h,w] to [h,w,c]
 
 
-        del  rollout_goals_list, rollout_actions_list,  rollout_goals_list_float32
+        del  rollout_obs_list,rollout_goals_list, rollout_actions_list,rollout_obs_list_float32,  rollout_goals_list_float32
         gc.collect()
         
         
@@ -376,6 +367,15 @@ class Worker():
             gc.collect()
         except Exception as e:
             print(f"Dummy clean up failed: {e}")
+
+
+        # Rayの内部APIを使ったメモリ解放を試みる（効果は保証されないが、試す価値あり）
+        try:
+             import ray.internal
+             ray.internal.free(ray.internal.get_session_workers())
+        except Exception:
+             # Rayの内部APIに依存するためエラーが出ても無視
+             pass
 
         
 
