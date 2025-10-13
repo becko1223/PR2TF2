@@ -191,6 +191,9 @@ class Worker():
             with tf.GradientTape() as tape:
                     obs = tf.convert_to_tensor(rollout_obs[i], dtype=tf.float32)
                     goals = tf.convert_to_tensor(rollout_goals[i], dtype=tf.float32)
+
+                    obs=tf.expand_dims(obs,0)
+                    goals=tf.expand_dims(goals,0)
                     
 
 
