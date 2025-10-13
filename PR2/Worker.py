@@ -99,6 +99,9 @@ class Worker():
         rollout_goals_list = rollout[:,:, 1].flatten()
         rollout_actions_list = rollout[:,:, 2].flatten()
 
+        rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
+        rollout_goals_list_float32 = [np.asarray(goal, dtype=np.float32) for goal in rollout_goals_list]
+
 
         """
         #ロールアウトデバッグ調査
@@ -171,8 +174,8 @@ class Worker():
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
         #rollout_actions = np.stack(rollout[:,:, 2]).astype(np.int32)
 
-        rollout_obs = np.stack(rollout_obs_list).astype(np.float32)
-        rollout_goals = np.stack(rollout_goals_list).astype(np.float32)
+        rollout_obs = np.stack(rollout_obs_list_float32).astype(np.float32)
+        rollout_goals = np.stack(rollout_goals_list_float32).astype(np.float32)
         rollout_actions = np.stack(rollout_actions_list).astype(np.int32)
 
         rollout_obs = rollout_obs.reshape((NUM_THREADS, S) + rollout_obs.shape[1:])  #[b,s,c,h,w]
@@ -182,7 +185,7 @@ class Worker():
         rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2)) #[c,h,w] to [h,w,c]
 
 
-        del rollout_obs_list, rollout_goals_list, rollout_actions_list
+        del rollout_obs_list, rollout_goals_list, rollout_actions_list, rollout_obs_list_float32, rollout_goals_list_float32
         gc.collect()
         
         
