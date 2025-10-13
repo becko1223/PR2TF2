@@ -202,6 +202,10 @@ class Worker():
                     print("h_state shape:", h_state.shape)
                     print("c_state shape:", c_state.shape)
                     print("rollout_obs[i].shape before expand:", rollout_obs[i].shape)
+                    dummy_obs=tf.zeros((1,10,11,11,11))
+                    dummy_goals=tf.zeros((1,10,3))
+                    policy,_,_,h_states,c_states=self.wrapped_local_AC(dummy_obs,dummy_goals,h_state,c_state)
+                    print("dummy policy",policy)
                     time.sleep(3)
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
@@ -210,6 +214,8 @@ class Worker():
 
 
                     print("before loss calc")
+                    
+
                     time.sleep(3)
                     total_loss+=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
