@@ -189,13 +189,19 @@ class Worker():
 
                 
                 obs=tf.transpose(obs,[0,1,3,4,2])
+
+                import time #出力文確認用
                 
                 print("before model calc")
+                time.sleep(3)
                 policy,_,_,h_states,c_states=self.local_AC([obs,goals,h_state,c_state])
 
               
                 optimal_actions_onehot = tf.one_hot(rollout_actions, a_size, dtype=tf.float32)
+
+
                 print("before loss calc")
+                time.sleep(3)
                 total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
                 i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
