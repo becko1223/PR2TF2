@@ -237,8 +237,8 @@ class Runner(object):
                         None, None,learningAgent=True)
 
         #with tf.device("/cpu:0"):
-        gradients, losses = worker.imitation_learning_only(episodeNumber)
-        mean_imitation_loss = [np.mean(losses)]
+        gradients, imitation_loss = worker.imitation_learning_only(episodeNumber)
+        mean_imitation_loss = imitation_loss
 
         is_imitation = True
 
