@@ -371,8 +371,7 @@ class Worker():
                         #print("valid_dist.ravel = ",valid_dist.ravel())
                         #print("validactions = ",validActions)
 
-                        print("valid_dist content:", valid_dist) 
-                        print("Any NaNs in valid_dist:", np.isnan(valid_dist).any())
+                        
 
                         if(np.isnan(valid_dist).any()):
                             a=None
@@ -399,6 +398,8 @@ class Worker():
 
 
                     if self.agentID == 1:
+                        print("valid_dist content:", valid_dist) 
+                        print("Any NaNs in valid_dist:", np.isnan(valid_dist).any())
                         print("step forward, episode,step:",episode_count,",", episode_step_count)
                         all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
