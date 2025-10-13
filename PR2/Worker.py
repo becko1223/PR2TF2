@@ -197,6 +197,11 @@ class Worker():
                     import time #出力文確認用
                     
                     print("before model calc")
+                    print("obs shape:", obs.shape)
+                    print("goals shape:", goals.shape)
+                    print("h_state shape:", h_state.shape)
+                    print("c_state shape:", c_state.shape)
+                    print("rollout_obs[i].shape before expand:", rollout_obs[i].shape)
                     time.sleep(3)
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
