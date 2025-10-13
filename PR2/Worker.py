@@ -191,7 +191,7 @@ class Worker():
                 obs=tf.transpose(obs,[0,1,3,4,2])
                 
                 print("model calc")
-                policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
+                policy,_,_,h_states,c_states=self.local_AC(obs,goals,h_state,c_state)
 
               
                 optimal_actions_onehot = tf.one_hot(rollout_actions, a_size, dtype=tf.float32)
@@ -294,9 +294,7 @@ class Worker():
         gradients = []
         losses = []
         print("calc loss in imitation")
-        #for i in range(0):
-        #print("imi roop")
-        #train_buffer = rollouts[i]
+        
         
         
         imitation_loss, grads = self.calculateImitationGradient(rollouts, episode_count)
