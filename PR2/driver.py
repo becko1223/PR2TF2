@@ -41,7 +41,7 @@ gpus = tf.config.list_physical_devices('GPU')
 if gpus:
     try:
         
-        fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
+        fraction = 1.0 / (NUM_META_AGENTS+ 1)
         for gpu in gpus:
             '''
             tf.config.set_logical_device_configuration(
