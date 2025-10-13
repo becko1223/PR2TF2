@@ -102,6 +102,9 @@ class Worker():
         rollout_obs_list_float32 = [np.asarray(obs, dtype=np.float32) for obs in rollout_obs_list]
         rollout_goals_list_float32 = [np.asarray(goal, dtype=np.float32) for goal in rollout_goals_list]
 
+        del rollout
+        gc.collect()
+
 
         """
         #ロールアウトデバッグ調査
