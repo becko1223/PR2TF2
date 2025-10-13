@@ -180,6 +180,10 @@ class Worker():
         rollout_actions = rollout_actions.reshape((NUM_THREADS, S) + rollout_actions.shape[1:])
 
         rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2)) #[c,h,w] to [h,w,c]
+
+
+        del rollout_obs_list, rollout_goals_list, rollout_actions_list
+        gc.collect()
         
         
         print("gradient calc")
@@ -326,7 +330,13 @@ class Worker():
         rollouts, targets_done = self.parse_path(episode_count)
 
         
-
+        gc.collect()
+        try:
+            dummy_tensor=tf.ones((1,1),dtype=tf.float32)
+            del dummy_tensor
+            gc.collect()
+        except Exception as e:
+            print(f"Dummy clean up failed: {e}")
 
         
 
