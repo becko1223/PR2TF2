@@ -132,6 +132,24 @@ class Worker():
                 print(f"First 10 elements: {obs.flatten()[:10]}")
                 print(f"--- END ERROR ---")
 
+
+
+        try:
+            processed_obs = [obs for obs in rollout_obs_list]
+            
+            # 結合を試みる
+            rollout_obs = np.stack(processed_obs).astype(np.float32)  # [b,s,c,h,w]
+
+            # ここに到達すれば成功
+            print("\n--- np.stack SUCCESSFUL with list comprehension ---")
+
+        except ValueError as e:
+            # 再度 ValueError が発生した場合
+            print(f"\n--- CRITICAL FAILURE: np.stack failed again. ---")
+            print(f"Error: {e}")
+            print("This confirms a fundamental shape/content mismatch that MUST be debugged at the data collection stage.")
+            raise # 再度エラーを発生させる
+
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
