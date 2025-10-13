@@ -96,7 +96,7 @@ class Worker():
         rollout_actions_list = rollout[:,:, 2]
 
 
-        """
+        
         #ロールアウトデバッグ調査
 
         # リストの要素数を確認 (問題なし: 8 * 51 = 408個 の要素が出力されるはず)
@@ -158,7 +158,7 @@ class Worker():
             
 
 
-        """
+        
 
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
