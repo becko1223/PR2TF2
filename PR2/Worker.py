@@ -129,7 +129,7 @@ class Worker():
 
 
                 
-                policy,_,_,h_new_state,c_new_state=self.local_AC(batch_obs,batch_goals,h_state,c_state)
+                policy,_,_,h_new_state,c_new_state=self.local_AC([batch_obs,batch_goals,h_state,c_state])
 
                 h_state=h_new_state
                 c_state=c_new_state
