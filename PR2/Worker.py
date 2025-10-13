@@ -91,6 +91,17 @@ class Worker():
         # if imitation=True the rollout is assumed to have different dimensions:
         # [o[0],o[1],optimal_actions]
 
+        rollout_obs_list = rollout[:,:, 0]
+
+        # リストの要素数を確認 (問題なし: 8 * 51 = 408個 の要素が出力されるはず)
+        print("rollout_obs_list length:", len(rollout_obs_list.flatten())) 
+
+        # 最初の観測データと最後の観測データの形状と型を確認
+        # これらが全て同じ形状のNumPy配列であることが理想
+        print("Type of first element:", type(rollout_obs_list[0, 0]))
+        if isinstance(rollout_obs_list[0, 0], np.ndarray):
+            print("Shape of first element:", rollout_obs_list[0, 0].shape)
+
         h_state = tf.zeros((1,512),dtype=tf.float32)
         c_state = tf.zeros((1,512),dtype=tf.float32)
 
