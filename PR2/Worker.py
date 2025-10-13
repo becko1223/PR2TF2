@@ -126,7 +126,7 @@ class Worker():
 
 
                 
-                policy,_,_,h_states,c_states=self.local_AC([tf.expand_dims(batch_obs,0),tf.expand_dims(batch_goals,0),h_state,c_state])
+                policy,_,_,h_states,c_states=self.wrapped_local_AC(tf.expand_dims(batch_obs,0),tf.expand_dims(batch_goals,0),h_state,c_state)
 
                 h_state=h_states[-1]
                 c_state=c_states[-1]
