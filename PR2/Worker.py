@@ -197,6 +197,7 @@ class Worker():
                     import time #出力文確認用
                     
                     print("before model calc")
+                    print("obs:",obs.shape,"  goals:",goals.shape)
                     time.sleep(3)
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
