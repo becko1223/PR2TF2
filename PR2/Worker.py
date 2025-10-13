@@ -5,7 +5,9 @@ import numpy as np
 import ray
 import os
 import imageio
+import gc
 from Env_Builder import *
+
 
 from Map_Generator import maze_generator
 
@@ -203,12 +205,7 @@ class Worker():
                     print("h_state shape:", h_state.shape)
                     print("c_state shape:", c_state.shape)
                     print("rollout_obs[i].shape before expand:", rollout_obs[i].shape)
-                    dummy_obs=tf.zeros((1,1,11,11,11))
-                    dummy_goals=tf.zeros((1,1,3))
-                    dummy_hstate=tf.zeros((1,512))
-                    dummy_cstate=(tf.zeros((1,512)))
-                    policy,_,_,h_states,c_states=self.wrapped_local_AC(dummy_obs,dummy_goals,dummy_hstate,dummy_cstate)
-                    print("dummy policy",policy)
+                    
                     time.sleep(3)
                     policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
 
