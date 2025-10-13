@@ -103,7 +103,7 @@ class Worker():
         #ミニバッチ版
         accumulated_grads = None
         rollout_length = np.stack(rollout[:, 0]).shape[0]
-        BATCH_SIZE = 8
+        STEP_SIZE = 8
         total_loss=0.0
         total_batches=0
 
@@ -113,8 +113,8 @@ class Worker():
         
 
 
-        for start_idx in range(0, rollout_length, BATCH_SIZE):
-            end_idx = min(start_idx + BATCH_SIZE, rollout_length)
+        for start_idx in range(0, rollout_length, STEP_SIZE):
+            end_idx = min(start_idx + STEP_SIZE, rollout_length)
 
 
             batch_obs = tf.convert_to_tensor(rollout_obs[start_idx:end_idx], dtype=tf.float32)
