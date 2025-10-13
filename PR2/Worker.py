@@ -207,7 +207,7 @@ class Worker():
         rollout_obs = np.transpose(rollout_obs, (0, 1, 3, 4, 2)) #[c,h,w] to [h,w,c]
 
 
-        del rollout_obs_list, rollout_goals_list, rollout_actions_list, rollout_obs_list_float32, rollout_goals_list_float32
+        del  rollout_goals_list, rollout_actions_list, rollout_obs_list_float32, rollout_goals_list_float32
         gc.collect()
         
         
