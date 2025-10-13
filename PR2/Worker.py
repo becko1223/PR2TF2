@@ -161,8 +161,8 @@ class Worker():
 
         """
 
-        h_state = tf.zeros((NUM_THREADS,512),dtype=tf.float32)
-        c_state = tf.zeros((NUM_THREADS,512),dtype=tf.float32)
+        h_state = tf.zeros((1,512),dtype=tf.float32)
+        c_state = tf.zeros((1,512),dtype=tf.float32)
 
         #rollout_obs = np.stack(rollout[:,:, 0]).astype(np.float32)  #[b,s,c,h,w]
         #rollout_goals = np.stack(rollout[:,:, 1]).astype(np.float32)
@@ -183,32 +183,37 @@ class Worker():
         
         
         print("gradient calc")
+        grads=[]
+        total_loss=0
 
-        with tf.GradientTape() as tape:
-                obs = tf.convert_to_tensor(rollout_obs, dtype=tf.float32)
-                goals = tf.convert_to_tensor(rollout_goals, dtype=tf.float32)
+        for i in range(NUM_THREADS):
+
+            with tf.GradientTape() as tape:
+                    obs = tf.convert_to_tensor(rollout_obs[i], dtype=tf.float32)
+                    goals = tf.convert_to_tensor(rollout_goals[i], dtype=tf.float32)
+                    
+
+
+                    import time #出力文確認用
+                    
+                    print("before model calc")
+                    time.sleep(3)
+                    policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
+
                 
+                    optimal_actions_onehot = tf.one_hot(rollout_actions[i], a_size, dtype=tf.float32)
 
 
-                import time #出力文確認用
-                
-                print("before model calc")
-                time.sleep(3)
-                policy,_,_,h_states,c_states=self.wrapped_local_AC(obs,goals,h_state,c_state)
+                    print("before loss calc")
+                    time.sleep(3)
+                    total_loss+=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
 
-              
-                optimal_actions_onehot = tf.one_hot(rollout_actions, a_size, dtype=tf.float32)
-
-
-                print("before loss calc")
-                time.sleep(3)
-                total_loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
-
-                i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
+                    i_grads = tape.gradient(total_loss,self.local_AC.trainable_variables)
+                    grads.append(i_grads)
         
         
 
-        return [total_loss], i_grads
+        return total_loss/NUM_THREADS, grads
 
     def calculateGradient(self, rollout, bootstrap_value, episode_count, rnn_state0):
         # ([s,a,r,s1,v[0,0]])
@@ -305,10 +310,10 @@ class Worker():
         
         imitation_loss, grads = self.calculateImitationGradient(rollouts, episode_count)
 
-        gradients.append(grads)
+        #gradients.append(grads)
             
 
-        return gradients, imitation_loss
+        return grads, imitation_loss
 
     def run_episode_multithreaded(self, episode_count, coord):
 
