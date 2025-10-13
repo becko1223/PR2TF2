@@ -129,10 +129,10 @@ class Worker():
 
 
                 
-                policy,_,_,h_states,c_states=self.wrapped_local_AC(batch_obs,batch_goals,h_state,c_state)
+                policy,_,_,h_new_state,c_new_state=self.wrapped_local_AC(batch_obs,batch_goals,h_state,c_state)
 
-                h_state=h_states[-1]
-                c_state=c_states[-1]
+                h_state=h_new_state
+                c_state=c_new_state
                 optimal_actions_onehot = tf.one_hot(tf.expand_dims(np.stack(rollout[start_idx:end_idx, 2]),0), a_size, dtype=tf.float32)
 
                 loss=tf.reduce_mean(tf.keras.backend.categorical_crossentropy(optimal_actions_onehot, policy))
@@ -344,7 +344,7 @@ class Worker():
                     #with self.inferenceLock:
                     a_dist,_,v,h_state,c_state=self.wrapped_local_AC(obs,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[h_state,c_state]
-                    print("rnn_state shape",rnn_state[0].shape)
+                    #print("rnn_state shape",rnn_state[0].shape)
 
                     #print("local_AC completed.   a_dist:",a_dist,"    state[0]_shape:",rnn_state[0].shape)
 
