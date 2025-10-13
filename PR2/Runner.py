@@ -118,7 +118,7 @@ class Runner(object):
         trainer = None
         print("runner dummy")
         if self.metaAgentID < NUM_IL_META_AGENTS:
-             with tf.device("/cpu:0"): # CPUでのモデル構築を強制
+             #with tf.device("/cpu:0"): # CPUでのモデル構築を強制
                  self.localNetwork = createmodel()
         else:
              self.localNetwork = createmodel()
@@ -242,8 +242,8 @@ class Runner(object):
                         self.env, self.localNetwork,
                         None, None,learningAgent=True)
 
-        with tf.device("/cpu:0"):
-            gradients, imitation_loss = worker.imitation_learning_only(episodeNumber)
+        #with tf.device("/cpu:0"):
+        gradients, imitation_loss = worker.imitation_learning_only(episodeNumber)
         mean_imitation_loss = imitation_loss
 
         is_imitation = True
