@@ -411,7 +411,7 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            rnn_state = [self.local_AC.h0,self.local_AC.c0]
+            rnn_state = [tf.zeros([1,512],dtype=tf.float32),tf.zeros([1,512],dtype=tf.float32)]
             rnn_state0 = rnn_state
 
             mean=tf.one_hot(tf.zeros([5]),a_size)
