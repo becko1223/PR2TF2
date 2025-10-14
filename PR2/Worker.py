@@ -414,7 +414,7 @@ class Worker():
             rnn_state = [tf.zeros([1,512],dtype=tf.float32),tf.zeros([1,512],dtype=tf.float32)]
             rnn_state0 = rnn_state
 
-            mean=tf.one_hot(tf.zeros([5]),a_size)
+            mean=tf.one_hot(tf.zeros([5],dtype=tf.int32),a_size)
 
             self.synchronize()  # synchronize starting time of the threads
             swarm_reward[self.metaAgentID] = 0
