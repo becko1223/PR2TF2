@@ -103,8 +103,13 @@ class ACRDNet(tf.keras.Model):
 
 
 
-
-    def encode(self,inputs,goal_pos,initial_state):
+    @tf.function(input_signature=[
+                        tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
+                        tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                        tf.TensorSpec(shape=[None,1, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
+                        tf.TensorSpec(shape=[None,1, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
+                    ])
+    def encode(self,inputs,goal_pos,h_state,c_state):
         x=inputs
         
             
@@ -144,10 +149,14 @@ class ACRDNet(tf.keras.Model):
         x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
         
 
-        lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
+        lstm_out, state_h, state_c = self.lstm(x, initial_state=[h_state,c_state])
         return lstm_out,[state_h,state_c]
     
 
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, A_SIZE], dtype=tf.float32)
+    ])
     def dynamics(self,latent,action):
         x=tf.concat([latent,action],-1)
         x=self.dynamics_dense1(x)
@@ -155,7 +164,10 @@ class ACRDNet(tf.keras.Model):
         x=self.dynamics_dense3(x)
         return x
     
-    
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
+    ])
     def reward(self,latent,action):
         x=tf.concat([latent,action],-1)
         x=self.reward_dense1(x)
@@ -163,7 +175,9 @@ class ACRDNet(tf.keras.Model):
         x=self.reward_dense3(x)
         return x
     
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32)
+    ])
     def policy(self,latent):
         x=self.policy_dense1(latent)
         x=self.policy_dense2(x)
@@ -171,7 +185,10 @@ class ACRDNet(tf.keras.Model):
       
         return x
     
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
+    ])
     def q1(self,latent,action):
         x=tf.concat([latent,action],-1)
         x=self.q1_dense1(x)
@@ -181,7 +198,10 @@ class ACRDNet(tf.keras.Model):
         x=self.q1_dense3(x)
         return x
     
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None,None,5],dtype=tf.float32)
+    ])
     def q2(self,latent,action):
         x=tf.concat([latent,action],-1)
         x=self.q2_dense1(x)
@@ -192,65 +212,7 @@ class ACRDNet(tf.keras.Model):
         return x
 
 
-#inputsで入ってくるのは(step,c,h,w)。最初はstepをバッチであるかのように見せてconvなどの処理をし、その後(step,vector)を(batch,step,vector)にしてlstmに入れる
-    def call(self,inputs,goal_pos,initial_state):
-        x=inputs
-        if np.array(x).ndim == 3:  
-            x = tf.expand_dims(x, axis=0)  
-            
-        print(f"#####input shape!!!!!!#####  {x.shape}:{np.array(goal_pos).shape}:{np.array(initial_state).shape}")
-        x=tf.transpose(x, perm=[0, 2, 3, 1])
 
-        x=self.vgg1_conv1(x)
-        x=self.vgg1_conv2(x)
-        x=self.vgg1_conv3(x)
-        x=self.maxpool1(x)
-
-        x=self.vgg2_conv1(x)
-        x=self.vgg2_conv2(x)
-        x=self.vgg2_conv3(x)
-        x=self.maxpool2(x)
-
-        x=self.conv3(x)
-        x=self.flat(x)
-        x=self.actflat(x)
-
-        y=goal_pos
-        if np.array(y).ndim==1:
-            y=tf.expand_dims(y,0)
-        y=self.goal_layer(y)
-
-        x=tf.concat([x,y],1)
-
-        skip=x
-
-        x=self.h1(x)
-        x=self.d1(x)
-        x=self.h2(x)
-        x=self.d2(x)
-
-        x=self.h3(x+skip)
-
-
-        #x=tf.expand_dims(x,0)
-        x = tf.reshape(x, [1, -1, RNN_SIZE])
-        
-
-        lstm_out, state_h, state_c = self.lstm(x, initial_state=initial_state)
-
-        #lstm_out = tf.reshape(lstm_out, [-1, lstm_out.shape[2]])
-        policy=self.policy_layer(lstm_out)
-        policy=tf.nn.softmax(policy[0])
-        policy_sig=tf.sigmoid(policy[0])
-
-        value=self.value(lstm_out)
-        reward=self.reward(lstm_out)
-
-        return policy,policy_sig,value,[state_h,state_c],reward
-
-
-
-        
 
 
 

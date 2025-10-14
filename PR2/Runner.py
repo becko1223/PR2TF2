@@ -119,7 +119,10 @@ class Runner(object):
         workers = []
         worker_threads = []
         workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]
-        groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO        
+        groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO  
+
+
+        inference_lock = threading.Lock()       
 
         workersPerMetaAgent = NUM_THREADS
 
@@ -128,7 +131,7 @@ class Runner(object):
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
-                                  groupLock, learningAgent=True))
+                                  groupLock,inference_lock, learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -258,7 +261,7 @@ class Runner(object):
 import multiprocessing
 cpu=multiprocessing.cpu_count()
 
-@ray.remote(num_cpus=(cpu*3)//19, num_gpus= 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1))
+@ray.remote(num_cpus=1, num_gpus= 1.0 / (NUM_META_AGENTS  + 1))
 class RLRunner(Runner):
     def __init__(self, metaAgentID):        
         super().__init__(metaAgentID)
