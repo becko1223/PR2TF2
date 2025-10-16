@@ -130,8 +130,8 @@ class Worker():
         
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
-        print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
-        print("eps shape:",eps.shape)
+        #print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
+        #print("eps shape:",eps.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
 
 
@@ -172,7 +172,7 @@ class Worker():
         
         samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
         
-        latents,discounts,rewards=zip(*tf.scan(fn=rollout,elems=samples,initializer=(latent_inits,1,0))) #[S,B,1,latentsdim],[S,B,1,1(reward)]
+        latents,discounts,rewards=zip(*tf.scan(fn=rollout,elems=samples,initializer=(latent_inits,1.0,0.0))) #[S,B,1,latentsdim],[S,B,1,1(reward)]
         last_policies=self.local_ACRD.policy(latents[-1])
         last_policies=tf.clip_by_value(last_policies,-10,10)
         last_policies=tf.nn.softmax(last_policies)
