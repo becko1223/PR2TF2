@@ -100,12 +100,12 @@ class Runner(object):
         dummy_latents=tf.zeros([1,1,512])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        self.network.encode(dummy_obs,dummy_goals,dummy_h_state,dummy_c_state)
-        self.network.dynamics(dummy_latents,dummy_actions) 
-        self.network.policy(dummy_latents)
-        self.network.reward(dummy_latents,dummy_actions)
-        self.network.q1(dummy_latents,dummy_actions)
-        self.network.q2(dummy_latents,dummy_actions)
+        self.localnetwork.encode(dummy_obs,dummy_goals,dummy_h_state,dummy_c_state)
+        self.localnetwork.dynamics(dummy_latents,dummy_actions) 
+        self.localnetwork.policy(dummy_latents)
+        self.localnetwork.reward(dummy_latents,dummy_actions)
+        self.localnetwork.q1(dummy_latents,dummy_actions)
+        self.localnetwork.q2(dummy_latents,dummy_actions)
         
        
         
