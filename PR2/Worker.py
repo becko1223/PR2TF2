@@ -63,6 +63,7 @@ class Worker():
         elems=range(0,horizon)
         batch=tf.shape(latent_inits)[0]
         init=(tf.zeros([batch,1,a_size]),latent_inits)
+        print("init[1] shape:",init[1].shape)
         result=tf.scan(fn=scan_fn,elems=elems,initializer=init)
         actions=result[0]
         
