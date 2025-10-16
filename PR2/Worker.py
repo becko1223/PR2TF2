@@ -451,8 +451,10 @@ class Worker():
 
                     ob=tf.expand_dims(s[0],0)
                     ob=tf.expand_dims(ob,0)
+                    ob=tf.cast(ob,dtype=tf.float32)
                     goal=tf.expand_dims(s[1],0)
                     goal=tf.expand_dims(goal,0)
+                    goal=tf.cast(goal,dtype=tf.float32)
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     a, mean=self.mppi(latent_init,mean)
