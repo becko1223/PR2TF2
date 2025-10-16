@@ -69,7 +69,7 @@ class Worker():
 
         actions=tf.squeeze(actions,axis=2)
         actions=tf.transpose(actions,[1,0,2])
-        print(actions shape:actions.shape)
+        print("actions shape:",actions.shape)
         return actions
 
     
