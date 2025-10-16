@@ -122,7 +122,7 @@ class Worker():
         def distribution_to_coordinate(action_prob):
             coord=np.zeros(2,dtype=np.float32)
             for i in range(a_size):
-                coord+=np.array(action_prob[i]*self.env.action2dr(i))
+                coord+=np.array(action_prob[i]*action2dir(i))
             return coord
         
         actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
@@ -189,7 +189,7 @@ class Worker():
         #elite_actions to coords
         def onehot_to_coordinate(action_onehot):
             action=tf.math.argmax(action_onehot,axis=-1)
-            action=self.env.action2dir(action)
+            action=action2dir(action)
             return action
 
         #mean_actions(probs) to coords
