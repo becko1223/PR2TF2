@@ -126,6 +126,7 @@ class Worker():
             return coord
         
         actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
+        actions_mean_2D=tf.expand_dims(actions_mean_2D,0)
         
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
