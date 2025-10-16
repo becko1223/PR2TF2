@@ -158,7 +158,21 @@ def main():
     with tf.device("/GPU:0"):
         optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
         global_network = ACRDNet()
-        
+
+        #ダミーデータでのネットワーク構築
+        dummy_obs=tf.zeros([1,1,11,11,11])
+        dummy_goals=tf.zeros([1,1,3])   
+        dummy_h_state=tf.zeros([1,512]) 
+        dummy_c_state=tf.zeros([1,512])  
+        dummy_latents=tf.zeros([1,1,512])
+        dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
+
+        global_network.encode(dummy_obs,dummy_goals,dummy_h_state,dummy_c_state)
+        global_network.dynamics(dummy_latents,dummy_actions) 
+        global_network.policy(dummy_latents)
+        global_network.reward(dummy_latents,dummy_actions)
+        global_network.q1(dummy_latents,dummy_actions)
+        global_network.q2(dummy_latents,dummy_actions)
         
         
 
