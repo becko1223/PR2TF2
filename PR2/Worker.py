@@ -46,6 +46,9 @@ class Worker():
 
 
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
+
+        """
+        #tf.scanでやろうとしていたときのもの（これだと不安定で上手く動かない）
         def scan_fn(actions_latents,elem):
             policy_logits=tf.clip_by_value(self.local_ACRD.policy(actions_latents[1]),-10.0,10.0)
             print("policy_logits shape:",policy_logits.shape)
@@ -63,24 +66,52 @@ class Worker():
         
         elems=range(0,horizon)
         batch_size = tf.shape(latent_inits)[0]
-        # initの2番目の要素も、形状情報が壊れていないか確認
-        
-        # initの要素を明示的に作成し、形状が確定したか確認
         init_action = tf.zeros([batch_size, 1, a_size], dtype=tf.float32)
-        
-        # latent_initsがtf.repeatで作成されているため、コピーして形状を確定
-        init_latent = tf.identity(latent_inits) 
-        
-        init = (init_action, init_latent)
+        init = (init_action, init_latents)
+
         print("init[1] shape:",init[1].shape)
         result=tf.scan(fn=scan_fn,elems=elems,initializer=init)
-        actions=result[0]
-        
-        #actions,latents=zip(*tf.scan(fn=scan_fn,elems=elems,initializer=init)) #[step,batch,1,feature]
-
+        actions=result[0]  
         actions=tf.squeeze(actions,axis=2)
         actions=tf.transpose(actions,[1,0,2])
         print("actions shape:",actions.shape)
+
+        """
+
+        batch_size = tf.shape(latent_inits)[0]
+       
+        current_latent = latent_inits 
+        
+        actions_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
+
+        for t in tf.range(horizon):
+            
+            
+            # Policy (B, 1, A_SIZE)
+            policy_logits = tf.clip_by_value(self.local_ACRD.policy(current_latent), -10.0, 10.0)
+            
+            # Action Probabilities (B, A_SIZE)
+            action_probs = tf.nn.softmax(policy_logits)
+            action_probs = tf.squeeze(action_probs, axis=1)
+
+            # Sample Action Index (B,)
+            actions = tf.squeeze(tf.random.categorical(tf.math.log(action_probs), num_samples=1), axis=-1)
+            
+            # Action One-Hot (B, 1, A_SIZE)
+            actions_onehot = tf.one_hot(actions, a_size)
+            actions_onehot = tf.expand_dims(actions_onehot, axis=1) 
+            
+            # Predict Next Latent (B, 1, 512)
+            current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot)
+            
+            # 結果をTensorArrayに書き込む (B, A_SIZE)
+            actions_ta = actions_ta.write(t, tf.squeeze(actions_onehot, axis=1))
+
+        # TensorArrayから結果を取り出し、形状を整える
+        actions = actions_ta.stack() # [horizon, B, A_SIZE]
+        actions = tf.transpose(actions, [1, 0, 2]) # [B, horizon, A_SIZE]
+
+
         return actions
 
     
