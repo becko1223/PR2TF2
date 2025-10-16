@@ -59,7 +59,8 @@ class Worker():
             return (actions_onehot,latent_preds)
         
         elems=range(0,horizon)
-        init=(0,latent_inits)
+        batch=latent_inits.shape()[0]
+        init=(tf.zeros([batch,1,5]),latent_inits)
         actions,latents=zip(*tf.scan(fn=scan_fn,elems=elems,initializer=init)) #[step,batch,1,feature]
 
         actions=tf.squeeze(actions,axis=2)
