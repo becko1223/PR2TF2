@@ -104,7 +104,7 @@ class ACRDNet(tf.keras.Model):
 
 
     @tf.function(input_signature=[
-                        tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S, H, W, C)
+                        tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
                         tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
                         tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
                         tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
@@ -115,17 +115,17 @@ class ACRDNet(tf.keras.Model):
             
         x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
 
-        x=layers.TimeDistributed(self.vgg1_conv1(x))
-        x=layers.TimeDistributed(self.vgg1_conv2(x))
-        x=layers.TimeDistributed(self.vgg1_conv3(x))
-        x=layers.TimeDistributed(self.maxpool1(x))
+        x=layers.TimeDistributed(self.vgg1_conv1)(x)
+        x=layers.TimeDistributed(self.vgg1_conv2)(x)
+        x=layers.TimeDistributed(self.vgg1_conv3)(x)
+        x=layers.TimeDistributed(self.maxpool1)(x)
 
-        x=layers.TimeDistributed(self.vgg2_conv1(x))
-        x=layers.TimeDistributed(self.vgg2_conv2(x))
-        x=layers.TimeDistributed(self.vgg2_conv3(x))
-        x=layers.TimeDistributed(self.maxpool2(x))
+        x=layers.TimeDistributed(self.vgg2_conv1)(x)
+        x=layers.TimeDistributed(self.vgg2_conv2)(x)
+        x=layers.TimeDistributed(self.vgg2_conv3)(x)
+        x=layers.TimeDistributed(self.maxpool2)(x)
 
-        x=layers.TimeDistributed(self.conv3(x))
+        x=layers.TimeDistributed(self.conv3)(x)
         x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[4]])
         x=self.actflat(x)
 
