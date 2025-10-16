@@ -175,6 +175,7 @@ class Worker():
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,1])
 
+        print("latent_init shape:",latent_init.shape)
         inits_for_actor=tf.repeat(latent_init,num_actor_traj,axis=0)
         
         inits_for_return=tf.repeat(latent_init,num_actor_traj+num_samples,axis=0)
