@@ -227,13 +227,13 @@ class Worker():
     def calculateGradient(self, rollout, episode_count, rnn_state0):
         
         rollout = np.array(rollout, dtype=object)
-        obs=tf.convert_to_tensor(rollout[:, 0])
-        goals=tf.convert_to_tensor(rollout[:,-4])
-        rewards = tf.convert_to_tensor(rollout[:, 2])
-        actions = tf.convert_to_tensor(rollout[:, 1])
-        train_value=tf.convert_to_tensor(rollout[:,-3])
-        rnn_states=tf.convert_to_tensor(rollout[:,-1])
-        valids = tf.convert_to_tensor(rollout[:, 5])
+        obs=tf.convert_to_tensor(rollout[:, 0],dtype=tf.float32)
+        goals=tf.convert_to_tensor(rollout[:,-4],dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rollout[:, 2],dtype=tf.float32)
+        actions = tf.convert_to_tensor(rollout[:, 1],dtype=tf.float32)
+        train_value=tf.convert_to_tensor(rollout[:,-3],dtype=tf.float32)
+        rnn_states=tf.convert_to_tensor(rollout[:,-1],dtype=tf.float32)
+        valids = tf.convert_to_tensor(rollout[:, 5],dtype=tf.float32)
 
         
 
