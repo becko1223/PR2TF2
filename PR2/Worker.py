@@ -61,8 +61,16 @@ class Worker():
             return (actions_onehot,latent_preds)
         
         elems=range(0,horizon)
-        batch=tf.shape(latent_inits)[0]
-        init=(tf.zeros([batch,1,a_size]),latent_inits)
+        batch_size = tf.shape(latent_inits)[0]
+        # initの2番目の要素も、形状情報が壊れていないか確認
+        
+        # initの要素を明示的に作成し、形状が確定したか確認
+        init_action = tf.zeros([batch_size, 1, a_size], dtype=tf.float32)
+        
+        # latent_initsがtf.repeatで作成されているため、コピーして形状を確定
+        init_latent = tf.identity(latent_inits) 
+        
+        init = (init_action, init_latent)
         print("init[1] shape:",init[1].shape)
         result=tf.scan(fn=scan_fn,elems=elems,initializer=init)
         actions=result[0]
