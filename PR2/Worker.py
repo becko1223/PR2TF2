@@ -57,6 +57,7 @@ class Worker():
             actions_onehot=tf.one_hot(actions,a_size)
             actions_onehot=tf.expand_dims(actions_onehot,axis=1) #dynamics入力のため
             latent_preds=self.local_ACRD.dynamics(actions_latents[1],actions_onehot)
+            print("actions_onehot shape:",actions_onehot.shape)
             return (actions_onehot,latent_preds)
         
         elems=range(0,horizon)
