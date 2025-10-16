@@ -59,7 +59,7 @@ class Worker():
             return (actions_onehot,latent_preds)
         
         elems=range(0,horizon)
-        batch=latent_inits.shape()[0]
+        batch=tf.shape(latent_inits)[0]
         init=(tf.zeros([batch,1,5]),latent_inits)
         actions,latents=zip(*tf.scan(fn=scan_fn,elems=elems,initializer=init)) #[step,batch,1,feature]
 
