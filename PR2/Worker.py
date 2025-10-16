@@ -61,13 +61,15 @@ class Worker():
         
         elems=range(0,horizon)
         batch=tf.shape(latent_inits)[0]
-        init=(tf.zeros([batch,1,5]),latent_inits)
+        init=(tf.zeros([batch,1,a_size]),latent_inits)
         result=tf.scan(fn=scan_fn,elems=elems,initializer=init)
         actions=result[0]
+        
         #actions,latents=zip(*tf.scan(fn=scan_fn,elems=elems,initializer=init)) #[step,batch,1,feature]
 
         actions=tf.squeeze(actions,axis=2)
         actions=tf.transpose(actions,[1,0,2])
+        print(actions shape:actions.shape)
         return actions
 
     
