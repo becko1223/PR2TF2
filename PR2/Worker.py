@@ -48,6 +48,7 @@ class Worker():
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
         def scan_fn(actions_latents,elem):
             policy_logits=tf.clip_by_value(self.local_ACRD.policy(actions_latents[1]),-10.0,10.0)
+            print("policy_logits shape:",policy_logits.shape)
             action_probs=tf.nn.softmax(policy_logits)
             action_probs=tf.squeeze(action_probs,axis=1)
             
