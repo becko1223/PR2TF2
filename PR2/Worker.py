@@ -52,7 +52,8 @@ class Worker():
             action_probs=tf.squeeze(action_probs,axis=1)
             
          
-            actions=tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),action_probs)
+            #actions=tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),action_probs)
+            actions = tf.squeeze(tf.random.categorical(tf.math.log(action_probs), num_samples=1), axis=-1)
             actions_onehot=tf.one_hot(actions,a_size)
             actions_onehot=tf.expand_dims(actions_onehot,axis=1) #dynamics入力のため
             latent_preds=self.local_ACRD.dynamics(actions_latents[1],actions_onehot)
