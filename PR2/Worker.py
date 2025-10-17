@@ -241,8 +241,8 @@ class Worker():
         def distribution_to_coordinate(action_prob):
             coord=np.zeros(2,dtype=np.float32)
             for i in range(a_size):
-                coord+=np.array(action_prob[i]*self.env.action2dr(i))
-            return coord
+                coord+=np.array(action_prob[i]*action2dir(i))
+            return tf.constant(coord,dtype=tf.float32)
 
 
         topK=tf.math.top_k(V,k=num_elites)
