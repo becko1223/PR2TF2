@@ -223,6 +223,7 @@ class Worker():
         print("rewards shape:",rewards.shape)
         V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_value,1)
         print("V shape:",V.shape)
+        V=tf.squeeze(V) #[512,1]to[512,]
 
         return V
 
@@ -243,8 +244,8 @@ class Worker():
             return coord
 
 
-        topK=tf.math.top_k(V,k=num_elites,axis=0)
-        V_elite=topK.values.numpy()                  #[k,v]
+        topK=tf.math.top_k(V,k=num_elites)
+        V_elite=topK.values.numpy()                  #[k,]
         actions_elite=samples[topK.indices.numpy()]  #[k,horizon,5]
         score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
         score=score/(tf.reduce_sum(V_elite)+ 1e-9)   #[k,score]
