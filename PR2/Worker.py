@@ -220,7 +220,9 @@ class Worker():
         q_value=tf.minimum(q1_value,q2_value)
 
         rewards=rewards_ta.stack()
+        print("rewards shape:",rewards.shape)
         V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_value,1)
+        print("V shape:",V.shape)
 
         return V
 
