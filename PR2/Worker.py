@@ -235,7 +235,7 @@ class Worker():
             action=tf.math.argmax(action_onehot,axis=-1)
             action_value = action.numpy().item()
             action=action2dir(action_value)
-            return action
+            return tf.constant(action,dtype=tf.float32)
 
         #mean_actions(probs) to coords
         def distribution_to_coordinate(action_prob):
