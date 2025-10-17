@@ -243,7 +243,7 @@ class Worker():
             return coord
 
 
-        topK=tf.math.top_k(V,k=num_elites)
+        topK=tf.math.top_k(V,k=num_elites,axis=0)
         V_elite=topK.values.numpy()                  #[k,v]
         actions_elite=samples[topK.indices.numpy()]  #[k,horizon,5]
         score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
