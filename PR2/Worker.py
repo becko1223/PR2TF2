@@ -162,6 +162,9 @@ class Worker():
 
 
     def compute_return(self,samples,latent_inits): #[B,horizon,onehot] , [B,1,latentdim]
+
+        """
+        #scanはむずかしい
         def rollout(carry,actions):
             latents,discount,_=carry
             actions=tf.expand_dims(actions,axis=1)
@@ -172,7 +175,7 @@ class Worker():
         
         samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
         
-        latents,discounts,rewards=zip(*tf.scan(fn=rollout,elems=samples,initializer=(latent_inits,1.0,0.0))) #[S,B,1,latentsdim],[S,B,1,1(reward)]
+        latents,discounts,rewards=zip(*tf.scan(fn=rollout,elems=samples,initializer=(latent_inits,1.0,0.0))) #[S,B,1,latentsdim],[S,B,1(reward)]
         last_policies=self.local_ACRD.policy(latents[-1])
         last_policies=tf.clip_by_value(last_policies,-10,10)
         last_policies=tf.nn.softmax(last_policies)
@@ -183,6 +186,36 @@ class Worker():
         q2_value=self.local_ACRD.q2(latents[-1],last_actions)
         q_value=tf.minimum(q1_value,q2_value)
         V=tf.reduce_sum(rewards,axis=0)+discounts[-1]*tf.squeeze(q_value,1)
+
+        """
+        current_latents=latent_inits
+        samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
+        discount=1.0
+        rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
+
+        for t in horizon:
+            actions=samples[t]
+            actions=tf.expand_dims(actions,axis=1)
+            rewards=self.local_ACRD.reward(current_latents,actions)
+            rewards=tf.squeeze(rewards,axis=1)
+            current_latents=self.local_ACRD.dynamics(current_latents,actions)
+            rewards_ta=rewards_ta.write(t,rewards*discount)
+            discount*=gammma_tdmpc
+
+
+        last_policies=self.local_ACRD.policy(current_latents)
+        last_policies=tf.clip_by_value(last_policies,-10,10)
+        last_policies=tf.nn.softmax(last_policies)
+        
+        last_actions=tf.map_fn(lambda last_policy:tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),last_policy),last_policies)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
+        last_actions=tf.one_hot(last_actions)
+        q1_value=self.local_ACRD.q1(current_latents,last_actions)
+        q2_value=self.local_ACRD.q2(current_latents,last_actions)
+        q_value=tf.minimum(q1_value,q2_value)
+
+        rewards=rewards_ta.stack()
+        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_value,1)
+
         return V
 
 
