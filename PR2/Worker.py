@@ -207,7 +207,7 @@ class Worker():
         last_policies=tf.clip_by_value(last_policies,-10,10)
         last_policies=tf.nn.softmax(last_policies)
         
-        last_actions=tf.map_fn(lambda last_policy:tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),last_policy),last_policies)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
+        last_actions=tf.map_fn(lambda last_policy:tf.map_fn(lambda action_prob: tf.random.categorical(tf.math.log(action_prob), num_samples=1),last_policy),last_policies)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
         last_actions=tf.one_hot(last_actions)
         q1_value=self.local_ACRD.q1(current_latents,last_actions)
         q2_value=self.local_ACRD.q2(current_latents,last_actions)
