@@ -136,15 +136,18 @@ class Worker():
 
 
         def coordinate_to_onehot(action):
-            distance=[]
-            distance.append(np.linalg.norm(np.array([0,0])-np.array(action)))
-            distance.append(np.linalg.norm(np.array([0,1])-np.array(action)))
-            distance.append(np.linalg.norm(np.array([1,0])-np.array(action)))
-            distance.append(np.linalg.norm(np.array([0,-1])-np.array(action)))
-            distance.append(np.linalg.norm(np.array([-1,0])-np.array(action)))
-            distance=tf.convert_to_tensor(distance)
-            index=tf.argmin(distance)
-            onehot=tf.one_hot(index,a_size)
+            targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=action.dtype)
+    
+            action_expanded = tf.expand_dims(action, axis=0) # 形状: (1, 2)
+            diff = targets - action_expanded 
+            
+
+            distance = tf.norm(diff, ord='euclidean', axis=1) # 形状: (5,)
+            
+
+            index = tf.argmin(distance)
+
+            onehot = tf.one_hot(index, a_size) # 形状: (a_size,)
             return onehot
         
 
@@ -255,7 +258,7 @@ class Worker():
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,1])
 
-        print("latent_init shape:",latent_init.shape)
+        #print("latent_init shape:",latent_init.shape)
         inits_for_actor=tf.repeat(latent_init,num_actor_traj,axis=0)
         
         inits_for_return=tf.repeat(latent_init,num_actor_traj+num_samples,axis=0)
