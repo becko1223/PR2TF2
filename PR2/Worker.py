@@ -88,7 +88,8 @@ class Worker():
             
             
             # Policy (B, 1, A_SIZE)
-            policy_logits = tf.clip_by_value(self.local_ACRD.policy(current_latent), -10.0, 10.0)
+            policy_logits=self.local_ACRD.policy(current_latent)
+            policy_logits = tf.clip_by_value(policy_logits, -10.0, 10.0)
             
             # Action Probabilities (B, A_SIZE)
             action_probs = tf.nn.softmax(policy_logits)
