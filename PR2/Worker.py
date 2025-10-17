@@ -250,7 +250,7 @@ class Worker():
         score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
         score=score/(tf.reduce_sum(V_elite)+ 1e-9)   #[k,score]
 
-        score=tf.expand_dims(score,axis=1)
+        score=tf.expand_dims(score,axis=[1,2])
 
         print("actions_elite shape:",actions_elite.shape)
         print("score shape:",score.shape)
