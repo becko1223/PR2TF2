@@ -252,6 +252,7 @@ class Worker():
 
         print("actions_elite shape:",actions_elite.shape)
         print("score shape:",score.shape)
+        score=tf.expand_dims(score,axis=1)
         mean=tf.reduce_mean(actions_elite*score,axis=0)   #[horizon,5]
 
         elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
@@ -551,8 +552,8 @@ class Worker():
                     goal=tf.expand_dims(goal,0)
                     goal=tf.cast(goal,dtype=tf.float32)
 
-                    print("ob shape:",ob.shape)
-                    print("goal shape:",goal.shape)
+                    #print("ob shape:",ob.shape)
+                    #print("goal shape:",goal.shape)
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     a, mean=self.mppi(latent_init,mean)
