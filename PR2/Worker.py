@@ -233,7 +233,8 @@ class Worker():
         #elite_actions to coords
         def onehot_to_coordinate(action_onehot):
             action=tf.math.argmax(action_onehot,axis=-1)
-            action=action2dir(action)
+            action_value = action.numpy().item()
+            action=action2dir(action_value)
             return action
 
         #mean_actions(probs) to coords
