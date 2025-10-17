@@ -193,7 +193,7 @@ class Worker():
         discount=1.0
         rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
 
-        for t in horizon:
+        for t in tf.range(horizon):
             actions=samples[t]
             actions=tf.expand_dims(actions,axis=1)
             rewards=self.local_ACRD.reward(current_latents,actions)
