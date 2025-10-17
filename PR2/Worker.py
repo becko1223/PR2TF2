@@ -250,6 +250,8 @@ class Worker():
         score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
         score=score/(tf.reduce_sum(V_elite)+ 1e-9)   #[k,score]
 
+        print("actions_elite shape:",actions_elite.shape)
+        print("score shape:",score.shape)
         mean=tf.reduce_mean(actions_elite*score,axis=0)   #[horizon,5]
 
         elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
