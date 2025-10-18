@@ -134,6 +134,7 @@ class Worker():
         actions_std = tf.expand_dims(actions_std, axis=0)
         print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
         print("eps shape:",eps.shape)
+        print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
 
 
