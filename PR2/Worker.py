@@ -255,15 +255,15 @@ class Worker():
         last_actions=tf.map_fn(lambda last_policy: tf.random.categorical(tf.math.log(last_policy), num_samples=1),last_policies,dtype=tf.int64)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
         last_actions=tf.squeeze(last_actions,1)
         last_actions=tf.one_hot(last_actions,a_size)
-        print("last_actions shape:",last_actions.shape)
+        #print("last_actions shape:",last_actions.shape)
         q1_value=self.local_ACRD.q1(current_latents,last_actions)
         q2_value=self.local_ACRD.q2(current_latents,last_actions)
         q_value=tf.minimum(q1_value,q2_value)
 
         rewards=rewards_ta.stack()
-        print("rewards shape:",rewards.shape)
+        #print("rewards shape:",rewards.shape)
         V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_value,1)
-        print("V shape:",V.shape)
+        #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
         return V
@@ -294,19 +294,19 @@ class Worker():
         score=tf.expand_dims(score,axis=1)
         score=tf.expand_dims(score,axis=1)
 
-        print("actions_elite shape:",actions_elite.shape)
-        print("score shape:",score.shape)
+        #print("actions_elite shape:",actions_elite.shape)
+        #print("score shape:",score.shape)
         
         mean=tf.reduce_mean(actions_elite*score,axis=0)   #[horizon,5]
 
         elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
-        print("score shape:",score.shape)
+        #print("score shape:",score.shape)
         print("elite_coord shape:",elite_coord.shape)
         print("mean coord shape",mean_coord.shape)
         std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1,keepdims=True)**2,axis=0))
-        print("std shape",std.shape)
+        #print("std shape",std.shape)
 
         return mean, std
 
