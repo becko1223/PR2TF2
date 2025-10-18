@@ -88,6 +88,7 @@ class Worker():
             
             
             # Policy (B, 1, A_SIZE)
+            print("current_latent shape:", current_latent.shape)
             policy_logits=self.local_ACRD.policy(current_latent)
             policy_logits = tf.clip_by_value(policy_logits, -10.0, 10.0)
             
