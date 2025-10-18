@@ -276,7 +276,7 @@ class Worker():
         score=score/(tf.reduce_sum(score)+ 1e-9)   #[k,(score)]
 
         score=tf.expand_dims(score,axis=1)
-        
+        score=tf.expand_dims(score,axis=1)
 
         print("actions_elite shape:",actions_elite.shape)
         print("score shape:",score.shape)
@@ -286,8 +286,12 @@ class Worker():
         elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
+        print("score shape:",score.shape)
+        print("elite_coord shape:",elite_coord.shape)
+        print("mean coord shape",mean_coord.shape)
         std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2,axis=0))
         std = tf.expand_dims(std, axis=-1)
+        print("std shape",std.shape)
 
         return mean, std
 
