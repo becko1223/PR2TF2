@@ -155,7 +155,7 @@ class Worker():
         
 
         #actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
-        targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=action.dtype)
+        targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=tf.float32)
 
         B = tf.shape(actions)[0]
         T = tf.shape(actions)[1]
