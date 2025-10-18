@@ -131,7 +131,6 @@ class Worker():
         
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
-        actions_std = tf.expand_dims(actions_std, axis=0)
         print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
         print("eps shape:",eps.shape)
         print("std shape:",actions_std.shape)
