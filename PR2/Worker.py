@@ -166,7 +166,27 @@ class Worker():
             return onehot
         
 
-        actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+        #actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+        # ターゲット座標: (A_SIZE, 2)
+        targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=tf.float32)
+        
+        # 形状を合わせるために targets を拡張: (1, 1, A_SIZE, 2)
+        targets_expanded = tf.expand_dims(tf.expand_dims(targets, 0), 0)
+
+        # actions を拡張: (B, T, 1, 2)
+        actions_expanded = tf.expand_dims(actions, axis=-2)
+        
+        # 差分を計算: (B, T, A_SIZE, 2)
+        diff = targets_expanded - actions_expanded
+        
+        # 距離を計算: (B, T, A_SIZE)
+        distance = tf.norm(diff, ord='euclidean', axis=-1) 
+        
+        # 最小距離のインデックス (アクションID) を取得: (B, T)
+        index = tf.argmin(distance, axis=-1)
+
+        # One-hotに変換: (B, T, A_SIZE)
+        actions_onehot_samples = tf.one_hot(index, a_size)
 
         """
         targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=tf.float32)
