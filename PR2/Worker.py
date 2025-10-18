@@ -287,6 +287,7 @@ class Worker():
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
         std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2,axis=0))
+        std = tf.expand_dims(std, axis=-1)
 
         return mean, std
 
