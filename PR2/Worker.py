@@ -154,7 +154,29 @@ class Worker():
             return onehot
         
 
-        actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+        #actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+        targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=action.dtype)
+
+        B = tf.shape(actions)[0]
+        T = tf.shape(actions)[1]
+        
+ 
+        actions_onehot_ta = tf.TensorArray(dtype=actions.dtype, size=0, dynamic_size=True, clear_after_read=False)
+        flat_index = 0 
+        for i in tf.range(actions.shape[0]):
+            for j in tf.range(actions.shape[1]):
+                action=actions[i][j]
+                action_expanded = tf.expand_dims(action, axis=0) # 形状: (1, 2)
+                diff = targets - action_expanded 
+                distance = tf.norm(diff, ord='euclidean', axis=1) # 形状: (5,)
+                index = tf.argmin(distance)
+                onehot = tf.one_hot(index, a_size) # 形状: (a_size,)
+                actions_onehot_ta = actions_onehot_ta.write(flat_index, onehot)
+                flat_index += 1
+
+
+        actions_onehot_samples = actions_onehot_ta.stack()
+        actions_onehot_samples = tf.reshape(actions_onehot_samples, (B, T, a_size))
 
         #invalidなものを取り除くが、環境モデルのことを考えるとinvalidな選択肢を絶対に取らせないようにするのは良くないかも
 
