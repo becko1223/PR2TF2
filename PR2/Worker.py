@@ -273,10 +273,10 @@ class Worker():
         V_elite=topK.values.numpy()                  #[k,]
         actions_elite=tf.gather(samples, topK.indices) #[k,horizon,5]
         score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
-        score=score/(tf.reduce_sum(V_elite)+ 1e-9)   #[k,score]
+        score=score/(tf.reduce_sum(score)+ 1e-9)   #[k,(score)]
 
         score=tf.expand_dims(score,axis=1)
-        score=tf.expand_dims(score,axis=1)
+        
 
         print("actions_elite shape:",actions_elite.shape)
         print("score shape:",score.shape)
