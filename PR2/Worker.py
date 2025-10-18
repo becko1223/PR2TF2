@@ -124,15 +124,15 @@ class Worker():
             coord=np.zeros(2,dtype=np.float32)
             for i in range(a_size):
                 coord+=np.array(action_prob[i]*action2dir(i))
-            return coord
+            return tf.constant(coord,dtype=tf.float32)
         
         actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
         actions_mean_2D=tf.expand_dims(actions_mean_2D,0)
         
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
-        #print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
-        #print("eps shape:",eps.shape)
+        print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
+        print("eps shape:",eps.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
 
 
