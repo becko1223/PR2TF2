@@ -139,7 +139,7 @@ class Worker():
 
 
         def coordinate_to_onehot(action):
-            targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=action.dtype)
+            targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=tf.float32)
     
             action_expanded = tf.expand_dims(action, axis=0) # 形状: (1, 2)
             diff = targets - action_expanded 
