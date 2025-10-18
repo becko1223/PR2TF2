@@ -26,7 +26,7 @@ def action2dir_tensor(a):
         [1, 0],
         [0, -1],
         [-1, 0]
-    ], dtype=tf.int32)
+    ], dtype=tf.float32)
     direction_tensor = tf.gather(checking_tensor, a)
     
     return direction_tensor
