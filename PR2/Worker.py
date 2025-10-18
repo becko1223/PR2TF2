@@ -154,7 +154,9 @@ class Worker():
             return onehot
         
 
-        #actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+        actions_onehot_samples=tf.map_fn(fn=lambda x:tf.map_fn(fn=coordinate_to_onehot,elems=x),elems=actions)
+
+        """
         targets = tf.constant([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, -1.0], [-1.0, 0.0]], dtype=tf.float32)
 
         B = tf.shape(actions)[0]
@@ -177,6 +179,9 @@ class Worker():
 
         actions_onehot_samples = actions_onehot_ta.stack()
         actions_onehot_samples = tf.reshape(actions_onehot_samples, (B, T, a_size))
+
+
+        """
 
         #invalidなものを取り除くが、環境モデルのことを考えるとinvalidな選択肢を絶対に取らせないようにするのは良くないかも
 
@@ -589,7 +594,7 @@ class Worker():
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     a, mean=self.mppi(latent_init,mean)
-                    q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a)),0),0)
+                    q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size)),0),0)
                   
 
                    
