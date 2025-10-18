@@ -19,6 +19,18 @@ GRAD_CLIP = 10.0
 def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
+def action2dir_tensor(a):
+    checking_tensor = tf.constant([
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [0, -1],
+        [-1, 0]
+    ], dtype=tf.int32)
+    direction_tensor = tf.gather(checking_tensor, a)
+    
+    return direction_tensor
+
 
 class Worker():
     def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock,inferenceLock, learningAgent,
@@ -262,15 +274,14 @@ class Worker():
         #elite_actions to coords
         def onehot_to_coordinate(action_onehot):
             action=tf.math.argmax(action_onehot,axis=-1)
-            action_value = action.numpy().item()
-            action=action2dir(action_value)
+            action=action2dir_tensor(action)
             return tf.constant(action,dtype=tf.float32)
 
         #mean_actions(probs) to coords
         def distribution_to_coordinate(action_prob):
             coord=np.zeros(2,dtype=np.float32)
             for i in range(a_size):
-                coord+=np.array(action_prob[i]*action2dir(i))
+                coord+=np.array(action_prob[i]*action2dir_tensor(i))
             return tf.constant(coord,dtype=tf.float32)
 
 
