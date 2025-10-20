@@ -102,7 +102,7 @@ class Worker():
             
             
             # Policy (B, 1, A_SIZE)
-            print("current_latent shape:", current_latent.shape)
+            #print("current_latent shape:", current_latent.shape)
             policy_logits=self.local_ACRD.policy(current_latent)
             policy_logits = tf.clip_by_value(policy_logits, -10.0, 10.0)
             
@@ -150,9 +150,9 @@ class Worker():
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
         eps=tf.random.normal([num_samples,horizon,2])
         actions_std=tf.expand_dims(actions_std,1)
-        print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
-        print("eps shape:",eps.shape)
-        print("std shape:",actions_std.shape)
+        #print("actions_mean_2D_samples shape:",actions_mean_2D_samples.shape)
+        #print("eps shape:",eps.shape)
+        #print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
 
 
@@ -349,13 +349,13 @@ class Worker():
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
         #print("score shape:",score.shape)
-        print("elite_coord shape:",elite_coord.shape)
-        print("mean coord shape",mean_coord.shape)
+        #print("elite_coord shape:",elite_coord.shape)
+        #print("mean coord shape",mean_coord.shape)
         score=tf.squeeze(score,axis=-1) #[k,1]に戻す。次の行の計算のため
         batch_for_std=score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2
-        print("batch_for_std shape:",batch_for_std.shape)
+        #print("batch_for_std shape:",batch_for_std.shape)
         std=tf.sqrt(tf.reduce_sum(batch_for_std,axis=0))
-        print("std shape",std.shape)
+        #print("std shape",std.shape)
 
         return mean, std
 
@@ -613,7 +613,7 @@ class Worker():
             rnn_state = [tf.zeros([1,512],dtype=tf.float32),tf.zeros([1,512],dtype=tf.float32)]
             rnn_state0 = rnn_state
 
-            mean=tf.one_hot(tf.zeros([5],dtype=tf.int32),a_size)
+            mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
             self.synchronize()  # synchronize starting time of the threads
             swarm_reward[self.metaAgentID] = 0
@@ -659,6 +659,8 @@ class Worker():
                     #print("goal shape:",goal.shape)
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    tf.print("latent_init shape:", tf.shape(latent_init))
+                    tf.print("mean shape:", tf.shape(mean))
                     a, mean=self.mppi(latent_init,mean)
                     a=a.numpy().item()
                     q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
