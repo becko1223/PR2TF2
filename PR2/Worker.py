@@ -336,7 +336,7 @@ class Worker():
         score=score/(tf.reduce_sum(score)+ 1e-9)   #[k,(score)]
 
         score=tf.expand_dims(score,axis=1)
-        score=tf.expand_dims(score,axis=1)
+        #score=tf.expand_dims(score,axis=1)
 
         #print("actions_elite shape:",actions_elite.shape)
         #print("score shape:",score.shape)
