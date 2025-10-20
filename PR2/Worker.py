@@ -261,6 +261,7 @@ class Worker():
         for t in tf.range(horizon):
             actions=samples[t]
             actions=tf.expand_dims(actions,axis=1)
+            print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions)
             rewards=tf.squeeze(rewards,axis=1)
             current_latents=self.local_ACRD.dynamics(current_latents,actions)
