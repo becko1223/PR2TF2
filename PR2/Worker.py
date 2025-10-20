@@ -381,7 +381,7 @@ class Worker():
 
         loop_iterations = int(iterations)
 
-        for i in tf.range(loop_iterations):
+        for i in range(loop_iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
