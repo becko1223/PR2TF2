@@ -13,6 +13,7 @@ from Map_Generator import maze_generator
 from parameters import *
 
 GRAD_CLIP = 10.0
+RNN_SIZE = 512
 
 
 # helper functions
@@ -56,7 +57,9 @@ class Worker():
 
         
 
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, 1, RNN_SIZE], dtype=tf.float32)
+    ])
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
 
         """
@@ -90,7 +93,6 @@ class Worker():
 
         """
 
-        batch_size = tf.shape(latent_inits)[0]
        
         current_latent = latent_inits 
         
@@ -131,7 +133,10 @@ class Worker():
     
 
 
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[horizon, a_size], dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon,],dtype=tf.float32)
+    ])
     def sample_from_distribution(self,actions_mean,actions_std):
         def distribution_to_coordinate(action_prob):
             coord=tf.constant([0,0],dtype=tf.float32)
@@ -225,7 +230,10 @@ class Worker():
 
         return actions_onehot_samples
 
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
+        tf.TensorSpec(shape=[None,1,512],dtype=tf.float32)
+    ])
     def compute_return(self,samples,latent_inits): #[B,horizon,onehot] , [B,1,latentdim]
 
         """
@@ -261,7 +269,7 @@ class Worker():
         for t in tf.range(horizon):
             actions=samples[t]
             actions=tf.expand_dims(actions,axis=1)
-            print("actions shape:",actions.shape)
+            #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions)
             rewards=tf.squeeze(rewards,axis=1)
             current_latents=self.local_ACRD.dynamics(current_latents,actions)
@@ -300,7 +308,10 @@ class Worker():
         return V
 
 
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, ], dtype=tf.float32),
+        tf.TensorSpec(shape=[None,horizon,a_size],dtype=tf.float32)
+    ])
     def get_mean(self,V,samples):
         #elite_actions to coords
         def onehot_to_coordinate(action_onehot):
@@ -345,7 +356,10 @@ class Worker():
         return mean, std
 
 
-
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon,],dtype=tf.float32)
+    ])
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,1])
 
@@ -357,7 +371,7 @@ class Worker():
 
         samples_from_actor=self.sample_from_actor(inits_for_actor)        #[B,horizon,onehot]
 
-        for i in range(iterations):
+        for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
