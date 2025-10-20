@@ -256,7 +256,7 @@ class Worker():
         current_latents=latent_inits
         samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
         discount=1.0
-        rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
+        rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False,clear_after_read=False)
 
         for t in tf.range(horizon):
             actions=samples[t]
@@ -320,7 +320,9 @@ class Worker():
         
         mean=tf.reduce_mean(actions_elite*score,axis=0)   #[horizon,5]
 
-        elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
+        action_indices = tf.argmax(actions_elite, axis=-1, output_type=tf.int32) # [k, horizon]
+        elite_coord = action2dir_tensor(action_indices) 
+        #elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
         mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
 
         #print("score shape:",score.shape)
