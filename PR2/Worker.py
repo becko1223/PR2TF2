@@ -351,7 +351,7 @@ class Worker():
         #print("score shape:",score.shape)
         print("elite_coord shape:",elite_coord.shape)
         print("mean coord shape",mean_coord.shape)
-        score=tf.squeeze(score) #[k,1]に戻す。次の行の計算のため
+        score=tf.squeeze(score,axis=-1) #[k,1]に戻す。次の行の計算のため
         batch_for_std=score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2
         print("batch_for_std shape:",batch_for_std.shape)
         std=tf.sqrt(tf.reduce_sum(batch_for_std,axis=0))
