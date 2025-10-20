@@ -372,6 +372,12 @@ class Worker():
 
         samples_from_actor=self.sample_from_actor(inits_for_actor)        #[B,horizon,onehot]
 
+        tf.autograph.experimental.set_loop_options(
+            shape_invariants=[
+                (std, tf.TensorShape([horizon])),
+                (mean, tf.TensorShape([horizon, a_size]))
+            ]
+        )
         for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
