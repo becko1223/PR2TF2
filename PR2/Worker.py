@@ -387,8 +387,7 @@ class Worker():
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
         V=self.compute_return(samples_from_distribution,inits_for_return)
-        action_best_tensor=tf.argmax(samples_from_distribution[tf.argmax(V),0])
-        action_best=action_best_tensor.numpy().item()
+        action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
         return action_best,mean
 
@@ -661,6 +660,7 @@ class Worker():
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     a, mean=self.mppi(latent_init,mean)
+                    a=a.numpy().item()
                     q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                   
 
