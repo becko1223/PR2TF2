@@ -336,7 +336,7 @@ class Worker():
         score=score/(tf.reduce_sum(score)+ 1e-9)   #[k,(score)]
 
         score=tf.expand_dims(score,axis=1)
-        #score=tf.expand_dims(score,axis=1)
+        score=tf.expand_dims(score,axis=1)  #[k,1,1]mean計算のために
 
         #print("actions_elite shape:",actions_elite.shape)
         #print("score shape:",score.shape)
@@ -351,6 +351,7 @@ class Worker():
         #print("score shape:",score.shape)
         print("elite_coord shape:",elite_coord.shape)
         print("mean coord shape",mean_coord.shape)
+        score=tf.squeeze(score) #[k,1]に戻す。次の行の計算のため
         batch_for_std=score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2
         print("batch_for_std shape:",batch_for_std.shape)
         std=tf.sqrt(tf.reduce_sum(batch_for_std,axis=0))
@@ -374,16 +375,10 @@ class Worker():
 
         samples_from_actor=self.sample_from_actor(inits_for_actor)        #[B,horizon,onehot]
 
-        tf.autograph.experimental.set_loop_options(
-            shape_invariants=[
-                (std, tf.TensorShape([horizon])),
-                (mean, tf.TensorShape([horizon, a_size]))
-            ]
-        )
+       
 
-        loop_iterations = int(iterations)
 
-        for i in range(loop_iterations):
+        for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
