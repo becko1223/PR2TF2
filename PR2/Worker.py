@@ -387,7 +387,8 @@ class Worker():
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
         V=self.compute_return(samples_from_distribution,inits_for_return)
-        action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
+        action_best_tensor=tf.argmax(samples_from_distribution[tf.argmax(V),0])
+        action_best=action_best_tensor.numpy().item()
 
         return action_best,mean
 
