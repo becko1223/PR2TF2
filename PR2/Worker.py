@@ -332,7 +332,7 @@ class Worker():
         topK=tf.math.top_k(V,k=num_elites)
         V_elite=topK.values.numpy()                  #[k,]
         actions_elite=tf.gather(samples, topK.indices) #[k,horizon,5]
-        score=tf.math.exp(temperature * (V_elite - np.max(V_elite)))
+        score=tf.math.exp(temperature * (V_elite - tf.reduce_max(V_elite)))
         score=score/(tf.reduce_sum(score)+ 1e-9)   #[k,(score)]
 
         score=tf.expand_dims(score,axis=1)
