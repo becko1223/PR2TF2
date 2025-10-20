@@ -272,9 +272,18 @@ class Worker():
         last_policies=tf.clip_by_value(last_policies,-10,10)
         last_policies=tf.nn.softmax(last_policies)
         
-        last_actions=tf.map_fn(lambda last_policy: tf.random.categorical(tf.math.log(last_policy), num_samples=1),last_policies,dtype=tf.int64)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
-        last_actions=tf.squeeze(last_actions,1)
-        last_actions=tf.one_hot(last_actions,a_size)
+        #last_actions=tf.map_fn(lambda last_policy: tf.random.categorical(tf.math.log(last_policy), num_samples=1),last_policies,dtype=tf.int64)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
+        policy_for_sampling = tf.squeeze(last_policies, axis=1) # [B, A_SIZE]
+
+        # バッチ全体でサンプリングを実行 (num_samples=1)
+        last_actions = tf.random.categorical(
+            tf.math.log(policy_for_sampling), 
+            num_samples=1, 
+            dtype=tf.int64
+        )   #[B,1]
+
+        last_actions=tf.squeeze(last_actions)
+        last_actions = tf.one_hot(last_actions, a_size)
         #print("last_actions shape:",last_actions.shape)
         q1_value=self.local_ACRD.q1(current_latents,last_actions)
         q2_value=self.local_ACRD.q2(current_latents,last_actions)
