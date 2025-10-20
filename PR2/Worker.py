@@ -286,6 +286,7 @@ class Worker():
         last_actions=tf.squeeze(last_actions)
         last_actions = tf.one_hot(last_actions, a_size)
         #print("last_actions shape:",last_actions.shape)
+        last_actions=tf.expand_dims(last_actions,axis=1)
         q1_value=self.local_ACRD.q1(current_latents,last_actions)
         q2_value=self.local_ACRD.q2(current_latents,last_actions)
         q_value=tf.minimum(q1_value,q2_value)
