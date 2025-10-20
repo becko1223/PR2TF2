@@ -659,8 +659,8 @@ class Worker():
                     #print("goal shape:",goal.shape)
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
-                    tf.print("latent_init shape:", tf.shape(latent_init))
-                    tf.print("mean shape:", tf.shape(mean))
+                    #tf.print("latent_init shape:", tf.shape(latent_init))
+                    #tf.print("mean shape:", tf.shape(mean))
                     a, mean=self.mppi(latent_init,mean)
                     a=a.numpy().item()
                     q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
@@ -693,6 +693,7 @@ class Worker():
                     self.synchronize()
 
                     if self.agentID == 1:
+                        print("step",episode_step_count,"  agent1 action:",a)
                         all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
