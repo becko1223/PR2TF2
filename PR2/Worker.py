@@ -352,7 +352,7 @@ class Worker():
         print("elite_coord shape:",elite_coord.shape)
         print("mean coord shape",mean_coord.shape)
         std=tf.sqrt(tf.reduce_sum(score * tf.math.reduce_euclidean_norm(elite_coord - mean_coord,axis=-1)**2,axis=0))
-        #print("std shape",std.shape)
+        print("std shape",std.shape)
 
         return mean, std
 
