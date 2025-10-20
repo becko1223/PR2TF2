@@ -134,10 +134,10 @@ class Worker():
 
     def sample_from_distribution(self,actions_mean,actions_std):
         def distribution_to_coordinate(action_prob):
-            coord=np.zeros(2,dtype=np.float32)
-            for i in range(a_size):
-                coord+=np.array(action_prob[i]*action2dir(i))
-            return tf.constant(coord,dtype=tf.float32)
+            coord=tf.constant([0,0],dtype=tf.float32)
+            for i in tf.range(a_size):
+                coord+=action_prob[i]*action2dir_tensor(i)
+            return coord
         
         actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
         actions_mean_2D=tf.expand_dims(actions_mean_2D,0)
@@ -299,10 +299,11 @@ class Worker():
 
         #mean_actions(probs) to coords
         def distribution_to_coordinate(action_prob):
-            coord=np.zeros(2,dtype=np.float32)
-            for i in range(a_size):
-                coord+=np.array(action_prob[i]*action2dir_tensor(i))
-            return tf.constant(coord,dtype=tf.float32)
+            
+            coord=tf.constant([0,0],dtype=tf.float32)
+            for i in tf.range(a_size):
+                coord+=action_prob[i]*action2dir_tensor(i)
+            return coord
 
 
         topK=tf.math.top_k(V,k=num_elites)
