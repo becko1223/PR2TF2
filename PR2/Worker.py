@@ -358,7 +358,7 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
-        tf.TensorSpec(shape=[horizon,],dtype=tf.float32)
+        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32)
     ])
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,1])
