@@ -358,10 +358,7 @@ class Worker():
         return mean, std
 
 
-    @tf.function(input_signature=[
-        tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
-        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32)
-    ], reduce_retracing=True)
+    @tf.function
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,])
 
