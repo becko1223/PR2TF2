@@ -449,17 +449,23 @@ class Worker():
         chosen=random.sample(all_list,step//horizon)
         chosen.append(step-horizon-1)
 
+        list_obs=[obs[i:i+horizon+1] for i in chosen]  #長さhorizon+1
+        list_goals=[goals[i:i+horizon+1] for i in chosen]
+        list_rewards=[rewards[i:i+horizon+1] for i in chosen]
+        list_actions=[actions[i:i+horizon+1] for i in chosen]
+        list_states=[rnn_states[i] for i in chosen]
+        list_valids=[valids[i:i+horizon+1] for i in chosen]
 
-        batch_obs = tf.stack([obs[i:i+horizon+1] for i in chosen]) #長さhorizon+1
-        batch_goals = tf.stack([goals[i:i+horizon+1] for i in chosen])
-        batch_rewards=tf.stack([rewards[i:i+horizon+1] for i in chosen])
+        batch_obs = tf.stack(list_obs) 
+        batch_goals = tf.stack(list_goals)
+        batch_rewards=tf.stack(list_rewards)
         #batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
-        batch_actions=tf.stack([actions[i:i+horizon+1] for i in chosen])
+        batch_actions=tf.stack(list_actions)
         batch_actions=tf.one_hot(batch_actions,a_size)
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
-        batch_states=tf.stack([rnn_states[i] for i in chosen])
-        batch_valids=tf.stack([valids[i:i+horizon+1] for i in chosen])
-        rhos=tf.stack([[rho**i for i in range(horizon)] for j in chosen])
+        batch_states=tf.stack(list_states)
+        batch_valids=tf.stack(list_valids)
+        rhos=tf.conver_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
 
 
         variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
