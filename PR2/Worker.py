@@ -358,7 +358,10 @@ class Worker():
         return mean, std
 
 
-    @tf.function
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32)
+    ], reduce_retracing=True)
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,])
 
@@ -372,12 +375,47 @@ class Worker():
 
        
 
-
+        """
         for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
             mean,std=self.get_mean(V,allsamples)
+        """
+
+
+        i = tf.constant(0)
+        current_mean = mean
+        current_std = std
+
+        # ループの条件
+        def cond(i, current_mean, current_std):
+            return tf.less(i, iterations)
+
+        # ループの本体
+        def body(i, current_mean, current_std):
+            # ループ内で実行したい処理
+            samples_from_distribution=self.sample_from_distribution(current_mean, current_std) 
+            allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
+            V=self.compute_return(allsamples,inits_for_return)
+            new_mean, new_std=self.get_mean(V,allsamples)
+            
+            # 次のイテレーションの値を返す
+            return tf.add(i, 1), new_mean, new_std
+
+        # tf.while_loop の実行
+        i_final, mean_final, std_final = tf.while_loop(
+            cond,
+            body,
+            loop_vars=[i, current_mean, current_std],
+            shape_invariants=[
+                i.get_shape(),
+                tf.TensorSpec(shape=[horizon, 5], dtype=tf.float32), # meanの形状
+                tf.TensorSpec(shape=[horizon,], dtype=tf.float32)    # stdの形状
+            ]
+        )
+
+
 
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
