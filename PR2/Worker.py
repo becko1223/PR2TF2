@@ -32,6 +32,15 @@ def action2dir_tensor(a):
     
     return direction_tensor
 
+@tf.function(input_signature=[
+tf.TensorSpec(shape=[a_size], dtype=tf.float32)
+])
+def distribution_to_coordinate(action_prob):
+    coord=tf.constant([0,0],dtype=tf.float32)
+    for i in tf.range(a_size):
+        coord+=action_prob[i]*action2dir_tensor(i)
+    return coord
+
 
 class Worker():
     def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock,inferenceLock, learningAgent,
@@ -53,6 +62,8 @@ class Worker():
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
 
+
+   
 
 
         
@@ -138,11 +149,6 @@ class Worker():
         tf.TensorSpec(shape=[horizon,],dtype=tf.float32)
     ])
     def sample_from_distribution(self,actions_mean,actions_std):
-        def distribution_to_coordinate(action_prob):
-            coord=tf.constant([0,0],dtype=tf.float32)
-            for i in tf.range(a_size):
-                coord+=action_prob[i]*action2dir_tensor(i)
-            return coord
         
         actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
         actions_mean_2D=tf.expand_dims(actions_mean_2D,0)
@@ -319,14 +325,6 @@ class Worker():
             action=tf.math.argmax(action_onehot,axis=-1)
             action=action2dir_tensor(action)
             return tf.constant(action,dtype=tf.float32)
-
-        #mean_actions(probs) to coords
-        def distribution_to_coordinate(action_prob):
-            
-            coord=tf.constant([0,0],dtype=tf.float32)
-            for i in tf.range(a_size):
-                coord+=action_prob[i]*action2dir_tensor(i)
-            return coord
 
 
         topK=tf.math.top_k(V,k=num_elites)
