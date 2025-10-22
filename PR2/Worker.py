@@ -358,7 +358,10 @@ class Worker():
         return mean, std
 
 
-    @tf.function
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32)
+    ], reduce_retracing=True)
     def mppi(self,latent_init,mean):
         std=tf.ones([horizon,])
 
@@ -652,6 +655,8 @@ class Worker():
 
                     #print("ob shape:",ob.shape)
                     #print("goal shape:",goal.shape)
+                    tf.ensure_shape(rnn_state[0],[1,512])
+                    tf.ensure_shape(rnn_state[1],[1,512])
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     #tf.print("latent_init shape:", tf.shape(latent_init))
