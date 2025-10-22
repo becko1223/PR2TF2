@@ -424,13 +424,13 @@ class Worker():
     def calculateGradient(self, rollout, episode_count, rnn_state0):
         
         rollout = np.array(rollout, dtype=object)
-        obs=tf.convert_to_tensor(rollout[:, 0],dtype=tf.float32)
-        goals=tf.convert_to_tensor(rollout[:,-4],dtype=tf.float32)
-        rewards = tf.convert_to_tensor(rollout[:, 2],dtype=tf.float32)
-        actions = tf.convert_to_tensor(rollout[:, 1],dtype=tf.float32)
-        train_value=tf.convert_to_tensor(rollout[:,-3],dtype=tf.float32)
-        rnn_states=tf.convert_to_tensor(rollout[:,-1],dtype=tf.float32)
-        valids = tf.convert_to_tensor(rollout[:, 5],dtype=tf.float32)
+        obs=tf.convert_to_tensor(np.stack(rollout[:, 0]),dtype=tf.float32)
+        goals=tf.convert_to_tensor(np.stack(rollout[:,-4]),dtype=tf.float32)
+        rewards = tf.convert_to_tensor(np.stack(rollout[:, 2]),dtype=tf.float32)
+        actions = tf.convert_to_tensor(np.stack(rollout[:, 1]),dtype=tf.float32)
+        train_value=tf.convert_to_tensor(np.stack(rollout[:,-3]),dtype=tf.float32)
+        rnn_states=tf.convert_to_tensor(np.stack(rollout[:,-1]),dtype=tf.float32)
+        valids = tf.convert_to_tensor(np.stack(rollout[:, 5]),dtype=tf.float32)
 
         
 
@@ -462,6 +462,9 @@ class Worker():
         rhos=tf.stack([[rho**i for i in range(horizon)] for j in chosen])
 
 
+        variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
+        variables_except_for_actor=list(set(self.local_ACRD.trainable_variables)-set(variables_for_actor))
+       
 
         #アクター以外訓練
         with tf.GradientTape() as tape:
@@ -522,7 +525,7 @@ class Worker():
             consistency_loss=tf.reduce_mean(rhos*tf.square(batch_latent_targets-batch_latent_preds))
 
             total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
-        world_grads=tape.gradient(total_loss,self.local_ACRD.trainable_variables)
+        world_grads=tape.gradient(total_loss,variables_except_for_actor)
 
 
         #アクター訓練
@@ -547,7 +550,7 @@ class Worker():
             entropy=-tf.reduce_mean(rhos*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
             total_loss=total_loss=0.5*policy_loss+16*valid_loss+entropy
-        policy_grads=tape.gradient(total_loss,self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables)
+        policy_grads=tape.gradient(total_loss,variables_for_actor)
 
 
         var_norms = tf.linalg.global_norm(self.local_ACRD.trainable_variables)
