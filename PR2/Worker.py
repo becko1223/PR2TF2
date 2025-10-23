@@ -681,7 +681,7 @@ class Worker():
 
                     else:
                         a=random.randint(0,4)
-                        q=[[0]]
+                        q=np.zeros((1,1))
                     
 
                    
