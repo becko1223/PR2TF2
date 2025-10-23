@@ -519,7 +519,7 @@ class Worker():
             #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
             with self.inferenceLock:
                 policy=self.local_ACRD.policy(batch_latent_preds)
-                policy=tf.clip_by_value(policy)
+                policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
             next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
             next_actions=tf.one_hot(next_actions,a_size)
