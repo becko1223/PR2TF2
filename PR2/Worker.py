@@ -514,7 +514,7 @@ class Worker():
 
             #latentのターゲットを出す(b,s,h,w,c)
             with self.inferenceLock:
-                batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],tf.reshape(batch_states_step1[:,0],[-1,512]),tf.reshape(batch_states_step1[:,1],[-1,512]))
+                batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
 
             #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
             with self.inferenceLock:
