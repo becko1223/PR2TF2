@@ -492,7 +492,7 @@ class Worker():
             with self.inferenceLock:
                 print("batch_obs shape:",batch_obs.shape)
                 print("batch_goals shape:",batch_goals.shape)
-                latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0],batch_goals[:,0],batch_states[:,0],batch_states[:,1])
+                latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],batch_states[:,0],batch_states[:,1])
 
             #latent,rewardの予測値
             batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
