@@ -465,7 +465,7 @@ class Worker():
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
         batch_states=tf.convert_to_tensor(np_states,dtype=tf.float32)
         batch_valids=tf.convert_to_tensor(np_valids,dtype=tf.float32)
-        rhos=tf.conver_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
+        rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
 
 
         variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
