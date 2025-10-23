@@ -490,6 +490,8 @@ class Worker():
             batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
 
             with self.inferenceLock:
+                print("batch_obs shape:",batch_obs.shape)
+                print("batch_goals shape:",batch_goals.shape)
                 latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0],batch_goals[:,0],batch_states[:,0],batch_states[:,1])
 
             #latent,rewardの予測値
