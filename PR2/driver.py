@@ -176,8 +176,12 @@ def main():
         
 
         variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
-        variables_except_for_actor=list(set(global_network.trainable_variables)-set(variables_for_actor))
-        
+        actor_variable_names = set([v.name for v in variables_for_actor])
+        all_trainable_variables = global_network.trainable_variables
+        variables_except_for_actor = [
+            v for v in all_trainable_variables 
+            if v.name not in actor_variable_names
+        ]
 
         global_summary = tf.summary.create_file_writer(train_path)
         checkpoint = tf.train.Checkpoint(model=global_network, optimizer=optimizer)

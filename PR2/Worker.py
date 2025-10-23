@@ -469,8 +469,12 @@ class Worker():
 
 
         variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
-        variables_except_for_actor=list(set(self.local_ACRD.trainable_variables)-set(variables_for_actor))
-       
+        actor_variable_names = set([v.name for v in variables_for_actor])
+        all_trainable_variables = self.local_ACRD.trainable_variables
+        variables_except_for_actor = [
+            v for v in all_trainable_variables 
+            if v.name not in actor_variable_names
+        ]
 
         #アクター以外訓練
         with tf.GradientTape() as tape:
