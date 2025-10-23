@@ -446,7 +446,7 @@ class Worker():
         #エピソードの切り分け
         step=len(rollout)
         all_list=range(0,step-(horizon+1))
-        chosen=random.sample(all_list,step//horizon)
+        chosen=random.sample(all_list,(step//horizon)-1)
         chosen.append(step-horizon-1)
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
@@ -490,9 +490,7 @@ class Worker():
             batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
 
             with self.inferenceLock:
-                print("batch_obs shape:",batch_obs.shape)
-                print("batch_goals shape:",batch_goals.shape)
-                latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],batch_states[:,0],batch_states[:,1])
+                latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
 
             #latent,rewardの予測値
             batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
