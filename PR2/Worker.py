@@ -677,10 +677,11 @@ class Worker():
                         a, mean=self.mppi(latent_init,mean)
                         a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
+                        q=q.numpy()
 
                     else:
                         a=random.randint(0,4)
-                        q=0
+                        q=[[0]]
                     
 
                    
