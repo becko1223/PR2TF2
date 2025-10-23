@@ -518,10 +518,13 @@ class Worker():
 
             #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
             with self.inferenceLock:
-                policy=self.local_ACRD.policy(batch_latent_preds)
+                policy=self.local_ACRD.policy(batch_latent_preds) #[B,H,a_size]
                 policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
-            next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
+            #next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
+            logits = tf.math.log(policy + 1e-10) # ゼロ除算を防ぐために微小値を加算
+            next_actions = tf.random.categorical(logits, 1) # 各分布から1つサンプリング
+            next_actions = tf.squeeze(next_actions, axis=-1)
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
                 q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
