@@ -497,7 +497,7 @@ class Worker():
             batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
                 fn=dynamics,
                 elems=batch_actions_T,     
-                initializer=(latent_init,tf.zeros([batch_size,1,], dtype=tf.float32))
+                initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
                 ))
             
             batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
