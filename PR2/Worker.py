@@ -494,11 +494,11 @@ class Worker():
                 latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
 
             #latent,rewardの予測値
-            batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
+            batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
                 fn=dynamics,
                 elems=batch_actions_T,     
                 initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
-                ))
+                )
             
             batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
             batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
