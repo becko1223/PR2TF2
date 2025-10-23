@@ -460,7 +460,7 @@ class Worker():
         batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
         batch_rewards=tf.convert_to_tensor(np_rewards,dtype=tf.float32)
         #batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
-        batch_actions=tf.convert_to_tensor(np_actions,dtype=tf.int32)
+        batch_actions=tf.convert_to_tensor(np_actions,dtype=tf.float32)
         batch_actions=tf.one_hot(batch_actions,a_size)
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
         batch_states=tf.convert_to_tensor(np_states,dtype=tf.float32)
