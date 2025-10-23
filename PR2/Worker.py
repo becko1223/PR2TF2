@@ -424,22 +424,22 @@ class Worker():
     def calculateGradient(self, rollout, episode_count, rnn_state0):
         
         rollout = np.array(rollout, dtype=object)
-        obs=tf.convert_to_tensor(np.stack(rollout[:, 0]),dtype=tf.float32)
-        goals=tf.convert_to_tensor(np.stack(rollout[:,-4]),dtype=tf.float32)
-        rewards = tf.convert_to_tensor(np.stack(rollout[:, 2]),dtype=tf.float32)
-        actions = tf.convert_to_tensor(np.stack(rollout[:, 1]),dtype=tf.float32)
-        train_value=tf.convert_to_tensor(np.stack(rollout[:,-3]),dtype=tf.float32)
-        rnn_states=tf.convert_to_tensor(np.stack(rollout[:,-1]),dtype=tf.float32)
-        valids = tf.convert_to_tensor(np.stack(rollout[:, 5]),dtype=tf.float32)
+        obs=np.stack(rollout[:, 0])
+        goals=np.stack(rollout[:,-4])
+        rewards = np.stack(rollout[:, 2])
+        actions = np.stack(rollout[:, 1])
+        
+        rnn_states=np.stack(rollout[:,-1])
+        valids = np.stack(rollout[:, 5])
 
         
 
         
 
-        rewards_array = np.array([float(r) for r in rewards])
+        #rewards_array = np.array([float(r) for r in rewards])
         #self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
-        discounted_rewards = discount(rewards_array, gamma)[:-1]
-        discounted_rewards=tf.convert_to_tensor(discounted_rewards)
+        #discounted_rewards = discount(rewards_array, gamma)[:-1]
+        #discounted_rewards=tf.convert_to_tensor(discounted_rewards)
         
 
 
@@ -449,22 +449,22 @@ class Worker():
         chosen=random.sample(all_list,step//horizon)
         chosen.append(step-horizon-1)
 
-        list_obs=[obs[i:i+horizon+1] for i in chosen]  #長さhorizon+1
-        list_goals=[goals[i:i+horizon+1] for i in chosen]
-        list_rewards=[rewards[i:i+horizon+1] for i in chosen]
-        list_actions=[actions[i:i+horizon+1] for i in chosen]
-        list_states=[rnn_states[i] for i in chosen]
-        list_valids=[valids[i:i+horizon+1] for i in chosen]
+        np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
+        np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
+        np_rewards=np.stack([rewards[i:i+horizon+1] for i in chosen])
+        np_actions=np.stack([actions[i:i+horizon+1] for i in chosen])
+        np_states=np.stack([rnn_states[i] for i in chosen])
+        np_valids=np.stack([valids[i:i+horizon+1] for i in chosen])
 
-        batch_obs = tf.stack(list_obs) 
-        batch_goals = tf.stack(list_goals)
-        batch_rewards=tf.stack(list_rewards)
+        batch_obs = tf.convert_to_tensor(np_obs,dtype=tf.float32) 
+        batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
+        batch_rewards=tf.convert_to_tensor(np_rewards,dtype=tf.float32)
         #batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
-        batch_actions=tf.stack(list_actions)
+        batch_actions=tf.convert_to_tensor(np_actions,dtype=tf.int32)
         batch_actions=tf.one_hot(batch_actions,a_size)
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
-        batch_states=tf.stack(list_states)
-        batch_valids=tf.stack(list_valids)
+        batch_states=tf.convert_to_tensor(np_states,dtype=tf.float32)
+        batch_valids=tf.convert_to_tensor(np_valids,dtype=tf.float32)
         rhos=tf.conver_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
 
 
@@ -651,29 +651,33 @@ class Worker():
 
 
 
+                    if(episode_count>20):
+                        #Let's MPPI
 
-                    #Let's MPPI
 
+                        ob=tf.expand_dims(s[0],0)
+                        ob=tf.expand_dims(ob,0)
+                        ob=tf.cast(ob,dtype=tf.float32)
+                        goal=tf.expand_dims(s[1],0)
+                        goal=tf.expand_dims(goal,0)
+                        goal=tf.cast(goal,dtype=tf.float32)
 
-                    ob=tf.expand_dims(s[0],0)
-                    ob=tf.expand_dims(ob,0)
-                    ob=tf.cast(ob,dtype=tf.float32)
-                    goal=tf.expand_dims(s[1],0)
-                    goal=tf.expand_dims(goal,0)
-                    goal=tf.cast(goal,dtype=tf.float32)
+                        #print("ob shape:",ob.shape)
+                        #print("goal shape:",goal.shape)
+                        tf.ensure_shape(rnn_state[0],[1,512])
+                        tf.ensure_shape(rnn_state[1],[1,512])
 
-                    #print("ob shape:",ob.shape)
-                    #print("goal shape:",goal.shape)
-                    tf.ensure_shape(rnn_state[0],[1,512])
-                    tf.ensure_shape(rnn_state[1],[1,512])
+                        latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                        #tf.print("latent_init shape:", tf.shape(latent_init))
+                        #tf.print("mean shape:", tf.shape(mean))
+                        a, mean=self.mppi(latent_init,mean)
+                        a=a.numpy().item()
+                        q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
 
-                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
-                    #tf.print("latent_init shape:", tf.shape(latent_init))
-                    #tf.print("mean shape:", tf.shape(mean))
-                    a, mean=self.mppi(latent_init,mean)
-                    a=a.numpy().item()
-                    q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
-                  
+                    else:
+                        a=random.randint(0,4)
+                        q=0
+                    
 
                    
 

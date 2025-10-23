@@ -75,10 +75,10 @@ else:
 
 
 
-def apply_gradients(global_network, gradients, optimizer, curr_episode):
+def apply_gradients(global_network, gradients, optimizer, curr_episode,variables_except_for_actor,variables_for_actor):
     if (isinstance(gradients,tuple)):
-        optimizer.apply_gradients(zip(gradients[0],global_network.trainable_variables))
-        optimizer.apply_gradients(zip(gradients[1],global_network.policy_dense1.trainable_variables + global_network.policy_dense2.trainable_variables + global_network.policy_dense3.trainable_variables))
+        optimizer.apply_gradients(zip(gradients[0],variables_except_for_actor))
+        optimizer.apply_gradients(zip(gradients[1],variables_for_actor))
     else:
         optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
@@ -174,6 +174,9 @@ def main():
         global_network.q1(dummy_latents,dummy_actions)
         global_network.q2(dummy_latents,dummy_actions)
         
+
+        variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+        variables_except_for_actor=list(set(global_network.trainable_variables)-set(variables_for_actor))
         
 
         global_summary = tf.summary.create_file_writer(train_path)
@@ -268,7 +271,7 @@ def main():
                 if JOB_TYPE == JOB_OPTIONS.getGradient:
                     if jobResults:
                         for gradient in jobResults:
-                            apply_gradients(global_network, gradient, optimizer, curr_episode)
+                            apply_gradients(global_network, gradient, optimizer, curr_episode,variables_except_for_actor,variables_for_actor)
 
                     
                 elif JOB_TYPE == JOB_OPTIONS.getExperience:
