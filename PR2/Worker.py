@@ -446,7 +446,8 @@ class Worker():
         #エピソードの切り分け
         step=len(rollout)
         all_list=range(0,step-(horizon+1))
-        chosen=random.sample(all_list,(step//horizon)-1)
+        batch_size=step//horizon
+        chosen=random.sample(all_list,batch_size-1)
         chosen.append(step-horizon-1)
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
@@ -496,7 +497,7 @@ class Worker():
             batch_latent_preds,batch_reward_preds = zip(*tf.scan(  #[horizon,batch,1,dim]
                 fn=dynamics,
                 elems=batch_actions_T,     
-                initializer=(latent_init,tf.constant(0.0, dtype=tf.float32))
+                initializer=(latent_init,tf.zeros([batch_size,1,], dtype=tf.float32))
                 ))
             
             batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
