@@ -75,7 +75,16 @@ else:
 
 
 
-def apply_gradients(global_network, gradients, optimizer, curr_episode,variables_except_for_actor,variables_for_actor):
+def apply_gradients(global_network, gradients, optimizer, curr_episode):
+
+    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    actor_variable_names = set([v.name for v in variables_for_actor])
+    all_trainable_variables = global_network.trainable_variables
+    variables_except_for_actor = [
+        v for v in all_trainable_variables 
+        if v.name not in actor_variable_names
+    ]
+    
     if (isinstance(gradients,tuple)):
         optimizer.apply_gradients(zip(gradients[0],variables_except_for_actor))
         optimizer.apply_gradients(zip(gradients[1],variables_for_actor))
@@ -275,7 +284,7 @@ def main():
                 if JOB_TYPE == JOB_OPTIONS.getGradient:
                     if jobResults:
                         for gradient in jobResults:
-                            apply_gradients(global_network, gradient, optimizer, curr_episode,variables_except_for_actor,variables_for_actor)
+                            apply_gradients(global_network, gradient, optimizer, curr_episode)
 
                     
                 elif JOB_TYPE == JOB_OPTIONS.getExperience:
