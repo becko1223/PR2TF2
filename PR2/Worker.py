@@ -530,8 +530,7 @@ class Worker():
                 q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
                 q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
             q_next=tf.minimum(q1_next,q2_next)
-            print("batch_rewards[:,1:] shape:",batch_rewards[:,1:].shape)
-            print("q_next shape:",q_next.shape)
+            q_next=tf.squeeze(q_next)
             q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
             
 
