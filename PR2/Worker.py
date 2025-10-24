@@ -430,9 +430,9 @@ class Worker():
         actions = np.stack(rollout[:, 1])
         
         rnn_states=np.stack(rollout[:,-1])
-        valids = np.stack(rollout[:, 5])
+        valids = np.stack(rollout[:, 4])
 
-        print("valids shape:",valids.shape)
+       
 
         
 
