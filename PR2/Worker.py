@@ -566,6 +566,7 @@ class Worker():
 
 
             policy_loss=-tf.reduce_mean(rhos*batch_q)
+            print("shape:",(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))).shape)
             valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
             entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
@@ -664,24 +665,26 @@ class Worker():
                 while not self.env.finished:
 
 
+                    ob=tf.expand_dims(s[0],0)
+                    ob=tf.expand_dims(ob,0)
+                    ob=tf.cast(ob,dtype=tf.float32)
+                    goal=tf.expand_dims(s[1],0)
+                    goal=tf.expand_dims(goal,0)
+                    goal=tf.cast(goal,dtype=tf.float32)
+
+                    #print("ob shape:",ob.shape)
+                    #print("goal shape:",goal.shape)
+                    tf.ensure_shape(rnn_state[0],[1,512])
+                    tf.ensure_shape(rnn_state[1],[1,512])
+
+                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+
 
                     if(episode_count>20):
                         #Let's MPPI
 
 
-                        ob=tf.expand_dims(s[0],0)
-                        ob=tf.expand_dims(ob,0)
-                        ob=tf.cast(ob,dtype=tf.float32)
-                        goal=tf.expand_dims(s[1],0)
-                        goal=tf.expand_dims(goal,0)
-                        goal=tf.cast(goal,dtype=tf.float32)
 
-                        #print("ob shape:",ob.shape)
-                        #print("goal shape:",goal.shape)
-                        tf.ensure_shape(rnn_state[0],[1,512])
-                        tf.ensure_shape(rnn_state[1],[1,512])
-
-                        latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                         #tf.print("latent_init shape:", tf.shape(latent_init))
                         #tf.print("mean shape:", tf.shape(mean))
                         a, mean=self.mppi(latent_init,mean)
