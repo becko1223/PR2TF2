@@ -505,11 +505,14 @@ class Worker():
 
             batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
             batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
+            batch_reward_preds=tf.squeeze(batch_reward_preds)
            
             #valueの予測値を出す
             with self.inferenceLock:
                 batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
                 batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                batch_q1value_preds=tf.squeeze(batch_q1value_preds)
+                batch_q2value_preds=tf.squeeze(batch_q2value_preds)
 
 
             #latentのターゲットを出す(b,s,h,w,c)
@@ -550,13 +553,13 @@ class Worker():
                 policy=self.local_ACRD.policy(batch_latent_preds)
             policy=tf.clip_by_value(policy)
             policy=tf.nn.softmax(policy)
-            next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
+            next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
                 q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
                 q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
-            q_next=tf.minimum(q1_next,q2_next)
-            batch_q=next_actions*q_next
+            batch_q=tf.minimum(q1_next,q2_next)
+            
             batch_policies_sig=tf.sigmoid(policy)
 
 
