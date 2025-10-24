@@ -560,13 +560,14 @@ class Worker():
                 q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
                 q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
             batch_q=tf.minimum(q1_next,q2_next)
+            batch_q=tf.squeeze(batch_q)
             
             batch_policies_sig=tf.sigmoid(policy)
 
 
             policy_loss=-tf.reduce_mean(rhos*batch_q)
-            valid_loss=-tf.reduce_mean(rhos*batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0)))
-            entropy=-tf.reduce_mean(rhos*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+            valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+            entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
             total_loss=total_loss=0.5*policy_loss+16*valid_loss+entropy
         policy_grads=tape.gradient(total_loss,variables_for_actor)
