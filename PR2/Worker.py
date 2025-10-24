@@ -540,9 +540,6 @@ class Worker():
             reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
             q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
             q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
-            print("rhos shape:",rhos.shape)
-            print("batch_latent_targets shape:",batch_latent_targets.shape)
-            print("batch_latent_preds shape:",batch_latent_preds.shape)
             consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
             total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
@@ -554,7 +551,7 @@ class Worker():
             
             with self.inferenceLock:
                 policy=self.local_ACRD.policy(batch_latent_preds)
-            policy=tf.clip_by_value(policy)
+            policy=tf.clip_by_value(policy,-10.0,10.0)
             policy=tf.nn.softmax(policy)
             next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
             next_actions=tf.one_hot(next_actions,a_size)
