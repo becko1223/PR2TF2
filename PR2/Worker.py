@@ -566,7 +566,9 @@ class Worker():
 
 
             policy_loss=-tf.reduce_mean(rhos*batch_q)
-            print("shape:",(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))).shape)
+            print("batch_valids[:,1:] shape:",batch_valids[:,1:].shape)
+            print("tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0) shape:",tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0)).shape)
+            print("(1-batch_valids[:,1:]) shape:",(1-batch_valids[:,1:]).shape)
             valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
             entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
