@@ -587,7 +587,7 @@ class Worker():
             valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
             entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
-            total_loss=total_loss=0.5*policy_loss+16*valid_loss+entropy
+            total_loss=0.5*policy_loss+16*valid_loss+entropy
         policy_grads=tape.gradient(total_loss,variables_for_actor)
 
 
