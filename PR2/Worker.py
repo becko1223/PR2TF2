@@ -523,7 +523,7 @@ class Worker():
                 policy=tf.nn.softmax(policy)
             #next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
             logits = tf.math.log(policy + 1e-10) # ゼロ除算を防ぐために微小値を加算
-            next_actions=tf.map_fn(lambda probs: tf.cast(tf.random.categorical(probs, 1),tf.float32),elems=logits)
+            next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=logits,dtype=tf.int32)   
             next_actions = tf.squeeze(next_actions, axis=-1)
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
