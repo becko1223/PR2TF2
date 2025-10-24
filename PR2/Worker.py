@@ -526,9 +526,15 @@ class Worker():
                 policy=self.local_ACRD.policy(batch_latent_preds) #[B,H,a_size]
                 policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
-            #next_actions=tf.map_fn(lambda action_probs: tf.map_fn(lambda action_prob: np.random.choice(range(a_size),p=action_prob),elems=action_probs),elems=policy)
+            
+            #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=logits,dtype=tf.int64)   
             logits = tf.math.log(policy + 1e-10) # ゼロ除算を防ぐために微小値を加算
-            next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=logits,dtype=tf.int64)   
+            B = tf.shape(logits)[0]
+            H = tf.shape(logits)[1]
+            A = tf.shape(logits)[2]
+            flat_logits = tf.reshape(logits, [-1, A])
+            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+            next_actions = tf.reshape(flat_actions, [B, H, 1])
             next_actions = tf.squeeze(next_actions, axis=-1)
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
@@ -555,7 +561,16 @@ class Worker():
                 policy=self.local_ACRD.policy(batch_latent_preds)
             policy=tf.clip_by_value(policy,-10.0,10.0)
             policy=tf.nn.softmax(policy)
-            next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
+            #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
+
+            logits = tf.math.log(policy + 1e-10)
+            B = tf.shape(logits)[0]
+            H = tf.shape(logits)[1]
+            A = tf.shape(logits)[2]
+            flat_logits = tf.reshape(logits, [-1, A])
+            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+            next_actions = tf.reshape(flat_actions, [B, H, 1])
+
             next_actions = tf.squeeze(next_actions, axis=-1)
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
