@@ -64,7 +64,7 @@ if not os.path.exists(gifs_path):
     os.makedirs(gifs_path)
 
 
-global_step = 0
+global_step = 0 #これはcurrent_episodeと同じ。混在していてちょっと良くない。
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -75,7 +75,7 @@ else:
 
 
 
-def apply_gradients(global_network, gradients, optimizer, curr_episode):
+def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer, curr_episode):
 
     variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
@@ -86,15 +86,17 @@ def apply_gradients(global_network, gradients, optimizer, curr_episode):
     ]
     
     if (isinstance(gradients,tuple)):
-        optimizer.apply_gradients(zip(gradients[0],variables_except_for_actor))
-        optimizer.apply_gradients(zip(gradients[1],variables_for_actor))
+        world_optimizer.apply_gradients(zip(gradients[0],variables_except_for_actor))
+        policy_optimizer.apply_gradients(zip(gradients[1],variables_for_actor))
     else:
-        optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
+        world_optimizer.apply_gradients(zip(gradients,global_network.trainable_variables))
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
-        optimizer.learning_rate.assign(float(lr))
+        world_optimizer.learning_rate.assign(float(lr))
+        policy_optimizer.learning_rate.assign(float(lr))
     else:
-        optimizer.learning_rate.assign(LR_Q)
+        world_optimizer.learning_rate.assign(LR_Q)
+        policy_optimizer.learning_rate.assign(LR_Q)
     global global_step
     global_step+=1
 
@@ -165,7 +167,8 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
     
 def main():    
     with tf.device("/GPU:0"):
-        optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
+        world_optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
+        policy_optimizer= tf.keras.optimizers.Nadam(learning_rate=float(lr))
         global_network = ACRDNet()
 
         #ダミーデータでのネットワーク構築
@@ -193,7 +196,7 @@ def main():
         ]
 
         global_summary = tf.summary.create_file_writer(train_path)
-        checkpoint = tf.train.Checkpoint(model=global_network, optimizer=optimizer)
+        checkpoint = tf.train.Checkpoint(model=global_network, world_optimizer=world_optimizer,policy_optimizer=policy_optimizer)
         checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
 
    
@@ -284,7 +287,7 @@ def main():
                 if JOB_TYPE == JOB_OPTIONS.getGradient:
                     if jobResults:
                         for gradient in jobResults:
-                            apply_gradients(global_network, gradient, optimizer, curr_episode)
+                            apply_gradients(global_network, gradient, world_optimizer,policy_optimizer, curr_episode)
 
                     
                 elif JOB_TYPE == JOB_OPTIONS.getExperience:
