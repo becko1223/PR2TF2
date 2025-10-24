@@ -554,6 +554,7 @@ class Worker():
             policy=tf.clip_by_value(policy,-10.0,10.0)
             policy=tf.nn.softmax(policy)
             next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
+            next_actions = tf.squeeze(next_actions, axis=-1)
             next_actions=tf.one_hot(next_actions,a_size)
             with self.inferenceLock:
                 q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
