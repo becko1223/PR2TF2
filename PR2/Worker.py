@@ -432,6 +432,8 @@ class Worker():
         rnn_states=np.stack(rollout[:,-1])
         valids = np.stack(rollout[:, 5])
 
+        print("valids shape:",valids.shape)
+
         
 
         
