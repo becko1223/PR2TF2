@@ -552,7 +552,8 @@ class Worker():
                 consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
                 total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
-            world_grads=tape.gradient(total_loss,variables_except_for_actor)
+            with self.inferenceLock:
+                world_grads=tape.gradient(total_loss,variables_except_for_actor)
 
 
             #アクター訓練
@@ -589,7 +590,8 @@ class Worker():
                 entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
                 total_loss=0.5*policy_loss+16*valid_loss+entropy
-            policy_grads=tape.gradient(total_loss,variables_for_actor)
+            with self.inferenceLock:
+                policy_grads=tape.gradient(total_loss,variables_for_actor)
             return world_grads,policy_grads,reward_loss,q1value_loss,q2value_loss,consistency_loss,policy_loss,valid_loss,entropy
         
 
