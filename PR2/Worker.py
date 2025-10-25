@@ -470,125 +470,130 @@ class Worker():
         batch_valids=tf.convert_to_tensor(np_valids,dtype=tf.float32)
         rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
 
+        @tf.function
+        def tape_calc(self,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
+            variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
+            actor_variable_names = set([v.name for v in variables_for_actor])
+            all_trainable_variables = self.local_ACRD.trainable_variables
+            variables_except_for_actor = [
+                v for v in all_trainable_variables 
+                if v.name not in actor_variable_names
+            ]
 
-        variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
-        actor_variable_names = set([v.name for v in variables_for_actor])
-        all_trainable_variables = self.local_ACRD.trainable_variables
-        variables_except_for_actor = [
-            v for v in all_trainable_variables 
-            if v.name not in actor_variable_names
-        ]
+            #アクター以外訓練
+            with tf.GradientTape() as tape:
 
-        #アクター以外訓練
-        with tf.GradientTape() as tape:
+                def dynamics(carry, elem):
+                    elem=tf.expand_dims(elem,axis=1)
+                    prev_latents,_=carry
+                    with self.inferenceLock:
+                        latents = self.local_ACRD.dynamics(prev_latents,elem)
+                        rewards= self.local_ACRD.reward(prev_latents,elem)
+                    return (latents,rewards)
+                
+                batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
 
-            def dynamics(carry, elem):
-                elem=tf.expand_dims(elem,axis=1)
-                prev_latents,_=carry
                 with self.inferenceLock:
-                    latents = self.local_ACRD.dynamics(prev_latents,elem)
-                    rewards= self.local_ACRD.reward(prev_latents,elem)
-                return (latents,rewards)
+                    latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+
+                #latent,rewardの予測値
+                batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
+                    fn=dynamics,
+                    elems=batch_actions_T,     
+                    initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
+                    )
+                
+                batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
+                batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
+
+                batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
+                batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
+                batch_reward_preds=tf.squeeze(batch_reward_preds)
             
-            batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
-
-            with self.inferenceLock:
-                latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
-
-            #latent,rewardの予測値
-            batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
-                fn=dynamics,
-                elems=batch_actions_T,     
-                initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
-                )
-            
-            batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
-            batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
-
-            batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
-            batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
-            batch_reward_preds=tf.squeeze(batch_reward_preds)
-           
-            #valueの予測値を出す
-            with self.inferenceLock:
-                batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
-                batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
-                batch_q1value_preds=tf.squeeze(batch_q1value_preds)
-                batch_q2value_preds=tf.squeeze(batch_q2value_preds)
+                #valueの予測値を出す
+                with self.inferenceLock:
+                    batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                    batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                    batch_q1value_preds=tf.squeeze(batch_q1value_preds)
+                    batch_q2value_preds=tf.squeeze(batch_q2value_preds)
 
 
-            #latentのターゲットを出す(b,s,h,w,c)
-            with self.inferenceLock:
-                batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
+                #latentのターゲットを出す(b,s,h,w,c)
+                with self.inferenceLock:
+                    batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
 
-            #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
-            with self.inferenceLock:
-                policy=self.local_ACRD.policy(batch_latent_preds) #[B,H,a_size]
+                #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
+                with self.inferenceLock:
+                    policy=self.local_ACRD.policy(batch_latent_preds) #[B,H,a_size]
+                    policy=tf.clip_by_value(policy,-10.0,10.0)
+                    policy=tf.nn.softmax(policy)
+                
+                #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=logits,dtype=tf.int64)   
+                logits = tf.math.log(policy + 1e-10) # ゼロ除算を防ぐために微小値を加算
+                B = tf.shape(logits)[0]
+                H = tf.shape(logits)[1]
+                A = tf.shape(logits)[2]
+                flat_logits = tf.reshape(logits, [-1, A])
+                flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+                next_actions = tf.reshape(flat_actions, [B, H, 1])
+                next_actions = tf.squeeze(next_actions, axis=-1)
+                next_actions=tf.one_hot(next_actions,a_size)
+                with self.inferenceLock:
+                    q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
+                    q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
+                q_next=tf.minimum(q1_next,q2_next)
+                q_next=tf.squeeze(q_next)
+                q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
+                
+
+                reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
+                q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
+                q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
+                consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
+
+                total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
+            world_grads=tape.gradient(total_loss,variables_except_for_actor)
+
+
+            #アクター訓練
+            with tf.GradientTape() as tape:
+                
+                with self.inferenceLock:
+                    policy=self.local_ACRD.policy(batch_latent_preds)
                 policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
-            
-            #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=logits,dtype=tf.int64)   
-            logits = tf.math.log(policy + 1e-10) # ゼロ除算を防ぐために微小値を加算
-            B = tf.shape(logits)[0]
-            H = tf.shape(logits)[1]
-            A = tf.shape(logits)[2]
-            flat_logits = tf.reshape(logits, [-1, A])
-            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
-            next_actions = tf.reshape(flat_actions, [B, H, 1])
-            next_actions = tf.squeeze(next_actions, axis=-1)
-            next_actions=tf.one_hot(next_actions,a_size)
-            with self.inferenceLock:
-                q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
-                q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
-            q_next=tf.minimum(q1_next,q2_next)
-            q_next=tf.squeeze(q_next)
-            q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
-            
+                #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
 
-            reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
-            q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
-            q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
-            consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
+                logits = tf.math.log(policy + 1e-10)
+                B = tf.shape(logits)[0]
+                H = tf.shape(logits)[1]
+                A = tf.shape(logits)[2]
+                flat_logits = tf.reshape(logits, [-1, A])
+                flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+                next_actions = tf.reshape(flat_actions, [B, H, 1])
 
-            total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
-        world_grads=tape.gradient(total_loss,variables_except_for_actor)
+                next_actions = tf.squeeze(next_actions, axis=-1)
+                next_actions=tf.one_hot(next_actions,a_size)
+                with self.inferenceLock:
+                    q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
+                    q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
+                batch_q=tf.minimum(q1_next,q2_next)
+                batch_q=tf.squeeze(batch_q)
+                
+                batch_policies_sig=tf.sigmoid(policy)
 
 
-        #アクター訓練
-        with tf.GradientTape() as tape:
-            
-            with self.inferenceLock:
-                policy=self.local_ACRD.policy(batch_latent_preds)
-            policy=tf.clip_by_value(policy,-10.0,10.0)
-            policy=tf.nn.softmax(policy)
-            #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
+                policy_loss=-tf.reduce_mean(rhos*batch_q)
+                
+                valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+                entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
-            logits = tf.math.log(policy + 1e-10)
-            B = tf.shape(logits)[0]
-            H = tf.shape(logits)[1]
-            A = tf.shape(logits)[2]
-            flat_logits = tf.reshape(logits, [-1, A])
-            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
-            next_actions = tf.reshape(flat_actions, [B, H, 1])
-
-            next_actions = tf.squeeze(next_actions, axis=-1)
-            next_actions=tf.one_hot(next_actions,a_size)
-            with self.inferenceLock:
-                q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
-                q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
-            batch_q=tf.minimum(q1_next,q2_next)
-            batch_q=tf.squeeze(batch_q)
-            
-            batch_policies_sig=tf.sigmoid(policy)
-
-
-            policy_loss=-tf.reduce_mean(rhos*batch_q)
-            
-            valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
-            entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
-
-            total_loss=0.5*policy_loss+16*valid_loss+entropy
-        policy_grads=tape.gradient(total_loss,variables_for_actor)
+                total_loss=0.5*policy_loss+16*valid_loss+entropy
+            policy_grads=tape.gradient(total_loss,variables_for_actor)
+            return world_grads,policy_grads,reward_loss,q1value_loss,q2value_loss,consistency_loss,policy_loss,valid_loss,entropy
+        
+        
+        world_grads,policy_grads,reward_loss,q1value_loss,q2value_loss,consistency_loss,policy_loss,valid_loss,entropy=tape_calc(self,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids)
 
 
         var_norms = tf.linalg.global_norm(self.local_ACRD.trainable_variables)
