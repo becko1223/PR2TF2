@@ -592,7 +592,7 @@ class Worker():
             policy_grads=tape.gradient(total_loss,variables_for_actor)
             return world_grads,policy_grads,reward_loss,q1value_loss,q2value_loss,consistency_loss,policy_loss,valid_loss,entropy
         
-        
+
         world_grads,policy_grads,reward_loss,q1value_loss,q2value_loss,consistency_loss,policy_loss,valid_loss,entropy=tape_calc(self,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids)
 
 
@@ -702,7 +702,7 @@ class Worker():
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
 
 
-                    if(episode_count>20):
+                    if(episode_count>30):
                         #Let's MPPI
 
 
