@@ -719,7 +719,7 @@ class Worker():
                         a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
-                        mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0.0]),a_size)],axis=0)
+                        mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
                        
 
                     else:
