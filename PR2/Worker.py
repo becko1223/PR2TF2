@@ -162,8 +162,13 @@ class Worker():
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
         
         if(self.agentID==1):
-            print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
-
+            tf.print(
+            "meta:", self.metaAgentID, 
+            " agent:", self.agentID, 
+            " one of sample:", actions[5][0],
+            summarize=-1,  # summarize=-1 でテンソルの全要素を出力
+            output_stream=sys.stderr  # (オプション) 出力ストリームを指定
+            )
 
 
         def coordinate_to_onehot(action):
