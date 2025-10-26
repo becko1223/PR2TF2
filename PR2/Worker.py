@@ -161,8 +161,8 @@ class Worker():
         #print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
         
-        #if(self.agentID==1):
-        #    print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
+        if(self.agentID==1):
+            print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
 
 
 
@@ -660,7 +660,9 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            rnn_state = [tf.zeros([1,512],dtype=tf.float32),tf.zeros([1,512],dtype=tf.float32)]
+            h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+            c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+            rnn_state = [h_init, c_init]
             rnn_state0 = rnn_state
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
