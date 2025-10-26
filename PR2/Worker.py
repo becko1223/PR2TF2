@@ -167,7 +167,6 @@ class Worker():
             " agent:", self.agentID, 
             " one of sample:", actions[5][0],
             summarize=-1,  # summarize=-1 でテンソルの全要素を出力
-            output_stream=sys.stderr  # (オプション) 出力ストリームを指定
             )
 
 
