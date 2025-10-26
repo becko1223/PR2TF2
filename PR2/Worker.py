@@ -161,8 +161,8 @@ class Worker():
         #print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
         
-        if(self.agentID==1):
-            print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
+        #if(self.agentID==1):
+        #    print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
 
 
 
@@ -719,7 +719,7 @@ class Worker():
                         a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
-                        mean=tf.concat([mean[1:],tf.constant([0])])
+                        mean=tf.concat([mean[1:],tf.constant([0])],axis=-1)
 
                     else:
                         a=random.randint(0,4)
