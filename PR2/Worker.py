@@ -161,6 +161,7 @@ class Worker():
         #print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
         
+        """
         if(self.agentID==1):
             tf.print(
             "meta:", self.metaAgentID, 
@@ -168,6 +169,7 @@ class Worker():
             " one of sample:", actions[5][0],
             summarize=-1,  # summarize=-1 でテンソルの全要素を出力
             )
+        """
 
 
         def coordinate_to_onehot(action):
@@ -666,7 +668,8 @@ class Worker():
 
             h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            rnn_state = [h_init, c_init]
+            rnn_state = (h_init, c_init)
+        
             rnn_state0 = rnn_state
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
@@ -712,6 +715,7 @@ class Worker():
                     tf.ensure_shape(rnn_state[1],[1,512])
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    rnn_state=[rnn_state[0],rnn_state[1]]
 
 
                     if(episode_count>10):
