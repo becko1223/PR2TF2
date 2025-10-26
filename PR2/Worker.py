@@ -160,6 +160,10 @@ class Worker():
         #print("eps shape:",eps.shape)
         #print("std shape:",actions_std.shape)
         actions=actions_mean_2D_samples+actions_std*eps      #[B,horizon,2]
+        
+        if(self.agentID==1):
+            print("meta:",self.metaAgentID," agent:",self.agentID," one of sample:",actions[5][0])
+
 
 
         def coordinate_to_onehot(action):
@@ -704,7 +708,7 @@ class Worker():
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
 
 
-                    if(episode_count>30):
+                    if(episode_count>50):
                         #Let's MPPI
 
 
@@ -715,6 +719,7 @@ class Worker():
                         a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
+                        mean=tf.concat([mean[1:],tf.constant([0])])
 
                     else:
                         a=random.randint(0,4)
@@ -748,7 +753,7 @@ class Worker():
                     self.synchronize()
 
                     if self.agentID == 1:
-                        print("step",episode_step_count,"  agent1 action:",a)
+                        print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
                         all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
