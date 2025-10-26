@@ -718,7 +718,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>10):
+                    if(episode_count>60):
                         #Let's MPPI
 
 
