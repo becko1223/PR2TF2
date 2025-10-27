@@ -278,6 +278,7 @@ class Worker():
         V=tf.reduce_sum(rewards,axis=0)+discounts[-1]*tf.squeeze(q_value,1)
 
         """
+        B_size=samples.shape[0]
         current_latents=latent_inits
         samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
         discount=1.0
@@ -301,24 +302,36 @@ class Worker():
         #last_actions=tf.map_fn(lambda last_policy: tf.random.categorical(tf.math.log(last_policy), num_samples=1),last_policies,dtype=tf.int64)  #ここは一個サンプリングよりも、前行動について確率重み付け平均撮った方が良いのかも。でも連続空間でやってる先行コードはこっち。
         policy_for_sampling = tf.squeeze(last_policies, axis=1) # [B, A_SIZE]
 
+        """
         # バッチ全体でサンプリングを実行 (num_samples=1)
         last_actions = tf.random.categorical(
             tf.math.log(policy_for_sampling), 
             num_samples=1, 
             dtype=tf.int64
         )   #[B,1]
+        """
 
-        last_actions=tf.squeeze(last_actions)
-        last_actions = tf.one_hot(last_actions, a_size)
+        q_expected=tf.zeros([B_size,1],dtype=tf.float32)
+
+        for t in tf.range(a_size):
+            actions=tf.expand_dims(tf.repeat(tf.one_hot(t,a_size),B_size,axis=0),axis=1)
+            q1_value=self.local_ACRD.q1(current_latents,actions)
+            q2_value=self.local_ACRD.q2(current_latents,actions)
+            q_value=tf.minimum(q1_value,q2_value)
+            q_expected+=policy_for_sampling[:,t]*q_value
+
+
+        #last_actions=tf.squeeze(last_actions)
+        #last_actions = tf.one_hot(last_actions, a_size)
         #print("last_actions shape:",last_actions.shape)
-        last_actions=tf.expand_dims(last_actions,axis=1)
-        q1_value=self.local_ACRD.q1(current_latents,last_actions)
-        q2_value=self.local_ACRD.q2(current_latents,last_actions)
-        q_value=tf.minimum(q1_value,q2_value)
+        #last_actions=tf.expand_dims(last_actions,axis=1)
+        #q1_value=self.local_ACRD.q1(current_latents,last_actions)
+        #q2_value=self.local_ACRD.q2(current_latents,last_actions)
+        #q_value=tf.minimum(q1_value,q2_value)
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_value,1)
+        V=tf.reduce_sum(rewards,axis=0)+2*tf.squeeze(q_value,1)       #スパースな正報酬に向かう影響力を増すため、行動価値への係数高めに
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
@@ -457,10 +470,13 @@ class Worker():
 
         #エピソードの切り分け
         step=len(rollout)
-        all_list=range(0,step-(horizon+1))
+        all_list=range(0,step-(horizon))
         batch_size=step//horizon
         chosen=random.sample(all_list,batch_size-1)
-        chosen.append(step-horizon-1)
+        if(step<256):               #ゴール報酬経験の訓練優先
+            chosen.append(step-horizon-1)
+            chosen.append(step-horizon-1)
+            chosen.append(step-horizon-1)
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
         np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
@@ -668,7 +684,7 @@ class Worker():
 
             h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            rnn_state = (h_init, c_init)
+            rnn_state = [h_init, c_init]
         
             rnn_state0 = rnn_state
 
@@ -711,14 +727,20 @@ class Worker():
 
                     #print("ob shape:",ob.shape)
                     #print("goal shape:",goal.shape)
-                    tf.ensure_shape(rnn_state[0],[1,512])
-                    tf.ensure_shape(rnn_state[1],[1,512])
+                    try:
+                        tf.ensure_shape(rnn_state[0],[1,512])
+                        tf.ensure_shape(rnn_state[1],[1,512])
+                    except Exception as e:
+                        h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+                        c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+                        rnn_state = [h_init, c_init]
+
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>60):
+                    if(episode_count>5):
                         #Let's MPPI
 
 
