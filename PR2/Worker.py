@@ -314,7 +314,7 @@ class Worker():
         q_expected=tf.zeros([B_size,1],dtype=tf.float32)
 
         for t in tf.range(a_size):
-            actions=tf.expand_dims(tf.repeat(tf.one_hot(t,a_size),B_size,axis=0),axis=1)
+            actions=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
             q1_value=self.local_ACRD.q1(current_latents,actions)
             q2_value=self.local_ACRD.q2(current_latents,actions)
             q_value=tf.minimum(q1_value,q2_value)
