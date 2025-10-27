@@ -278,7 +278,7 @@ class Worker():
         V=tf.reduce_sum(rewards,axis=0)+discounts[-1]*tf.squeeze(q_value,1)
 
         """
-        B_size=samples.shape[0]
+        B_size=tf.shape(samples)[0]
         current_latents=latent_inits
         samples=tf.transpose(samples,[1,0,2]) #[B,S,5] to [S,B,5]
         discount=1.0
@@ -741,7 +741,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>5):
+                    if(episode_count>3):
                         #Let's MPPI
 
 
