@@ -738,11 +738,26 @@ class Worker():
                         c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
                         rnn_state = [h_init, c_init]
 
+                    try:
+                        tf.ensure_shape(rnn_state[0],[1,512])
+                        tf.ensure_shape(rnn_state[1],[1,512])
+                    except Exception as e:
+                        print("state ensure error2")
+                        h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+                        c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+                        rnn_state = [h_init, c_init]
+
 
                     try:
                         tf.ensure_shape(mean,[horizon,a_size])
                     except Exception as e:
                         print("mean ensure error")
+                        mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
+
+                    try:
+                        tf.ensure_shape(mean,[horizon,a_size])
+                    except Exception as e:
+                        print("mean ensure error2")
                         mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
 
@@ -751,7 +766,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>20):
+                    if(episode_count>500):
                         #Let's MPPI
 
 
