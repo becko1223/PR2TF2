@@ -318,7 +318,7 @@ class Worker():
             q1_value=self.local_ACRD.q1(current_latents,actions)
             q2_value=self.local_ACRD.q2(current_latents,actions)
             q_value=tf.minimum(q1_value,q2_value)
-            q_expected+=policy_for_sampling[:,t]*q_value
+            q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value
 
 
         #last_actions=tf.squeeze(last_actions)
