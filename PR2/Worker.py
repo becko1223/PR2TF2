@@ -472,11 +472,12 @@ class Worker():
         step=len(rollout)
         all_list=range(0,step-(horizon))
         batch_size=step//horizon
-        chosen=random.sample(all_list,batch_size-1)
+        chosen=random.sample(all_list,batch_size)
         if(step<256):               #ゴール報酬経験の訓練優先
             chosen.append(step-horizon-1)
             chosen.append(step-horizon-1)
             chosen.append(step-horizon-1)
+            batch_size+=3
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
         np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
