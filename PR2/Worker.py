@@ -740,7 +740,7 @@ class Worker():
 
 
                     try:
-                        tf.ensure_shape(mean,[horizon,a_size],dtype=tf.float32)
+                        tf.ensure_shape(mean,[horizon,a_size])
                     except Exception as e:
                         print("mean ensure error")
                         mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
