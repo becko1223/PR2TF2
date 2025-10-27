@@ -331,7 +331,7 @@ class Worker():
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+2*tf.squeeze(q_expected,1)       #スパースな正報酬に向かう影響力を増すため、行動価値への係数高めに
+        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_expected,1)       
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
@@ -474,10 +474,11 @@ class Worker():
         batch_size=step//horizon
         chosen=random.sample(all_list,batch_size)
         if(step<256):               #ゴール報酬経験の訓練優先
-            chosen.append(step-horizon-1)
-            chosen.append(step-horizon-1)
-            chosen.append(step-horizon-1)
-            batch_size+=3
+            for t in tf.range(10):
+                chosen.append(step-horizon-1)
+                batch_size+=1
+            
+            
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
         np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
@@ -741,7 +742,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>500):
+                    if(episode_count>20):
                         #Let's MPPI
 
 
@@ -756,7 +757,9 @@ class Worker():
                        
 
                     else:
-                        a=random.randint(0,4)
+                        probabilities = [0.3, 0.175, 0.175, 0.175, 0.175]
+                        indices = np.arange(len(probabilities))
+                        a=np.random.choice(indices, p=probabilities)
                         q=np.zeros((1,1))
                     
 
