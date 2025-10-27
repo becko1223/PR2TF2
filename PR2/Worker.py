@@ -331,7 +331,7 @@ class Worker():
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+2*tf.squeeze(q_value,1)       #スパースな正報酬に向かう影響力を増すため、行動価値への係数高めに
+        V=tf.reduce_sum(rewards,axis=0)+2*tf.squeeze(q_expected,1)       #スパースな正報酬に向かう影響力を増すため、行動価値への係数高めに
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
