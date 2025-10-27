@@ -733,9 +733,18 @@ class Worker():
                         tf.ensure_shape(rnn_state[0],[1,512])
                         tf.ensure_shape(rnn_state[1],[1,512])
                     except Exception as e:
+                        print("state ensure error")
                         h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
                         c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
                         rnn_state = [h_init, c_init]
+
+
+                    try:
+                        tf.ensure_shape(mean,[horizon,a_size],dtype=tf.float32)
+                    except Exception as e:
+                        print("mean ensure error")
+                        mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
+
 
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
