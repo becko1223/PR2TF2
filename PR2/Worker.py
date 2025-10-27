@@ -311,7 +311,7 @@ class Worker():
         )   #[B,1]
         """
 
-        q_expected=tf.zeros([B_size,1],dtype=tf.float32)
+        q_expected=tf.zeros([B_size,1,1],dtype=tf.float32)
 
         for t in tf.range(a_size):
             actions=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
