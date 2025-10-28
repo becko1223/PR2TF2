@@ -289,7 +289,7 @@ class Worker():
             penalty_rate = -0.3 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
             penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
             return penalty_tensor
-        condition = tf.less(self.currEpisode, 2000.0)
+        condition = tf.less(self.currEpisode, 2000)
 
         for t in tf.range(horizon):
             actions=samples[t]
@@ -781,7 +781,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>20):
+                    if(episode_count>2):
                         #Let's MPPI
 
 
