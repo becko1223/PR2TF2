@@ -349,7 +349,7 @@ class Worker():
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(q_expected,1)       
+        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)      
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
