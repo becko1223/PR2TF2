@@ -364,7 +364,7 @@ class Worker():
             action=action2dir_tensor(action)
             return tf.constant(action,dtype=tf.float32)
 
-
+        print("V size:",tf.shape(V))
         topK=tf.math.top_k(V,k=num_elites)
         V_elite=topK.values                #[k,]
         actions_elite=tf.gather(samples, topK.indices) #[k,horizon,5]
