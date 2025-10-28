@@ -293,13 +293,14 @@ class Worker():
 
         for t in tf.range(horizon):
             actions=samples[t]
+            is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
+
             actions=tf.expand_dims(actions,axis=1)
             
             #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions)
             rewards=tf.squeeze(rewards,axis=1)
 
-            is_wait_action = tf.squeeze(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
             penalty_tensor = tf.cond(condition, 
                 lambda: compute_penalty(self.currEpisode, is_wait_action),
                 lambda: tf.zeros_like(rewards) 
