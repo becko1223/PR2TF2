@@ -306,7 +306,7 @@ class Worker():
                 lambda: tf.zeros_like(rewards) 
             )
 
-            tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
+            #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions)
             rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor)
@@ -353,7 +353,7 @@ class Worker():
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
-        tf.print("V shape after tf.squeeze(V):", tf.shape(V))
+        #tf.print("V shape after tf.squeeze(V):", tf.shape(V))
 
         return V
 
@@ -422,7 +422,7 @@ class Worker():
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
-            tf.print("V shape befre get_mean:", tf.shape(V))
+            #tf.print("V shape befre get_mean:", tf.shape(V))
             mean,std=self.get_mean(V,allsamples)
 
         samples_from_distribution=self.sample_from_distribution(mean,std)
@@ -787,7 +787,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>2):
+                    if(episode_count>400):
                         #Let's MPPI
 
 
@@ -802,7 +802,7 @@ class Worker():
                        
 
                     else:
-                        probabilities = [0.3, 0.175, 0.175, 0.175, 0.175]
+                        probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                         indices = np.arange(len(probabilities))
                         a=np.random.choice(indices, p=probabilities)
                         q=np.zeros((1,1))
