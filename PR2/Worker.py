@@ -419,11 +419,13 @@ class Worker():
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
             V=self.compute_return(allsamples,inits_for_return)
+            tf.print("V shape befre get_mean:", tf.shape(V))
             mean,std=self.get_mean(V,allsamples)
 
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
         V=self.compute_return(samples_from_distribution,inits_for_return)
+
         action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
         return action_best,mean
