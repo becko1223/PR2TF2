@@ -350,6 +350,8 @@ class Worker():
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
 
+        tf.print("V shape after tf.squeeze(V):", tf.shape(V))
+
         return V
 
 
@@ -364,7 +366,6 @@ class Worker():
             action=action2dir_tensor(action)
             return tf.constant(action,dtype=tf.float32)
 
-        print("V size:",tf.shape(V))
         topK=tf.math.top_k(V,k=num_elites)
         V_elite=topK.values                #[k,]
         actions_elite=tf.gather(samples, topK.indices) #[k,horizon,5]
