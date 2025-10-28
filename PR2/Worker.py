@@ -284,14 +284,29 @@ class Worker():
         discount=1.0
         rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False,clear_after_read=False)
 
+        wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
+        def compute_penalty(current_episode, is_wait, max_episode=2000.0, start_decay_episode=400.0):
+            penalty_rate = -0.3 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
+            penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
+            return penalty_tensor
+        condition = tf.less(self.currEpisode, 2000.0)
+
         for t in tf.range(horizon):
             actions=samples[t]
             actions=tf.expand_dims(actions,axis=1)
+            
             #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions)
             rewards=tf.squeeze(rewards,axis=1)
+
+            is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
+            penalty_tensor = tf.cond(condition, 
+                lambda: compute_penalty(self.currEpisode, is_wait_action),
+                lambda: tf.zeros_like(rewards) 
+            )
+            
             current_latents=self.local_ACRD.dynamics(current_latents,actions)
-            rewards_ta=rewards_ta.write(t,rewards*discount)
+            rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor)
             discount*=gammma_tdmpc
 
 
@@ -766,7 +781,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>500):
+                    if(episode_count>20):
                         #Let's MPPI
 
 
