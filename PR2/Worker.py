@@ -299,7 +299,7 @@ class Worker():
             rewards=self.local_ACRD.reward(current_latents,actions)
             rewards=tf.squeeze(rewards,axis=1)
 
-            is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
+            is_wait_action = tf.squeeze(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
             penalty_tensor = tf.cond(condition, 
                 lambda: compute_penalty(self.currEpisode, is_wait_action),
                 lambda: tf.zeros_like(rewards) 
