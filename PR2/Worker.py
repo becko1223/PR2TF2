@@ -304,6 +304,8 @@ class Worker():
                 lambda: compute_penalty(self.currEpisode, is_wait_action),
                 lambda: tf.zeros_like(rewards) 
             )
+
+            tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions)
             rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor)
