@@ -299,7 +299,7 @@ class Worker():
             
             #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions)
-            rewards=tf.squeeze(rewards,axis=1)
+            rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
             penalty_tensor = tf.cond(condition, 
                 lambda: compute_penalty(self.currEpisode, is_wait_action),
