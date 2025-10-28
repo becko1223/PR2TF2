@@ -489,7 +489,7 @@ class Worker():
         batch_size=step//horizon
         chosen=random.sample(all_list,batch_size)
         if(step<256):               #ゴール報酬経験の訓練優先
-            for t in tf.range(10):
+            for t in tf.range(20):
                 chosen.append(step-horizon-1)
                 batch_size+=1
             
