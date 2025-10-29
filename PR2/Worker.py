@@ -286,7 +286,7 @@ class Worker():
 
         wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
         def compute_penalty(current_episode, is_wait, max_episode=2000.0, start_decay_episode=400.0):
-            penalty_rate = -0.3 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
+            penalty_rate = -0.2 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
             penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
             return penalty_tensor
         condition = tf.less(self.currEpisode, 2000)
@@ -492,10 +492,10 @@ class Worker():
         #エピソードの切り分け
         step=len(rollout)
         all_list=range(0,step-(horizon))
-        batch_size=step//horizon
-        chosen=random.sample(all_list,batch_size)
+        batch_size=(step//horizon)*2
+        chosen=random.choices(all_list,batch_size)
         if(step<256):               #ゴール報酬経験の訓練優先
-            for t in tf.range(20):
+            for t in tf.range(30):
                 chosen.append(step-horizon-1)
                 batch_size+=1
             
@@ -788,14 +788,14 @@ class Worker():
 
 
                     if(episode_count>400):
-                        #Let's MPPI
-
-
-
-                        #tf.print("latent_init shape:", tf.shape(latent_init))
-                        #tf.print("mean shape:", tf.shape(mean))
-                        a, mean=self.mppi(latent_init,mean)
-                        a=a.numpy().item()
+                        if(random.random()<0.1*((2000.0-episode_count)/1600)):
+                            probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
+                            indices = np.arange(len(probabilities))
+                            a=np.random.choice(indices, p=probabilities)
+                            
+                        else:
+                            a, mean=self.mppi(latent_init,mean)
+                            a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
                         mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
