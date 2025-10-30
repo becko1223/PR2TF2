@@ -286,7 +286,7 @@ class Worker():
 
         wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
         def compute_penalty(current_episode, is_wait, max_episode=2000.0, start_decay_episode=400.0):
-            penalty_rate = -0.2 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
+            penalty_rate = -0.1 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
             penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
             return penalty_tensor
         condition = tf.less(self.currEpisode, 2000)
