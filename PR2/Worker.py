@@ -290,7 +290,7 @@ class Worker():
             penalty_rate = -0.1 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
             penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
             return penalty_tensor
-        condition = tf.less(self.currEpisode, 2)
+        condition = tf.less(self.currEpisode, 2000)
 
         for t in tf.range(horizon):
             actions=samples[t]
