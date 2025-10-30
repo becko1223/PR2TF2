@@ -34,7 +34,7 @@ OBSTACLE_DENSITY        = (0, 0.75)  # range of densities   Starting Params of C
 
 DIAG_MVMT               = False  # Diagonal movements allowed?
 a_size                  = 5 + int(DIAG_MVMT) * 4
-NUM_META_AGENTS         = 2
+NUM_META_AGENTS         = 15
 NUM_IL_META_AGENTS      = 0
 
 NUM_THREADS             = 8 # int(multiprocessing.cpu_count() / (2 * NUM_META_AGENTS))

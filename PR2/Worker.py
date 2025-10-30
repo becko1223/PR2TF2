@@ -800,7 +800,7 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>2):
+                    if(episode_count>400):
                         if(random.random()<0.1*((2000.0-episode_count)/1600)):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
