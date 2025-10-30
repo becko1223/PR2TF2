@@ -249,9 +249,10 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
-        tf.TensorSpec(shape=[None,1,512],dtype=tf.float32)
+        tf.TensorSpec(shape=[None,1,512],dtype=tf.float32),
+        tf.TensorSpec(shape=[None,a_size],dtype=tf.float32)
     ])
-    def compute_return(self,samples,latent_inits): #[B,horizon,onehot] , [B,1,latentdim]
+    def compute_return(self,samples,latent_inits,validActions): #[B,horizon,onehot] , [B,1,latentdim]
 
         """
         #scanはむずかしい
@@ -289,27 +290,38 @@ class Worker():
             penalty_rate = -0.1 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
             penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
             return penalty_tensor
-        condition = tf.less(self.currEpisode, 2000)
+        condition = tf.less(self.currEpisode, 2)
 
         for t in tf.range(horizon):
             actions=samples[t]
+            actions_expanded = tf.expand_dims(actions, axis=1)
+
             is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
 
-            actions=tf.expand_dims(actions,axis=1)
+            validActions_expanded = tf.expand_dims(validActions, axis=0) 
+            validActions_tiled = tf.tile(validActions_expanded, [B_size, 1, 1]) # [B, N, A_SIZE]
+
+            all_equal_to_valid = tf.reduce_all(tf.equal(actions_expanded, validActions_tiled), axis=2) # [B, N]
+            is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
+            is_invalid_action = tf.logical_not(is_valid_action)
+
+            stop_action=tf.logical_or(is_wait_action,is_invalid_action)
+
+
             
             #print("actions shape:",actions.shape)
-            rewards=self.local_ACRD.reward(current_latents,actions)
+            rewards=self.local_ACRD.reward(current_latents,actions_expanded)
             rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
-            penalty_tensor = tf.cond(condition, 
-                lambda: compute_penalty(self.currEpisode, is_wait_action),
+            stop_penalty_tensor = tf.cond(condition, 
+                lambda: compute_penalty(self.currEpisode, stop_action),
                 lambda: tf.zeros_like(rewards) 
             )
 
             #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
-            current_latents=self.local_ACRD.dynamics(current_latents,actions)
-            rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor)
+            current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
+            rewards_ta=rewards_ta.write(t,rewards*discount+stop_penalty_tensor)
             discount*=gammma_tdmpc
 
 
@@ -402,9 +414,10 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
-        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32)
+        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32),
+        tf.TensorSpec(shape=[None,a_size],dtype=tf.float32)
     ], reduce_retracing=True)
-    def mppi(self,latent_init,mean):
+    def mppi(self,latent_init,mean,validActions):
         std=tf.ones([horizon,])
 
         #print("latent_init shape:",latent_init.shape)
@@ -421,7 +434,7 @@ class Worker():
         for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
-            V=self.compute_return(allsamples,inits_for_return)
+            V=self.compute_return(allsamples,inits_for_return,validActions)
             #tf.print("V shape befre get_mean:", tf.shape(V))
             mean,std=self.get_mean(V,allsamples)
 
@@ -787,14 +800,15 @@ class Worker():
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>400):
+                    if(episode_count>2):
                         if(random.random()<0.1*((2000.0-episode_count)/1600)):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
                             
                         else:
-                            a, mean=self.mppi(latent_init,mean)
+                            validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
+                            a, mean=self.mppi(latent_init,mean,validActions_onehot)
                             a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
