@@ -828,7 +828,7 @@ class Worker():
                         a=np.random.choice(indices, p=probabilities)
                         q=np.zeros((1,1))
 
-                    a_onehot=tf.onehot(a,a_size)
+                    a_onehot=tf.one_hot(a,a_size)
                     pred_latent=self.local_ACRD.dynamics(latent_init,a_onehot)
                     
 
