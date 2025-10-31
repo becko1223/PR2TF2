@@ -872,14 +872,14 @@ class Worker():
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
-                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])
+                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+model_error.numpy()
                     validActions = self.env.listValidActions(self.agentID, s1)
 
                     self.synchronize()
                     # Append to Appropriate buffers 
                     if not skipping_state:
                         episode_buffer.append(
-                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID], s1, train_valid, s[1],
+                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID]+model_error.numpy(), s1, train_valid, s[1],
                                 train_val, train_policy, rnn_state])
                         episode_values.append(q[0, 0])
                     episode_reward += r
