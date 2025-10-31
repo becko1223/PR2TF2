@@ -726,6 +726,8 @@ class Worker():
             rnn_state = [h_init, c_init]
             rnn_state0 = rnn_state
 
+            is_first_step=True
+
             pred_latent = tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
@@ -801,7 +803,8 @@ class Worker():
 
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
-                    model_error=tf.reduce_mean(tf.square(latent_init-pred_latent))
+                    model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
+                    is_first_step=False
                     
 
                     rnn_state=[rnn_state[0],rnn_state[1]]
@@ -873,7 +876,7 @@ class Worker():
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
-                    error_reward=min([0.5*float(model_error.numpy()),0.1]) if episode_step_count!=0 else 0.0
+                    error_reward=min([0.5*float(model_error.numpy()),0.1]) 
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
@@ -907,6 +910,7 @@ class Worker():
                             episode_buffer = []
                             joint_done[self.metaAgentID][self.agentID] = False
                             targets_done += 1
+                            pred_latent=tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
                         #else:
                             
