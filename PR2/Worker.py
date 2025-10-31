@@ -293,6 +293,7 @@ class Worker():
         condition = tf.less(self.currEpisode, guide_term)
 
         for t in tf.range(horizon):
+            is_horizon_first_condition = tf.equal(t, tf.constant([0]))
             actions=samples[t]
             actions_expanded = tf.expand_dims(actions, axis=1)
 
@@ -311,15 +312,17 @@ class Worker():
             rewards=self.local_ACRD.reward(current_latents,actions_expanded)
             rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
-            stop_penalty_tensor = tf.cond(condition, 
-                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.1),
+            penalty_tensor = tf.cond(condition, 
+                lambda: tf.cond(is_horizon_first_condition,
+                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.1) , 
+                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)),
                 lambda: tf.zeros_like(rewards) 
             )
 
             #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
-            rewards_ta=rewards_ta.write(t,rewards*discount+stop_penalty_tensor)
+            rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor*discount)
             discount*=gammma_tdmpc
 
 
