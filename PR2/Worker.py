@@ -829,6 +829,7 @@ class Worker():
                         q=np.zeros((1,1))
 
                     a_onehot=tf.one_hot(a,a_size)
+                    a_onehot=tf.expand_dims(tf.expand_dims(a_onehot,axis=0),axis=0)
                     pred_latent=self.local_ACRD.dynamics(latent_init,a_onehot)
                     
 
