@@ -286,11 +286,11 @@ class Worker():
         rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False,clear_after_read=False)
 
         wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
-        def compute_penalty(current_episode, is_wait, max_episode=2000.0, start_decay_episode=400.0):
-            penalty_rate = -0.1 * ((max_episode - current_episode) / (max_episode - start_decay_episode))
-            penalty_tensor = tf.cast(is_wait, dtype=tf.float32) * penalty_rate
+        def compute_penalty(current_episode, B_bool, penalty_weight):
+            penalty_rate = penalty_weight * ((guide_term - current_episode) / (guide_term - random_term))
+            penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_rate
             return penalty_tensor
-        condition = tf.less(self.currEpisode, 2000)
+        condition = tf.less(self.currEpisode, guide_term)
 
         for t in tf.range(horizon):
             actions=samples[t]
@@ -305,16 +305,14 @@ class Worker():
             is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
             is_invalid_action = tf.logical_not(is_valid_action)
 
-            stop_action=tf.logical_or(is_wait_action,is_invalid_action)
-
-
             
+
             #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions_expanded)
             rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
             stop_penalty_tensor = tf.cond(condition, 
-                lambda: compute_penalty(self.currEpisode, stop_action),
+                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.1),
                 lambda: tf.zeros_like(rewards) 
             )
 
@@ -505,12 +503,17 @@ class Worker():
         #エピソードの切り分け
         step=len(rollout)
         all_list=range(0,step-(horizon))
-        batch_size=(step//horizon)*2
-        chosen=random.choices(all_list,k=batch_size)
+        batch_size=(step//horizon)
         if(step<256):               #ゴール報酬経験の訓練優先
-            for t in tf.range(30):
+            batch_size*=3
+            chosen=random.choices(all_list,k=batch_size)
+            for t in tf.range(10):
                 chosen.append(step-horizon-1)
                 batch_size+=1
+        else:
+            chosen=random.choices(all_list,k=batch_size)
+        
+            
             
             
 
@@ -721,8 +724,9 @@ class Worker():
             h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             rnn_state = [h_init, c_init]
-        
             rnn_state0 = rnn_state
+
+            pred_latent = tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
@@ -797,11 +801,14 @@ class Worker():
 
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    model_error=tf.reduce_mean(tf.square(latent_init-pred_latent))
+                    
+
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
 
-                    if(episode_count>400):
-                        if(random.random()<0.1*((2000.0-episode_count)/1600)):
+                    if(episode_count>random_term):
+                        if(random.random()<0.1*((guide_term-episode_count)/guide_term-random_term)):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
@@ -820,6 +827,9 @@ class Worker():
                         indices = np.arange(len(probabilities))
                         a=np.random.choice(indices, p=probabilities)
                         q=np.zeros((1,1))
+
+                    a_onehot=tf.onehot(a,a_size)
+                    pred_latent=self.local_ACRD.dynamics(latent_init,a_onehot)
                     
 
                    
