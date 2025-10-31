@@ -314,8 +314,8 @@ class Worker():
 
             penalty_tensor = tf.cond(condition, 
                 lambda: tf.cond(is_horizon_first_condition,
-                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.02)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.02)),
+                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.01)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
+                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.01)),
                 lambda: tf.zeros_like(rewards) 
             )
 
