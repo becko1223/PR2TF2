@@ -32,6 +32,11 @@ def action2dir_tensor(a):
     
     return direction_tensor
 
+def onehot_to_coordinate(action_onehot):
+    action=tf.math.argmax(action_onehot,axis=-1)
+    action=action2dir_tensor(action)
+    return tf.constant(action,dtype=tf.float32)
+
 @tf.function(input_signature=[
 tf.TensorSpec(shape=[a_size], dtype=tf.float32)
 ])
@@ -252,7 +257,7 @@ class Worker():
         tf.TensorSpec(shape=[None,1,512],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32)
     ])
-    def compute_return(self,samples,latent_inits,validActions): #[B,horizon,onehot] , [B,1,latentdim]
+    def compute_return(self,samples,latent_inits,validActions,is_no_goalguide_condition,guide_dir): #[B,horizon,onehot] , [B,1,latentdim]
 
         """
         #scanはむずかしい
@@ -285,44 +290,20 @@ class Worker():
         discount=1.0
         rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False,clear_after_read=False)
 
-        wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
-        def compute_penalty(current_episode, B_bool, penalty_weight):
-            penalty_rate = penalty_weight * ((guide_term - current_episode) / (guide_term - random_term))
-            penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_rate
-            return penalty_tensor
-        condition = tf.less(self.currEpisode, guide_term)
+        
 
         for t in tf.range(horizon):
-            is_horizon_first_condition = tf.equal(t, tf.constant([0]))
             actions=samples[t]
             actions_expanded = tf.expand_dims(actions, axis=1)
-
-            is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
-
-            validActions_expanded = tf.expand_dims(validActions, axis=0) 
-            validActions_tiled = tf.tile(validActions_expanded, [B_size, 1, 1]) # [B, N, A_SIZE]
-
-            all_equal_to_valid = tf.reduce_all(tf.equal(actions_expanded, validActions_tiled), axis=2) # [B, N]
-            is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
-            is_invalid_action = tf.logical_not(is_valid_action)
-
-            
 
             #print("actions shape:",actions.shape)
             rewards=self.local_ACRD.reward(current_latents,actions_expanded)
             rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
-            penalty_tensor = tf.cond(condition, 
-                lambda: tf.cond(is_horizon_first_condition,
-                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.01)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                                lambda: compute_penalty(self.currEpisode, is_wait_action, -0.01)),
-                lambda: tf.zeros_like(rewards) 
-            )
-
             #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
-            rewards_ta=rewards_ta.write(t,rewards*discount+penalty_tensor*discount)
+            rewards_ta=rewards_ta.write(t,rewards*discount)
             discount*=gammma_tdmpc
 
 
@@ -345,9 +326,9 @@ class Worker():
         q_expected=tf.zeros([B_size,1,1],dtype=tf.float32)
 
         for t in tf.range(a_size):
-            actions=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
-            q1_value=self.local_ACRD.q1(current_latents,actions)
-            q2_value=self.local_ACRD.q2(current_latents,actions)
+            actions_expanded=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
+            q1_value=self.local_ACRD.q1(current_latents,actions_expanded)
+            q2_value=self.local_ACRD.q2(current_latents,actions_expanded)
             q_value=tf.minimum(q1_value,q2_value)
             q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value
 
@@ -362,12 +343,46 @@ class Worker():
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)      
+        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)   
+
+
         #print("V shape:",V.shape)
         V=tf.squeeze(V) #[512,1]to[512,]
-
         #tf.print("V shape after tf.squeeze(V):", tf.shape(V))
 
+
+        #系列評価ペナルティ
+        wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
+        def compute_penalty(current_episode, B_bool, penalty_weight):
+            penalty_rate = penalty_weight * ((guide_term - current_episode) / (guide_term - random_term))
+            penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_rate
+            return penalty_tensor
+        is_guide_term_condition = tf.less(self.currEpisode, guide_term)
+
+        actions=samples[0]
+        actions_expanded = tf.expand_dims(actions, axis=1)
+
+        is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
+
+        validActions_expanded = tf.expand_dims(validActions, axis=0) 
+        validActions_tiled = tf.tile(validActions_expanded, [B_size, 1, 1]) # [B, N, A_SIZE]
+        all_equal_to_valid = tf.reduce_all(tf.equal(actions_expanded, validActions_tiled), axis=2) # [B, N]
+        is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
+        is_invalid_action = tf.logical_not(is_valid_action)
+
+        actions_dir=tf.map_fn(onehot_to_coordinate,actions)
+        distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir)
+
+
+        penalty_tensor = tf.cond(is_guide_term_condition, 
+            lambda: tf.cond(is_no_goalguide_condition,
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.03)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.03)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.1),
+            lambda: tf.zeros_like(V) 
+        )
+
+        V+=penalty_tensor
+        
         return V
 
 
@@ -376,11 +391,6 @@ class Worker():
         tf.TensorSpec(shape=[None,horizon,a_size],dtype=tf.float32)
     ])
     def get_mean(self,V,samples):
-        #elite_actions to coords
-        def onehot_to_coordinate(action_onehot):
-            action=tf.math.argmax(action_onehot,axis=-1)
-            action=action2dir_tensor(action)
-            return tf.constant(action,dtype=tf.float32)
 
         topK=tf.math.top_k(V,k=num_elites)
         V_elite=topK.values                #[k,]
@@ -418,7 +428,7 @@ class Worker():
         tf.TensorSpec(shape=[horizon,5],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32)
     ], reduce_retracing=True)
-    def mppi(self,latent_init,mean,validActions):
+    def mppi(self,latent_init,mean,validActions,is_no_guide,guide_dir):
         std=tf.ones([horizon,])
 
         #print("latent_init shape:",latent_init.shape)
@@ -435,13 +445,13 @@ class Worker():
         for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
-            V=self.compute_return(allsamples,inits_for_return,validActions)
+            V=self.compute_return(allsamples,inits_for_return,validActions,is_no_guide,guide_dir)
             #tf.print("V shape befre get_mean:", tf.shape(V))
             mean,std=self.get_mean(V,allsamples)
 
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
-        V=self.compute_return(samples_from_distribution,inits_for_return,validActions)
+        V=self.compute_return(samples_from_distribution,inits_for_return,validActions,is_no_guide,guide_dir)
 
         action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
@@ -709,7 +719,7 @@ class Worker():
         
         while self.shouldRun(coord, episode_count):
             episode_buffer, episode_values = [], []
-            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = 0
+            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
@@ -806,9 +816,25 @@ class Worker():
 
 
                     latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
-                    
+
+                    is_no_guide=False
+                    guide_dir=tf.zeros([2],dtype=tf.float32)
+                    astar_map=s[0][4]
+                    distance_list=[]
+                    distance_list.append(1000) #待機が最短経路になることはない
+                    distance_list.append(astar_map[5,4])
+                    distance_list.append(astar_map[6,5])
+                    distance_list.append(astar_map[5,6])
+                    distance_list.append(astar_map[4,5])
+                    if(distance_list.count(0)>1):
+                        is_no_guide=True
+                    else:
+                        a_guide=distance_list.index(min(distance_list))
+                        guide_dir=action2dir(a_guide)
+
 
                     rnn_state=[rnn_state[0],rnn_state[1]]
 
@@ -821,7 +847,7 @@ class Worker():
                             
                         else:
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
-                            a, mean=self.mppi(latent_init,mean,validActions_onehot)
+                            a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
                             a=a.numpy().item()
                         q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
                         q=q.numpy()
@@ -861,6 +887,10 @@ class Worker():
                         if a == 0:
                             episode_stop_count += 1
 
+                        if not(is_no_guide):
+                            if a==a_guide:
+                                episode_astar_count += 1
+
                     # Make A Single Agent Gather All Information
 
                     self.synchronize()
@@ -879,7 +909,7 @@ class Worker():
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
-                    error_reward=min([0.5*float(model_error.numpy()),0.1]) 
+                    error_reward=min([0.5*float(model_error.numpy()),0.05]) 
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
@@ -965,6 +995,7 @@ class Worker():
                     np.nanmean(episode_values),
                     episode_inv_count,
                     episode_stop_count,
+                    episode_astar_count,
                     episode_reward,
                     targets_done
                 ])
