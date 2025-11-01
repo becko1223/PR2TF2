@@ -20,6 +20,7 @@ RNN_SIZE = 512
 def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
+@tf.function
 def action2dir_tensor(a):
     checking_tensor = tf.constant([
         [0, 0],
@@ -32,6 +33,7 @@ def action2dir_tensor(a):
     
     return direction_tensor
 
+@tf.function
 def onehot_to_coordinate(action_onehot):
     action=tf.math.argmax(action_onehot,axis=-1)
     action=action2dir_tensor(action)
