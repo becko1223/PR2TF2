@@ -373,7 +373,7 @@ class Worker():
         is_invalid_action = tf.logical_not(is_valid_action)
 
         actions_dir=tf.map_fn(onehot_to_coordinate,actions)
-        distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir)
+        distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
 
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
