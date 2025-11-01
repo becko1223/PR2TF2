@@ -35,7 +35,7 @@ def action2dir_tensor(a):
 def onehot_to_coordinate(action_onehot):
     action=tf.math.argmax(action_onehot,axis=-1)
     action=action2dir_tensor(action)
-    return tf.constant(action,dtype=tf.float32)
+    return action
 
 @tf.function(input_signature=[
 tf.TensorSpec(shape=[a_size], dtype=tf.float32)
