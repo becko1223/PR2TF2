@@ -256,7 +256,7 @@ class Worker():
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
         tf.TensorSpec(shape=[None,1,512],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
-        tf.TensorSpec(shape=[], dtype=tf.bool),
+        tf.TensorSpec(shape=[1], dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)
     ])
     def compute_return(self,samples,latent_inits,validActions,is_no_goalguide_condition,guide_dir): #[B,horizon,onehot] , [B,1,latentdim]
@@ -429,7 +429,7 @@ class Worker():
         tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon,5],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
-        tf.TensorSpec(shape=[],dtype=tf.bool),
+        tf.TensorSpec(shape=[1],dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)
     ], reduce_retracing=True)
     def mppi(self,latent_init,mean,validActions,is_no_guide,guide_dir):
