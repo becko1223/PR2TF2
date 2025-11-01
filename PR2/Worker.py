@@ -429,7 +429,7 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
-        tf.TensorSpec(shape=[horizon,5],dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[1],dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)

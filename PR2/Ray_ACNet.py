@@ -200,7 +200,7 @@ class ACRDNet(tf.keras.Model):
     
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
-        tf.TensorSpec(shape=[None,None,5],dtype=tf.float32)
+        tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def q2(self,latent,action):
         x=tf.concat([latent,action],-1)
