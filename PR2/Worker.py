@@ -822,7 +822,7 @@ class Worker():
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
 
-                    is_no_guide=False
+                    is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
                     astar_map=s[0][4]
                     distance_list=[]
@@ -832,7 +832,7 @@ class Worker():
                     distance_list.append(astar_map[5,6])
                     distance_list.append(astar_map[4,5])
                     if(distance_list.count(0)>1):
-                        is_no_guide=True
+                        is_no_guide=tf.constant([True],tf.bool)
                     else:
                         a_guide=distance_list.index(min(distance_list))
                         guide_dir=action2dir(a_guide)
