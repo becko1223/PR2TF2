@@ -39,6 +39,22 @@ def onehot_to_coordinate(action_onehot):
     action=action2dir_tensor(action)
     return action
 
+@tf.function
+def onehot_to_coordinate_batch(actions_onehot):
+    # actions_onehot: 形状は [B, A_SIZE]
+ 
+    checking_tensor = tf.constant([
+        [0.0, 0.0], # 0: 待機
+        [0.0, 1.0], # 1: 上
+        [1.0, 0.0], # 2: 右
+        [0.0, -1.0],# 3: 下
+        [-1.0, 0.0] # 4: 左
+    ], dtype=tf.float32) # 形状: [A_SIZE, 2]
+    
+    direction_tensor = tf.matmul(actions_onehot, checking_tensor)
+    
+    return direction_tensor
+
 @tf.function(input_signature=[
 tf.TensorSpec(shape=[a_size], dtype=tf.float32)
 ])
@@ -374,14 +390,14 @@ class Worker():
         is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
         is_invalid_action = tf.logical_not(is_valid_action)
 
-        #actions_dir=tf.map_fn(onehot_to_coordinate,actions)
-        #distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
+        actions_dir=onehot_to_coordinate_batch(actions)
+        distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
 
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
                             lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)),
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.1),
             lambda: tf.zeros_like(V) 
         )
 
