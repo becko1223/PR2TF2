@@ -11,10 +11,10 @@ IL_MAX_EP_LENGTH        = 64
 episode_count           = 0
 
 # TDMPC parameters
-horizon                 =5
+horizon                 =4
 rho                     =0.5
 
-num_samples             =512
+num_samples             =200
 num_actor_traj          =16
 num_elites              =64
 
