@@ -397,7 +397,7 @@ class Worker():
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
                             lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.1),
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.2* ((guide_term - self.currEpisod) / (guide_term - random_term))),
             lambda: tf.zeros_like(V) 
         )
 
@@ -741,7 +741,7 @@ class Worker():
         
         while self.shouldRun(coord, episode_count):
             episode_buffer, episode_values = [], []
-            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= 0
+            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
@@ -932,6 +932,8 @@ class Worker():
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
                     error_reward=min([0.5*float(model_error.numpy()),0.05]) 
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
+                        episode_collision_count+=1
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
@@ -1018,6 +1020,7 @@ class Worker():
                     episode_inv_count,
                     episode_stop_count,
                     episode_astar_count,
+                    episode_collision_count,
                     episode_reward,
                     targets_done
                 ])
