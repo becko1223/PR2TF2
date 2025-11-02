@@ -374,14 +374,14 @@ class Worker():
         is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
         is_invalid_action = tf.logical_not(is_valid_action)
 
-        actions_dir=tf.map_fn(onehot_to_coordinate,actions)
-        distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
+        #actions_dir=tf.map_fn(onehot_to_coordinate,actions)
+        #distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
 
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
                             lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.1),
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)),
             lambda: tf.zeros_like(V) 
         )
 
