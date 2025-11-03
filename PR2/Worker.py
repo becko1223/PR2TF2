@@ -33,36 +33,20 @@ def action2dir_tensor(a):
     
     return direction_tensor
 
-@tf.function
-def onehot_to_coordinate(action_onehot):
-    action=tf.math.argmax(action_onehot,axis=-1)
-    action=action2dir_tensor(action)
-    return action
 
-@tf.function
-def onehot_to_coordinate_batch(actions_onehot):
-    # actions_onehot: 形状は [B, A_SIZE]
- 
+
+def distribution_to_coordinate(actions_distribution):
     checking_tensor = tf.constant([
         [0.0, 0.0], # 0: 待機
         [0.0, 1.0], # 1: 上
         [1.0, 0.0], # 2: 右
         [0.0, -1.0],# 3: 下
         [-1.0, 0.0] # 4: 左
-    ], dtype=tf.float32) # 形状: [A_SIZE, 2]
-    
-    direction_tensor = tf.matmul(actions_onehot, checking_tensor)
-    
-    return direction_tensor
+    ], dtype=tf.float32)
 
-@tf.function(input_signature=[
-tf.TensorSpec(shape=[a_size], dtype=tf.float32)
-])
-def distribution_to_coordinate(action_prob):
-    coord=tf.constant([0,0],dtype=tf.float32)
-    for i in tf.range(a_size):
-        coord+=action_prob[i]*action2dir_tensor(i)
+    coord=tf.matmul(actions_distribution,checking_tensor)
     return coord
+
 
 
 class Worker():
@@ -173,7 +157,8 @@ class Worker():
     ])
     def sample_from_distribution(self,actions_mean,actions_std):
         
-        actions_mean_2D=tf.map_fn(fn=distribution_to_coordinate,elems=actions_mean) #[horizon,2]
+       #[horizon,2]
+        actions_mean_2D=distribution_to_coordinate(actions_mean)
         actions_mean_2D=tf.expand_dims(actions_mean_2D,0)
         
         actions_mean_2D_samples=tf.repeat(actions_mean_2D,num_samples,axis=0)
@@ -390,14 +375,14 @@ class Worker():
         is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
         is_invalid_action = tf.logical_not(is_valid_action)
 
-        actions_dir=onehot_to_coordinate_batch(actions)
+        actions_dir=distribution_to_coordinate(actions)
         distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
 
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2) , 
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.2)-distance_from_goalguide*0.2* ((guide_term - self.currEpisode) / (guide_term - random_term))),
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.3) , 
+                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.05)+compute_penalty(self.currEpisode,is_invalid_action,-0.3)-distance_from_goalguide*0.4* ((guide_term - self.currEpisode) / (guide_term - random_term))),
             lambda: tf.zeros_like(V) 
         )
 
@@ -429,7 +414,7 @@ class Worker():
         action_indices = tf.argmax(actions_elite, axis=-1, output_type=tf.int32) # [k, horizon]
         elite_coord = action2dir_tensor(action_indices) 
         #elite_coord=tf.map_fn(fn=lambda x:tf.map_fn(fn=onehot_to_coordinate,elems=x),elems=actions_elite)
-        mean_coord=tf.map_fn(fn=distribution_to_coordinate,elems=mean)
+        mean_coord=distribution_to_coordinate(mean)
 
         #print("score shape:",score.shape)
         #print("elite_coord shape:",elite_coord.shape)
