@@ -216,7 +216,7 @@ def main():
         p=checkpoint_manager.latest_checkpoint
         print("checkpoint name:",p)
         p=p[p.find('-')+1:]
-        p=p[:p.find('.')]
+        #p=p[:p.find('.')]
         curr_episode=int(p)
 
         print("curr_episode set to ",curr_episode)
