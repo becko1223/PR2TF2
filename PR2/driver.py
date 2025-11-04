@@ -329,11 +329,11 @@ def main():
                 print ('Saved Model', end='\n')
 
             
-                    
-        except KeyboardInterrupt:
-            print("CTRL-C pressed. killing remote workers")
-            for a in meta_agents:
-                ray.kill(a)
+                
+    except KeyboardInterrupt:
+        print("CTRL-C pressed. killing remote workers")
+        for a in meta_agents:
+            ray.kill(a)
 
 
 if __name__ == "__main__": 
