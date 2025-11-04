@@ -8,6 +8,7 @@ import pynvml
 from Ray_ACNet import ACRDNet
 from Runner import imitationRunner, RLRunner
 
+import parameters
 from parameters import *
 import random
 
@@ -142,8 +143,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
             mean_length, mean_value, mean_invalid, \
             mean_stop, mean_astar,mean_collision, mean_reward, mean_finishes = firstEpisode
 
-        
-    global_mean_finishes=mean_finishes
+    parameters.global_mean_finishes=mean_finishes
 
     with global_summary.as_default():
         tf.summary.scalar('Perf/Reward',mean_reward,curr_episode)
