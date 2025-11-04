@@ -282,7 +282,7 @@ def main():
             # imitation episodes write different data to tensorboard
             if info['is_imitation']:
                 if jobResults:
-                    writeImitationDataToTensorboard(global_summary, metrics, curr_episode)
+                    writeImitationDataToTensorboard(global_summary, metrics, curr_episode,current_finishes)
                     numImitationEpisodes += 1
             else:
                 if jobResults:
