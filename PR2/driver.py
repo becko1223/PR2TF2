@@ -225,110 +225,110 @@ def main():
 
 
         
-        # launch all of the threads:
+    # launch all of the threads:
+
+    il_agents = [imitationRunner.remote(i) for i in range(NUM_IL_META_AGENTS)]
+    rl_agents = [RLRunner.remote(i) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
+    meta_agents = il_agents + rl_agents
+
     
-        il_agents = [imitationRunner.remote(i) for i in range(NUM_IL_META_AGENTS)]
-        rl_agents = [RLRunner.remote(i) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
-        meta_agents = il_agents + rl_agents
 
-        
+    
 
-        
-
-        weights=global_network.get_weights()
+    weights=global_network.get_weights()
 
 
-        
-        # launch the first job (e.g. getGradient) on each runner
-        jobList = [] # Ray ObjectIDs 
-        for i, meta_agent in enumerate(meta_agents):
-            jobList.append(meta_agent.job.remote(weights, curr_episode))
+    
+    # launch the first job (e.g. getGradient) on each runner
+    jobList = [] # Ray ObjectIDs 
+    for i, meta_agent in enumerate(meta_agents):
+        jobList.append(meta_agent.job.remote(weights, curr_episode))
+        curr_episode += 1
+
+    tensorboardData = []
+
+
+    IDs = [None] * NUM_META_AGENTS
+
+    numImitationEpisodes = 0
+    numRLEpisodes = 0
+    try:
+        while True:
+            # wait for any job to be completed - unblock as soon as the earliest arrives
+            done_id, jobList = ray.wait(jobList)
+            
+            # get the results of the task from the object store
+            #jobResults, metrics, info = ray.get(done_id)[0]
+
+
+            res = ray.get(done_id)[0]
+
+            if not res["ok"]:
+                # 例外が発生しているので中身を表示して中断
+                print("Remote job error:")
+                print(f"Type: {res['error_type']}")
+                print(res["traceback"])
+                break  # or continue, or raise 例外を再発生させるなど対応
+
+            # 成功時は result の中身をアンパック
+            jobResults, metrics, info = res["result"]
+
+
+
+
+
+
+
+            # imitation episodes write different data to tensorboard
+            if info['is_imitation']:
+                if jobResults:
+                    writeImitationDataToTensorboard(global_summary, metrics, curr_episode)
+                    numImitationEpisodes += 1
+            else:
+                if jobResults:
+                    tensorboardData.append(metrics)
+                    numRLEpisodes += 1
+
+
+            # Write ratio of RL to IL episodes to tensorboard
+            writeEpisodeRatio(global_summary, numImitationEpisodes, numRLEpisodes, curr_episode)
+
+            
+            if JOB_TYPE == JOB_OPTIONS.getGradient:
+                if jobResults:
+                    for gradient in jobResults:
+                        apply_gradients(global_network, gradient, world_optimizer,policy_optimizer, curr_episode)
+
+                
+            elif JOB_TYPE == JOB_OPTIONS.getExperience:
+                print("not implemented")
+                assert(1==0)
+            else:
+                print("not implemented")
+                assert(1==0)
+
+
+            # Every `SUMMARY_WINDOW` RL episodes, write RL episodes to tensorboard
+            if len(tensorboardData) >= SUMMARY_WINDOW:
+                writeToTensorBoard(global_summary, tensorboardData, curr_episode)
+                tensorboardData = []
+                
+            # get the updated weights from the global network
+            
+            weights = global_network.get_weights()
             curr_episode += 1
 
-        tensorboardData = []
+            # start a new job on the recently completed agent with the updated weights
+            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode)])
 
+            
+            if curr_episode % 100 == 0:
+                print ('Saving Model', end='\n')
+                #checkpoint_numberのところにエピソードナンバーを保存しておく
+                checkpoint_manager.save(checkpoint_number=curr_episode)
+                print ('Saved Model', end='\n')
 
-        IDs = [None] * NUM_META_AGENTS
-
-        numImitationEpisodes = 0
-        numRLEpisodes = 0
-        try:
-            while True:
-                # wait for any job to be completed - unblock as soon as the earliest arrives
-                done_id, jobList = ray.wait(jobList)
-                
-                # get the results of the task from the object store
-                #jobResults, metrics, info = ray.get(done_id)[0]
-
-
-                res = ray.get(done_id)[0]
-
-                if not res["ok"]:
-                    # 例外が発生しているので中身を表示して中断
-                    print("Remote job error:")
-                    print(f"Type: {res['error_type']}")
-                    print(res["traceback"])
-                    break  # or continue, or raise 例外を再発生させるなど対応
-
-                # 成功時は result の中身をアンパック
-                jobResults, metrics, info = res["result"]
-
-
-
-
-
-
-
-                # imitation episodes write different data to tensorboard
-                if info['is_imitation']:
-                    if jobResults:
-                        writeImitationDataToTensorboard(global_summary, metrics, curr_episode)
-                        numImitationEpisodes += 1
-                else:
-                    if jobResults:
-                        tensorboardData.append(metrics)
-                        numRLEpisodes += 1
-
-
-                # Write ratio of RL to IL episodes to tensorboard
-                writeEpisodeRatio(global_summary, numImitationEpisodes, numRLEpisodes, curr_episode)
-
-                
-                if JOB_TYPE == JOB_OPTIONS.getGradient:
-                    if jobResults:
-                        for gradient in jobResults:
-                            apply_gradients(global_network, gradient, world_optimizer,policy_optimizer, curr_episode)
-
-                    
-                elif JOB_TYPE == JOB_OPTIONS.getExperience:
-                    print("not implemented")
-                    assert(1==0)
-                else:
-                    print("not implemented")
-                    assert(1==0)
-
-
-                # Every `SUMMARY_WINDOW` RL episodes, write RL episodes to tensorboard
-                if len(tensorboardData) >= SUMMARY_WINDOW:
-                    writeToTensorBoard(global_summary, tensorboardData, curr_episode)
-                    tensorboardData = []
-                    
-                # get the updated weights from the global network
-                
-                weights = global_network.get_weights()
-                curr_episode += 1
-
-                # start a new job on the recently completed agent with the updated weights
-                jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode)])
-
-                
-                if curr_episode % 100 == 0:
-                    print ('Saving Model', end='\n')
-                    #checkpoint_numberのところにエピソードナンバーを保存しておく
-                    checkpoint_manager.save(checkpoint_number=curr_episode)
-                    print ('Saved Model', end='\n')
-
-                
+            
                     
         except KeyboardInterrupt:
             print("CTRL-C pressed. killing remote workers")
