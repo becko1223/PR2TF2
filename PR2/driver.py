@@ -197,6 +197,13 @@ def main():
             if v.name not in actor_variable_names
         ]
 
+        dummy_world_grads = [tf.zeros_like(v) for v in variables_except_for_actor]
+        dummy_policy_grads = [tf.zeros_like(v) for v in variables_for_actor]
+
+        world_optimizer.apply_gradients(zip(dummy_world_grads, variables_except_for_actor))
+        policy_optimizer.apply_gradients(zip(dummy_policy_grads, variables_for_actor))
+     
+
         global_summary = tf.summary.create_file_writer(train_path)
         checkpoint = tf.train.Checkpoint(model=global_network, world_optimizer=world_optimizer,policy_optimizer=policy_optimizer)
         checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
