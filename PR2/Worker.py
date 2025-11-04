@@ -525,14 +525,9 @@ class Worker():
         step=len(rollout)
         all_list=range(0,step-(horizon))
         batch_size=(step//horizon)
-        if(step<256):               #ゴール報酬経験の訓練優先
-            batch_size*=3
-            chosen=random.choices(all_list,k=batch_size)
-            for t in tf.range(10):
-                chosen.append(step-horizon-1)
-                batch_size+=1
-        else:
-            chosen=random.choices(all_list,k=batch_size)
+        chosen=random.choices(all_list,k=batch_size)
+        chosen.append(step-horizon-1)
+        batch_size+=1
         
             
             

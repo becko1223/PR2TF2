@@ -66,6 +66,8 @@ if not os.path.exists(gifs_path):
 
 
 global_step = 0 #これはcurrent_episodeと同じ。混在していてちょっと良くない。
+
+global_mean_finishes=0
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -143,7 +145,8 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
             mean_length, mean_value, mean_invalid, \
             mean_stop, mean_astar,mean_collision, mean_reward, mean_finishes = firstEpisode
 
-    parameters.global_mean_finishes=mean_finishes
+    global global_mean_finishes
+    global_mean_finishes=mean_finishes
 
     with global_summary.as_default():
         tf.summary.scalar('Perf/Reward',mean_reward,curr_episode)
@@ -233,7 +236,7 @@ def main():
 
     
 
-    current_finishes = parameters.global_mean_finishes
+    current_finishes = global_mean_finishes
 
     weights=global_network.get_weights()
 
