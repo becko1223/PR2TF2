@@ -358,9 +358,8 @@ class Worker():
 
         #系列評価ペナルティ
         wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
-        def compute_penalty(current_episode, B_bool, penalty_weight):
-            penalty_rate = penalty_weight * ((guide_term - current_episode) / (guide_term - random_term))
-            penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_rate
+        def compute_penalty(B_bool, penalty_weight):
+            penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_weight
             return penalty_tensor
         is_guide_term_condition = tf.less(self.currEpisode, guide_term)
 
@@ -381,12 +380,12 @@ class Worker():
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5) , 
-                            lambda: compute_penalty(self.currEpisode, is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5)-distance_from_goalguide*0.25* ((guide_term - self.currEpisode) / (guide_term - random_term))),
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5) , 
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5)-distance_from_goalguide*0.25),
             lambda: tf.zeros_like(V) 
         )
 
-        V+=penalty_tensor
+        V+=penalty_tensor*max([0,((20-episode_finishes)/20.0)])
         
         return V
 
