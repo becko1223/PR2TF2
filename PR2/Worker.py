@@ -380,8 +380,8 @@ class Worker():
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5) , 
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(self.currEpisode,is_invalid_action,-0.5)-distance_from_goalguide*0.25),
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.5) , 
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.5)-distance_from_goalguide*0.25),
             lambda: tf.zeros_like(V) 
         )
 
