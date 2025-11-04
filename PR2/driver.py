@@ -236,7 +236,7 @@ def main():
 
     
 
-    current_finishes = global_mean_finishes
+ 
 
     weights=global_network.get_weights()
 
@@ -245,7 +245,7 @@ def main():
     # launch the first job (e.g. getGradient) on each runner
     jobList = [] # Ray ObjectIDs 
     for i, meta_agent in enumerate(meta_agents):
-        jobList.append(meta_agent.job.remote(weights, curr_episode, current_finishes))
+        jobList.append(meta_agent.job.remote(weights, curr_episode, global_mean_finishes))
         curr_episode += 1
 
     tensorboardData = []
@@ -322,7 +322,7 @@ def main():
             curr_episode += 1
 
             # start a new job on the recently completed agent with the updated weights
-            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,current_finishes)])
+            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,global_mean_finishes)])
 
             
             if curr_episode % 100 == 0:
