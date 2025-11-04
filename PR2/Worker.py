@@ -837,10 +837,11 @@ class Worker():
                     distance_list.append(astar_map[6,5])
                     distance_list.append(astar_map[5,6])
                     distance_list.append(astar_map[4,5])
-                    if(distance_list.count(0)>1):
+                    distance_list_replace=[1000 if i<0 else i for i in distance_list]
+                    if(distance_list_replace.count(0)>1):
                         is_no_guide=tf.constant([True],tf.bool)
                     else:
-                        a_guide=distance_list.index(min(distance_list))
+                        a_guide=distance_list.index(min(distance_list_replace))
                         guide_dir=action2dir(a_guide)
 
 
