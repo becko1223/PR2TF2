@@ -831,6 +831,8 @@ class Worker():
                     is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
                     astar_map=s[0][4]
+                    if(random.random()<0.0001):
+                        print(astar_map)
                     distance_list=[]
                     distance_list.append(1000) #待機が最短経路になることはない
                     distance_list.append(astar_map[5,4])
@@ -841,7 +843,7 @@ class Worker():
                     if(distance_list_replace.count(0)>1):
                         is_no_guide=tf.constant([True],tf.bool)
                     else:
-                        a_guide=distance_list.index(min(distance_list_replace))
+                        a_guide=distance_list_replace.index(min(distance_list_replace))
                         guide_dir=action2dir(a_guide)
 
 
