@@ -83,6 +83,9 @@ episode_wrong_blocking  = [[] for _ in range(NUM_META_AGENTS)]
 rollouts                = [None for _ in range(NUM_META_AGENTS)]
 GIF_frames              = []
 
+
+global_mean_finishes    = 0
+
 # Joint variables 
 joint_actions           = [{} for _ in range(NUM_META_AGENTS)]
 joint_env               = [None for _ in range(NUM_META_AGENTS)]
