@@ -122,7 +122,7 @@ class Runner(object):
 
 
         
-    def multiThreadedJob(self, episodeNumber):
+    def multiThreadedJob(self, episodeNumber, mean_finishes):
         workers = []
         worker_threads = []
         workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]
@@ -138,7 +138,7 @@ class Runner(object):
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
-                                  groupLock,inference_lock, learningAgent=True))
+                                  groupLock,inference_lock, mean_finishes, learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -224,7 +224,7 @@ class Runner(object):
         return gradients, mean_imitation_loss, is_imitation
         
         
-    def job(self, global_weights, episodeNumber):
+    def job(self, global_weights, episodeNumber, mean_finishes):
         try:
             print("starting episode {} on metaAgent {}".format(episodeNumber, self.metaAgentID))
 
@@ -238,7 +238,7 @@ class Runner(object):
                 jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-                jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber)
+                jobResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
                 print("not implemented")

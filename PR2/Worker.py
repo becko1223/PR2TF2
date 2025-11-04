@@ -50,7 +50,7 @@ def distribution_to_coordinate(actions_distribution):
 
 
 class Worker():
-    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock,inferenceLock, learningAgent,
+    def __init__(self, metaAgentID, workerID, workers_per_metaAgent, env, localNetwork, groupLock,inferenceLock,mean_finishes, learningAgent,
                  ):
 
         self.metaAgentID = metaAgentID
@@ -64,10 +64,12 @@ class Worker():
         self.local_ACRD = localNetwork
         self.groupLock = groupLock
         self.inferenceLock=inferenceLock
+        self.mean_finisheds = mean_finishes
         self.learningAgent = learningAgent
         self.allGradients = []
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
+        
 
 
    
@@ -385,7 +387,7 @@ class Worker():
             lambda: tf.zeros_like(V) 
         )
 
-        V+=penalty_tensor*max([0.0,((20.0-global_mean_finishes)/20.0)])
+        V+=penalty_tensor*max([0.0,((20.0-self.mean_finisheds)/20.0)])
         
         return V
 
