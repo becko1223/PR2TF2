@@ -282,7 +282,7 @@ def main():
             # imitation episodes write different data to tensorboard
             if info['is_imitation']:
                 if jobResults:
-                    writeImitationDataToTensorboard(global_summary, metrics, curr_episode,current_finishes)
+                    writeImitationDataToTensorboard(global_summary, metrics, curr_episode)
                     numImitationEpisodes += 1
             else:
                 if jobResults:
@@ -319,7 +319,7 @@ def main():
             curr_episode += 1
 
             # start a new job on the recently completed agent with the updated weights
-            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode)])
+            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,current_finishes)])
 
             
             if curr_episode % 100 == 0:
