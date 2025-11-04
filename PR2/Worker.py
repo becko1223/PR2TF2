@@ -387,7 +387,7 @@ class Worker():
             lambda: tf.zeros_like(V) 
         )
 
-        V+=penalty_tensor*max([0.0,((20.0-self.mean_finisheds)/20.0)])
+        V+=penalty_tensor*max([0.0,min[1.0,((60.0-self.mean_finisheds)/40.0)]])
         
         return V
 

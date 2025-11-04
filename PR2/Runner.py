@@ -201,7 +201,7 @@ class Runner(object):
                 print(f"gradient[{i}] is None")
             else:
                 print(f"gradient[{i}] length: {len(grads)}")
-        print("global_mean_finishes:",global_mean_finishes)
+        print("global_mean_finishes:",mean_finishes)
         
         return jobResults, all_metrics, is_imitation
     
