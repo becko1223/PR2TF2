@@ -6,11 +6,13 @@ import ray
 import os
 import imageio
 import random
+import itertools
 from Env_Builder import *
 
 from Map_Generator import maze_generator
 
 from parameters import *
+
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
@@ -38,14 +40,26 @@ def action2dir_tensor(a):
 def distribution_to_coordinate(actions_distribution):
     checking_tensor = tf.constant([
         [0.0, 0.0], # 0: 待機
-        [0.0, 1.0], # 1: 上
-        [1.0, 0.0], # 2: 右
-        [0.0, -1.0],# 3: 下
-        [-1.0, 0.0] # 4: 左
+        [0.0, 1.0], # 1: 右
+        [1.0, 0.0], # 2: 下
+        [0.0, -1.0],# 3: 左
+        [-1.0, 0.0] # 4: 上
     ], dtype=tf.float32)
 
     coord=tf.matmul(actions_distribution,checking_tensor)
     return coord
+
+
+def generate_all_action_sequences(horizon, a_size):
+    
+    action_indices = range(a_size)
+    all_sequences_indices = list(itertools.product(action_indices, repeat=horizon))
+    all_sequences_indices_np = np.array(all_sequences_indices, dtype=np.int32)
+    all_sequences_indices_tf = tf.constant(all_sequences_indices_np, dtype=tf.int32)
+    all_sequences_onehot = tf.one_hot(all_sequences_indices_tf, a_size, dtype=tf.float32)
+    return all_sequences_onehot
+
+#ALL_ACTION_SEQUENCES = generate_all_action_sequences(horizon, a_size)
 
 
 
@@ -256,6 +270,8 @@ class Worker():
         #actions_onehot_samples=tf.boolean_mask(actions_onehot_samples,cond)
 
         return actions_onehot_samples
+    
+
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
@@ -354,7 +370,7 @@ class Worker():
 
 
         #print("V shape:",V.shape)
-        V=tf.squeeze(V) #[512,1]to[512,]
+        V=tf.squeeze(V) #[num,1]to[num,]
         #tf.print("V shape after tf.squeeze(V):", tf.shape(V))
 
 
@@ -382,8 +398,8 @@ class Worker():
 
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.5) , 
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.5)-distance_from_goalguide*0.25),
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1) , 
+                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
             lambda: tf.zeros_like(V) 
         )
 
