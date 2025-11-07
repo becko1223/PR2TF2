@@ -395,15 +395,19 @@ class Worker():
         actions_dir=distribution_to_coordinate(actions)
         distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
 
-
+        """
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
                             lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1) , 
                             lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
             lambda: tf.zeros_like(V) 
         )
+        """
 
-        #V+=penalty_tensor*max([0.0,min([1.0,((60.0-self.mean_finisheds)/40.0)])])
+        penalty_tensor=tf.cond(is_no_goalguide_condition,
+                            lambda: compute_penalty(is_invalid_action,-0.1) , 
+                            lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1)
+
         V+=penalty_tensor
         
         return V
@@ -861,7 +865,7 @@ class Worker():
 
 
                     if(episode_count>random_term):
-                        if(random.random()<0.1*((guide_term-episode_count)/guide_term-random_term)):
+                        if(random.random()<0.05):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
