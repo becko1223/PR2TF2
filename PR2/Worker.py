@@ -518,7 +518,7 @@ class Worker():
 
     
 
-    def calculateGradient(self, rollout, episode_count, rnn_state0):
+    def calculateGradient(self, rollout, episode_count, rnn_state0,bootstrap_value):
         
         rollout = np.array(rollout, dtype=object)
         obs=np.stack(rollout[:, 0])
@@ -535,10 +535,9 @@ class Worker():
 
         
 
-        #rewards_array = np.array([float(r) for r in rewards])
-        #self.rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
-        #discounted_rewards = discount(rewards_array, gamma)[:-1]
-        #discounted_rewards=tf.convert_to_tensor(discounted_rewards)
+        rewards_array = np.array([float(r) for r in rewards])
+        rewards_plus = np.concatenate([rewards_array, [bootstrap_value]])
+        discounted_rewards = discount(rewards_plus, gamma)[:-1]
         
 
 
@@ -560,11 +559,12 @@ class Worker():
         np_actions=np.stack([actions[i:i+horizon+1] for i in chosen])
         np_states=np.stack([rnn_states[i] for i in chosen])
         np_valids=np.stack([valids[i:i+horizon+1] for i in chosen])
+        np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
 
         batch_obs = tf.convert_to_tensor(np_obs,dtype=tf.float32) 
         batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
         batch_rewards=tf.convert_to_tensor(np_rewards,dtype=tf.float32)
-        #batch_discounted_rewards = tf.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
+        batch_discounted_rewards = tf.convert_to_tensor(np_discounted_rewards,dtype=tf.float32)
         batch_actions=tf.convert_to_tensor(np_actions,dtype=tf.int32)
         batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
@@ -615,15 +615,18 @@ class Worker():
                 #valueの予測値を出す
                 with self.inferenceLock:
                     batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
-                    batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                    #batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
                     batch_q1value_preds=tf.squeeze(batch_q1value_preds)
-                    batch_q2value_preds=tf.squeeze(batch_q2value_preds)
+                    #batch_q2value_preds=tf.squeeze(batch_q2value_preds)
 
 
                 #latentのターゲットを出す(b,s,h,w,c)
                 with self.inferenceLock:
                     batch_latent_targets,_=self.local_ACRD.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
 
+
+                """
+                TD版のvalueターゲット導出
                 #valueのターゲットを出す  一個行動抜き出してvalue出すか、各行動ごとの確率重み付け平均にするか悩む
                 with self.inferenceLock:
                     policy=self.local_ACRD.policy(batch_latent_preds) #[B,H,a_size]
@@ -646,14 +649,17 @@ class Worker():
                 q_next=tf.minimum(q1_next,q2_next)
                 q_next=tf.squeeze(q_next)
                 q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
+                """
+
+                q_target=batch_discounted_rewards[:,1:]
                 
 
                 reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
                 q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
-                q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
+                #q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
                 consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
-                total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
+                total_loss=0.5*reward_loss+0.1*(q1value_loss)+2.0*consistency_loss
             with self.inferenceLock:
                 world_grads=tape.gradient(total_loss,variables_except_for_actor)
 
@@ -972,19 +978,21 @@ class Worker():
                             targets_done += 1
                             pred_latent=tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
-                        #else:
-                            
-                            
-                            
-                            #latent_init,_=self.local_ACRD.encode(s[0],s[1],rnn_state)
-                            
-                            #for i in range(a_size):
-                            #    s1Value+=a_dist[i]*self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(i)),0),0)
+                        else:
+                            ob=tf.expand_dims(s[0],0)
+                            ob=tf.expand_dims(ob,0)
+                            ob=tf.cast(ob,dtype=tf.float32)
+                            goal=tf.expand_dims(s[1],0)
+                            goal=tf.expand_dims(goal,0)
+                            goal=tf.cast(goal,dtype=tf.float32)
+                            latent_init,_=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                           
+                            s1Value=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(mean[0]),0),0)[0][0]
                             
 
                         
                         self.loss_metrics, world_grads, policy_grads = self.calculateGradient(train_buffer, episode_count,
-                                                                            rnn_state0)
+                                                                            rnn_state0,s1Value)
 
                         grads=(world_grads,policy_grads)
                         self.allGradients.append(grads)

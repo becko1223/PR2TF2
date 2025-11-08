@@ -18,7 +18,7 @@ num_samples             =200
 num_actor_traj          =16
 num_elites              =64
 
-gammma_tdmpc            =0.99
+gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 

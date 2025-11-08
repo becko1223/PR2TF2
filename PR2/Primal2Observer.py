@@ -73,6 +73,12 @@ class Primal2Observer(ObservationBuilder):
                    max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
                    max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])], axis=0)
 
+        """
+        all_tentative_maps=np.zeros([self.world.num_agents, self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
+        for i in range(self.num_future_steps):
+            for j in range(self.world.num_agents)
+        """
+
         time2 = time.time() - start_time
         start_time = time.time()
 
