@@ -988,7 +988,7 @@ class Worker():
                             goal=tf.cast(goal,dtype=tf.float32)
                             latent_init,_=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                            
-                            s1Value=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(mean[0]),0),0)[0][0]
+                            s1Value=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(mean[0],0),0))[0][0]
                             
 
                         
