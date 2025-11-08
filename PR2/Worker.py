@@ -657,6 +657,7 @@ class Worker():
                 reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
                 q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
                 #q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
+                q2value_loss=tf.constant(0.0)
                 consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
                 total_loss=0.5*reward_loss+0.1*(q1value_loss)+2.0*consistency_loss
