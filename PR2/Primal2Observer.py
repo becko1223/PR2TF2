@@ -81,15 +81,16 @@ class Primal2Observer(ObservationBuilder):
             
             for j in range(self.world.num_agents):
                 pos=self.world.getPos(j+1)
+                pos_list=[pos[0],pos[1]]
                 for i in range(self.num_future_steps):
                     if(joint_tentative_actions!=None and (j+1 in joint_tentative_actions)):
-                        next_y=pos[0]+joint_tentative_actions[j+1][i][0] #jointの中身は1から始まるエージェントIDをキーとした辞書型
-                        next_x=pos[1]+joint_tentative_actions[j+1][i][1]
+                        next_y=pos_list[0]+joint_tentative_actions[j+1][i][0] #jointの中身は1から始まるエージェントIDをキーとした辞書型
+                        next_x=pos_list[1]+joint_tentative_actions[j+1][i][1]
                         if 0 <= next_y < self.world.state.shape[0] and 0 <= next_x < self.world.state.shape[1]:
                             if self.world.state[next_y, next_x] != -1:
-                                pos[0]=next_y
-                                pos[1]=next_x
-                    all_tentative_maps[j][i][pos[0]][pos[1]] = 1
+                                pos_list[0]=next_y
+                                pos_list[1]=next_x
+                    all_tentative_maps[j][i][pos_list[0]][pos_list[1]] = 1
             other_agents = list(range(self.world.num_agents))  # needs to be 0-indexed for numpy magic below
             other_agents.remove(agent_id - 1)  # 0-indexing again
             tentative_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
