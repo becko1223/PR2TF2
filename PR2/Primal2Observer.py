@@ -82,7 +82,7 @@ class Primal2Observer(ObservationBuilder):
             for j in range(self.world.num_agents):
                 pos=self.world.getPos(j+1)
                 for i in range(self.num_future_steps):
-                    if(j+1 in joint_tentative_actions):
+                    if(joint_tentative_actions!=None and (j+1 in joint_tentative_actions)):
                         next_y=pos[0]+joint_tentative_actions[j+1][i][0] #jointの中身は1から始まるエージェントIDをキーとした辞書型
                         next_x=pos[1]+joint_tentative_actions[j+1][i][1]
                         if 0 <= next_y < self.world.shape[0] and 0 <= next_x < self.world.shape[1]:
