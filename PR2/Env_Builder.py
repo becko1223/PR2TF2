@@ -815,21 +815,21 @@ class MAPFEnv(gym.Env):
         else:
             return True, self.world.corridor_map[(agent_pos[0], agent_pos[1])][0]
 
-    def _observe(self, handles=None):
+    def _observe(self, joint_tentative_actions, handles=None):
         """
         Returns Dict of observation {agentid:[], ...}
         """
         if handles is None:
-            self.obs_dict = self.observer.get_many(list(range(1, self.num_agents + 1)))
+            self.obs_dict = self.observer.get_many(joint_tentative_actions, list(range(1, self.num_agents + 1)))
         elif handles in list(range(1, self.num_agents + 1)):
-            self.obs_dict = self.observer.get_many([handles])
+            self.obs_dict = self.observer.get_many(joint_tentative_actions, [handles])
         elif set(handles) == set(handles) & set(list(range(1, self.num_agents + 1))):
-            self.obs_dict = self.observer.get_many(handles)
+            self.obs_dict = self.observer.get_many(joint_tentative_actions, handles)
         else:
             raise ValueError("Invalid agent_id given")
         return self.obs_dict
 
-    def step_all(self, movement_dict):
+    def step_all(self, movement_dict,joint_tentative_actions):
         """
         Agents are forced to freeze self.frozen_steps steps if they are standing on their goals.
         The new goal will be generated at the FIRST step it remains on its goal.
@@ -881,7 +881,7 @@ class MAPFEnv(gym.Env):
 
             for frozen_agent in freeze_list:
                 free_agents.remove(frozen_agent)
-        return self._observe(free_agents), self.individual_rewards
+        return self._observe(joint_tentative_actions,free_agents), self.individual_rewards
 
     def give_moving_reward(self, agentID):
         raise NotImplementedError

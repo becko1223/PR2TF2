@@ -22,7 +22,7 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
-random_term             =300
+random_term             =2
 guide_term              =1500
 
 
@@ -36,6 +36,7 @@ WALL_COMPONENTS         = (1, 21)    # Starting Params of Curriculum = TRUE
 OBSTACLE_DENSITY        = (0, 0.75)  # range of densities   Starting Params of Curriculum = TRUE
 
 DIAG_MVMT               = False  # Diagonal movements allowed?
+TENTATIVE               = True
 a_size                  = 5 + int(DIAG_MVMT) * 4
 NUM_META_AGENTS         = 15
 NUM_IL_META_AGENTS      = 0
@@ -45,7 +46,7 @@ NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
 SUMMARY_WINDOW          = 10
-load_model              = True
+load_model              = False
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
@@ -92,6 +93,8 @@ joint_env               = [None for _ in range(NUM_META_AGENTS)]
 joint_observations      =[{} for _ in range(NUM_META_AGENTS)]
 joint_rewards           = [{} for _ in range(NUM_META_AGENTS)]
 joint_done              = [{} for _ in range(NUM_META_AGENTS)]
+
+joint_tentative_actions = [{} for _ in range(NUM_META_AGENTS)]
 
 
 env_params              = [[ [WALL_COMPONENTS[0], WALL_COMPONENTS[1]] , [OBSTACLE_DENSITY[0],OBSTACLE_DENSITY[1]]]  for _ in range(NUM_META_AGENTS)]

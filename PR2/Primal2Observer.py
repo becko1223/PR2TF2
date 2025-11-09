@@ -2,6 +2,7 @@ from Observer_Builder import ObservationBuilder
 import numpy as np
 import copy
 from Env_Builder import *
+from parameters import TENTATIVE
 
 import time
 
@@ -37,7 +38,7 @@ class Primal2Observer(ObservationBuilder):
 
         return positions
 
-    def _get(self, agent_id, all_astar_maps):
+    def _get(self, agent_id, all_astar_maps, joint_tentative_actions):
 
         start_time = time.time()
 
@@ -53,7 +54,7 @@ class Primal2Observer(ObservationBuilder):
         poss_map = np.zeros(obs_shape)
         goals_map = np.zeros(obs_shape)
         obs_map = np.zeros(obs_shape)
-        astar_map = np.zeros([self.num_future_steps, self.observation_size, self.observation_size])
+        future_map = np.zeros([self.num_future_steps, self.observation_size, self.observation_size])
         astar_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
         pathlength_map = np.zeros(obs_shape)
         deltax_map = np.zeros(obs_shape)
@@ -63,21 +64,41 @@ class Primal2Observer(ObservationBuilder):
         time1 = time.time() - start_time
         start_time = time.time()
 
-        # concatenate all_astar maps
-        other_agents = list(range(self.world.num_agents))  # needs to be 0-indexed for numpy magic below
-        other_agents.remove(agent_id - 1)  # 0-indexing again
-        astar_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
-        astar_map_unpadded[:self.num_future_steps, max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
-        max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])] = \
-            np.sum(all_astar_maps[other_agents, :self.num_future_steps,
-                   max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
-                   max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])], axis=0)
 
-        """
-        all_tentative_maps=np.zeros([self.world.num_agents, self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
-        for i in range(self.num_future_steps):
-            for j in range(self.world.num_agents)
-        """
+        if(not TENTATIVE):
+            # concatenate all_astar maps
+            other_agents = list(range(self.world.num_agents))  # needs to be 0-indexed for numpy magic below
+            other_agents.remove(agent_id - 1)  # 0-indexing again
+            astar_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
+            astar_map_unpadded[:self.num_future_steps, max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
+            max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])] = \
+                np.sum(all_astar_maps[other_agents, :self.num_future_steps,
+                    max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
+                    max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])], axis=0)
+
+        else:
+            all_tentative_maps=np.zeros([self.world.num_agents, self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
+            
+            for j in range(self.world.num_agents):
+                pos=self.world.getPos(j+1)
+                for i in range(self.num_future_steps):
+                    if(j+1 in joint_tentative_actions):
+                        next_y=pos[0]+joint_tentative_actions[j+1][i][0] #jointの中身は1から始まるエージェントIDをキーとした辞書型
+                        next_x=pos[1]+joint_tentative_actions[j+1][i][1]
+                        if 0 <= next_y < self.world.shape[0] and 0 <= next_x < self.world.shape[1]:
+                            if self.world.state[next_y, next_x] != -1:
+                                pos[0]=next_y
+                                pos[1]=next_x
+                    all_tentative_maps[j][i][pos[0]][pos[1]] = 1
+            other_agents = list(range(self.world.num_agents))  # needs to be 0-indexed for numpy magic below
+            other_agents.remove(agent_id - 1)  # 0-indexing again
+            tentative_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
+            tentative_map_unpadded[:self.num_future_steps, max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
+            max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])] = \
+                np.sum(all_tentative_maps[other_agents, :self.num_future_steps,
+                    max(0, top_left[0]):min(bottom_right[0], self.world.state.shape[0]),
+                    max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])], axis=0)
+            
 
         time2 = time.time() - start_time
         start_time = time.time()
@@ -91,9 +112,12 @@ class Primal2Observer(ObservationBuilder):
                     obs_map[i - top_left[0], j - top_left[1]] = 1
                     pathlength_map[i - top_left[0], j - top_left[1]] = -1
                     continue
-
-                astar_map[:self.num_future_steps, i - top_left[0], j - top_left[1]] = astar_map_unpadded[
-                                                                                      :self.num_future_steps, i, j]
+                if(not TENTATIVE):
+                    future_map[:self.num_future_steps, i - top_left[0], j - top_left[1]] = astar_map_unpadded[
+                                                                                        :self.num_future_steps, i, j]
+                else:
+                    future_map[:self.num_future_steps, i - top_left[0], j - top_left[1]] = tentative_map_unpadded[
+                                                                                        :self.num_future_steps, i, j]
                 if self.world.state[i, j] == -1:
                     # obstacles
                     obs_map[i - top_left[0], j - top_left[1]] = 1
@@ -196,23 +220,24 @@ class Primal2Observer(ObservationBuilder):
 
         state = np.array([poss_map, goal_map, goals_map, obs_map, pathlength_map, blocking_map, deltax_map,
                           deltay_map])
-        state = np.concatenate((state, astar_map), axis=0)
+        state = np.concatenate((state, future_map), axis=0)
 
         time6 = time.time() - start_time
         start_time = time.time()
 
         return state, [dx, dy, mag], np.array([time1, time2, time3, time4, time5, time6])
 
-    def get_many(self, handles=None):
+    def get_many(self,joint_tentative_actions, handles=None):
         observations = {}
-        all_astar_maps = self.get_astar_map()
+        if (not TENTATIVE):
+            all_astar_maps = self.get_astar_map()
         if handles is None:
             handles = list(range(1, self.world.num_agents + 1))
 
         times = np.zeros((1, 6))
 
         for h in handles:
-            state, vector, time = self._get(h, all_astar_maps)
+            state, vector, time = self._get(h, all_astar_maps,joint_tentative_actions)
             observations[h] = [state, vector]
             times += time
         if self.printTime:
