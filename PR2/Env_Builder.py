@@ -815,7 +815,7 @@ class MAPFEnv(gym.Env):
         else:
             return True, self.world.corridor_map[(agent_pos[0], agent_pos[1])][0]
 
-    def _observe(self, joint_tentative_actions, handles=None):
+    def _observe(self, joint_tentative_actions=None, handles=None):
         """
         Returns Dict of observation {agentid:[], ...}
         """
