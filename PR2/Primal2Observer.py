@@ -231,6 +231,8 @@ class Primal2Observer(ObservationBuilder):
         observations = {}
         if (not TENTATIVE):
             all_astar_maps = self.get_astar_map()
+        else:
+            all_astar_maps = None
         if handles is None:
             handles = list(range(1, self.world.num_agents + 1))
 
