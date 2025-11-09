@@ -919,7 +919,7 @@ class Worker():
                         if a == 0:
                             episode_stop_count += 1
 
-                        tentative_actions=distribution_to_coordinate(mean).numpy()
+                        tentative_actions=distribution_to_coordinate(mean).numpy().astype(np.int32)
                         joint_tentative_actions[self.metaAgentID][self.agentID]=tentative_actions
 
                         if not(is_no_guide):
