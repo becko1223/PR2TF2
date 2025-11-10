@@ -38,7 +38,7 @@ class Primal2Observer(ObservationBuilder):
 
         return positions
 
-    def _get(self, agent_id, all_astar_maps, joint_tentative_actions):
+    def _get(self, agent_id, all_astar_maps, all_tentative_maps):
 
         start_time = time.time()
 
@@ -77,6 +77,8 @@ class Primal2Observer(ObservationBuilder):
                     max(0, top_left[1]):min(bottom_right[1], self.world.state.shape[1])], axis=0)
 
         else:
+            """
+            #素朴な実装
             all_tentative_maps=np.zeros([self.world.num_agents, self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
             
             for j in range(self.world.num_agents):
@@ -91,6 +93,7 @@ class Primal2Observer(ObservationBuilder):
                                 pos_list[0]=next_y
                                 pos_list[1]=next_x
                     all_tentative_maps[j][i][pos_list[0]][pos_list[1]] = 1
+            """
             other_agents = list(range(self.world.num_agents))  # needs to be 0-indexed for numpy magic below
             other_agents.remove(agent_id - 1)  # 0-indexing again
             tentative_map_unpadded = np.zeros([self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]])
@@ -232,15 +235,17 @@ class Primal2Observer(ObservationBuilder):
         observations = {}
         if (not TENTATIVE):
             all_astar_maps = self.get_astar_map()
+            all_tentative_maps = None
         else:
             all_astar_maps = None
+            all_tentative_maps = self.get_tentative_map()
         if handles is None:
             handles = list(range(1, self.world.num_agents + 1))
 
         times = np.zeros((1, 6))
 
         for h in handles:
-            state, vector, time = self._get(h, all_astar_maps,joint_tentative_actions)
+            state, vector, time = self._get(h, all_astar_maps,all_tentative_maps)
             observations[h] = [state, vector]
             times += time
         if self.printTime:
@@ -318,6 +323,52 @@ class Primal2Observer(ObservationBuilder):
                     astar_maps[agentID][step, cell[0], cell[1]] = 1
 
         return np.asarray([astar_maps[i] for i in range(1, self.world.num_agents + 1)])
+
+    def get_tentative_map(self, joint_tentative_actions):
+        initial_pos = np.array([self.world.getPos(j + 1) for j in range(self.world.num_agents)])
+        move_vectors = np.stack([joint_tentative_actions.get(j + 1, np.zeros((self.num_future_steps, 2))) for j in range(self.world.num_agents)])
+        current_pos = initial_pos.copy()
+        all_final_pos = np.zeros((self.num_future_steps, self.world.num_agents, 2), dtype=np.int32)
+        for t in range(self.num_future_steps):
+            predicted_pos = current_pos + move_vectors[:, t, :]
+            predicted_pos = predicted_pos.astype(np.int32)
+
+            y_pred = predicted_pos[:, 0]
+            x_pred = predicted_pos[:, 1]
+
+            in_bounds = (y_pred >= 0) & (y_pred < self.world.state.shape[0]) & \
+                    (x_pred >= 0) & (x_pred < self.world.state.shape[1])
+            
+            is_not_obstacle = np.ones(self.world.num_agents, dtype=bool)
+
+            valid_indices = np.where(in_bounds)[0] #in_boundsがfalseのところは考える必要なし
+            if len(valid_indices) > 0:
+                is_not_obstacle[valid_indices] = world.state[y_pred[valid_indices], x_pred[valid_indices]] != -1
+          
+            is_valid_move = in_bounds & is_not_obstacle
+
+            final_pos_t = current_pos.copy() #止まるやつはそのまま
+            final_pos_t[is_valid_move] = predicted_pos[is_valid_move]
+
+            current_pos = final_pos_t
+            all_final_pos[t] = final_pos_t
+
+        final_pos=all_final_pos.transpose(1,0,2)
+
+        all_tentative_maps = np.zeros((self.world.num_agents, self.num_future_steps, self.world.state.shape[0], self.world.state.shape[1]), dtype=np.int32)
+        y_coords = final_pos[..., 0]
+        x_coords = final_pos[..., 1]
+
+        agent_indices = np.arange(self.world.num_agents)[:, np.newaxis]
+        agent_indices = np.repeat(agent_indices, self.num_future_steps, axis=1) 
+
+       
+        step_indices = np.arange(self.num_future_steps)[np.newaxis, :]
+        step_indices = np.repeat(step_indices, self.world.num_agents, axis=0)
+
+        all_tentative_maps[agent_indices, step_indices, y_coords, x_coords] = 1
+        return all_tentative_maps
+
 
     def get_blocking(self, corridor_id, reverse, agent_id, dead_end):
         def get_last_pos(agentID, position):
