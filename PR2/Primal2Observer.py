@@ -343,7 +343,7 @@ class Primal2Observer(ObservationBuilder):
 
             valid_indices = np.where(in_bounds)[0] #in_boundsがfalseのところは考える必要なし
             if len(valid_indices) > 0:
-                is_not_obstacle[valid_indices] = world.state[y_pred[valid_indices], x_pred[valid_indices]] != -1
+                is_not_obstacle[valid_indices] = self.world.state[y_pred[valid_indices], x_pred[valid_indices]] != -1
           
             is_valid_move = in_bounds & is_not_obstacle
 
