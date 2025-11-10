@@ -231,7 +231,7 @@ class Primal2Observer(ObservationBuilder):
 
         return state, [dx, dy, mag], np.array([time1, time2, time3, time4, time5, time6])
 
-    def get_many(self,joint_tentative_actions, handles=None):
+    def get_many(self,joint_tentative_actions={}, handles=None):
         observations = {}
         if (not TENTATIVE):
             all_astar_maps = self.get_astar_map()
