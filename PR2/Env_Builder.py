@@ -868,7 +868,6 @@ class MAPFEnv(gym.Env):
             newPos = newPos_dict[agentID]
             self.world.state[newPos] = agentID
             self.world.agents[agentID].move(newPos, status_dict[agentID])
-            print("agent1 status:",status_dict[1])
             self.give_moving_reward(agentID)
             if status_dict[agentID] == 1:
                 if not self.isOneShot:
@@ -882,6 +881,8 @@ class MAPFEnv(gym.Env):
                     self.world.state[newPos] = 0
                     self.world.goals_map[newPos] = 0
         free_agents = list(range(1, self.num_agents + 1))
+
+        print("agent1 status:",status_dict[1], " agent1 move:",movement_dict[1])
 
         if put_goal_list and not self.isOneShot:
             self.world.put_goals(put_goal_list)
