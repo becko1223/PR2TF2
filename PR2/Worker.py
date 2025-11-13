@@ -375,7 +375,7 @@ class Worker():
 
 
         #系列評価ペナルティ
-        wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
+       
         def compute_penalty(B_bool, penalty_weight):
             penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_weight
             return penalty_tensor
@@ -384,13 +384,13 @@ class Worker():
         actions=samples[0]
         actions_expanded = tf.expand_dims(actions, axis=1)
 
-        is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
-
+        """
         validActions_expanded = tf.expand_dims(validActions, axis=0) 
         validActions_tiled = tf.tile(validActions_expanded, [B_size, 1, 1]) # [B, N, A_SIZE]
         all_equal_to_valid = tf.reduce_all(tf.equal(actions_expanded, validActions_tiled), axis=2) # [B, N]
         is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
         is_invalid_action = tf.logical_not(is_valid_action)
+        """
 
         actions_dir=distribution_to_coordinate(actions)
         distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
@@ -398,15 +398,15 @@ class Worker():
         """
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1) , 
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
+                            lambda: compute_penalty(is_invalid_action,-0.1) , 
+                            lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
             lambda: tf.zeros_like(V) 
         )
         """
 
         penalty_tensor=tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_invalid_action,-0.1) , 
-                            lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1)
+                            lambda: tf.zeros_like(V) ,
+                            lambda: -distance_from_goalguide*0.1)
 
         #V+=penalty_tensor
         

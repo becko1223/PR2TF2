@@ -227,11 +227,12 @@ def main():
         curr_episode = 0
 
 
+    global global_mean_finishes
         
     # launch all of the threads:
 
     il_agents = [imitationRunner.remote(i) for i in range(NUM_IL_META_AGENTS)]
-    rl_agents = [RLRunner.remote(i) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
+    rl_agents = [RLRunner.remote(i, global_mean_finishes) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
     meta_agents = il_agents + rl_agents
 
     
