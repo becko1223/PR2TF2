@@ -272,10 +272,10 @@ cpu=multiprocessing.cpu_count()
 @ray.remote(num_cpus=cpu / (NUM_META_AGENTS  + 1), num_gpus= 1.0 / (NUM_META_AGENTS  + 1))
 class RLRunner(Runner):
     def __init__(self, metaAgentID, mean_finishes):        
-        super().__init__(metaAgentID)
+        super().__init__(metaAgentID,mean_finishes)
 
 
 @ray.remote(num_cpus=(cpu*1)//19, num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
-        super().__init__(metaAgentID)
+        super().__init__(metaAgentID,mean_finishes)
