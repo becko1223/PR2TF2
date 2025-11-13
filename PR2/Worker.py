@@ -408,7 +408,7 @@ class Worker():
                             lambda: compute_penalty(is_invalid_action,-0.1) , 
                             lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1)
 
-        V+=penalty_tensor
+        #V+=penalty_tensor
         
         return V
 
