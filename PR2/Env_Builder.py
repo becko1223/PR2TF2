@@ -868,6 +868,7 @@ class MAPFEnv(gym.Env):
             newPos = newPos_dict[agentID]
             self.world.state[newPos] = agentID
             self.world.agents[agentID].move(newPos, status_dict[agentID])
+            print("agent1 status:",status_dict[1])
             self.give_moving_reward(agentID)
             if status_dict[agentID] == 1:
                 if not self.isOneShot:
