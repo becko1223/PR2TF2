@@ -702,6 +702,14 @@ class World:
                 not_checked_list.remove(agentID)
                 # collide, stay at the same place
 
+
+        #confirm stop move
+        for agentID in copy.deepcopy(not_checked_list):
+            if movement_dict[agentID]==0:
+                status_dict[agentID] = 0
+                newPos_dict.update({agentID: Assumed_newPos_dict[agentID]})
+                not_checked_list.remove(agentID)
+
         # detect swap collision
 
         for agentID in copy.deepcopy(not_checked_list):
@@ -719,12 +727,7 @@ class World:
                         Assumed_newPos_dict[collided_ID] = self.getPos(collided_ID)
                         not_checked_list.remove(collided_ID)
         
-        #confirm stop move
-        for agentID in copy.deepcopy(not_checked_list):
-            if movement_dict[agentID]==0:
-                status_dict[agentID] = 0
-                newPos_dict.update({agentID: Assumed_newPos_dict[agentID]})
-                not_checked_list.remove(agentID)
+        
 
 
         # detect cell-wise collision
