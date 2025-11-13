@@ -755,7 +755,7 @@ class Worker():
             # Initial state from the environment
             if self.agentID == 1:
                 self.env._reset()
-                joint_observations[self.metaAgentID] = self.env._observe()
+                joint_observations[self.metaAgentID], visible_agents_dict = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads
 
@@ -846,11 +846,53 @@ class Worker():
 
 
 
-                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    encoded_obs,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    rnn_state=[rnn_state[0],rnn_state[1]]
+                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs
+
+                    #コミュニケーションを挟む
+                    self.synchronize()
+                    visible_agents=visible_agents_dict[self.agentID]
+                    num=len(visible_agents)
+                    visible_latents=tf.zeros([1,1,num,RNN_SIZE])
+                    visible_latents[0][0][0]=encoded_obs[0][0]
+
+                    def get_angles(pos, i, d_model):
+                        angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+                        return pos * angle_rates
+                    
+                    def positional_encoding(position, d_model):
+                        angle_rad = get_angles(position,
+                                                np.arange(d_model),
+                                                d_model)
+
+                        # 配列中の偶数インデックスにはsinを適用; 2i
+                        angle_rad[0::2] = np.sin(angle_rad[0::2])
+
+                        # 配列中の奇数インデックスにはcosを適用; 2i+1
+                        angle_rad[1::2] = np.cos(angle_rad[1::2])
+
+                        pos_encoding = angle_rad[np.newaxis, np.newaxis, ...]
+
+                        return tf.cast(pos_encoding, dtype=tf.float32)
+
+                    for i in range(num):
+                        dy=visible_agents[i][1]
+                        dx=visible_agents[i][2]
+                        id=visible_agents[i][0]
+                        pos_encoding1=positional_encoding(dy,RNN_SIZE)
+                        pos_encoding2=positional_encoding(dx,RNN_SIZE)
+                        latent=joint_encoded_obs[id]+pos_encoding1+pos_encoding2
+                        visible_latents[0][0][i+1]=latent[0][0]
+
+                    latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs,axis=0),visible_latents,tf.ones([1,1,1,num+1]))
+                    
+
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
 
+                    #補正用最短経路用意
                     is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
                     astar_map=s[0][4]
@@ -866,9 +908,6 @@ class Worker():
                     else:
                         a_guide=distance_list_replace.index(min(distance_list_replace))
                         guide_dir=action2dir(a_guide)
-
-
-                    rnn_state=[rnn_state[0],rnn_state[1]]
 
 
                     if(episode_count>random_term):

@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 import numpy as np
+from parameters import *
 
 # parameters for training
 GRAD_CLIP = 10.0
@@ -73,6 +74,13 @@ class ACRDNet(tf.keras.Model):
         self.c0=tf.zeros((1,RNN_SIZE))
 
 
+        #コミュニケーション
+        self.mha=layers.MultiHeadAttention(heads=8,key_dim=64,dropout=0.1)
+        self.mha_layernorm=layers.LayerNormalization()
+        self.feedforward1=layers.Dense(units=2048,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
+        self.feedforward2=layers.Dense(units=RNN_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
+        self.ff_layernorm=layers.LayerNormalization()
+
         #状態遷移
         self.dynamics_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.dynamics_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
@@ -82,8 +90,7 @@ class ACRDNet(tf.keras.Model):
                          
         #方策、価値、報酬
         self.policy_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.policy_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.policy_dense3=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
+        self.policy_dense2=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
         self.q1_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
         self.q1_layernorm=layers.LayerNormalization()
@@ -152,6 +159,20 @@ class ACRDNet(tf.keras.Model):
         lstm_out, state_h, state_c = self.lstm(x, initial_state=[h_state,c_state])
         return lstm_out,[state_h,state_c]
     
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, None, 1, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
+    ])
+    def communication(self,own_latent,all_latents,mask):
+        mha_output=layers.TimeDistributed(self.mha)(query=own_latent,key=all_latents,attention_mask=mask)
+        mha_output=layers.TimeDistributed(self.mha_layernorm)(mha_output+own_latent)
+
+        ff_output=layers.TimeDistributed(self.feedforward1)(mha_output)
+        ff_output=layers.TimeDistributed(self.feedforward2)(ff_output)
+        output=layers.TimeDistributed(self.ff_layernorm)(mha_output+ff_output)
+        return output
+    
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
@@ -181,7 +202,6 @@ class ACRDNet(tf.keras.Model):
     def policy(self,latent):
         x=self.policy_dense1(latent)
         x=self.policy_dense2(x)
-        x=self.policy_dense3(x)
       
         return x
     
@@ -193,7 +213,7 @@ class ACRDNet(tf.keras.Model):
         x=tf.concat([latent,action],-1)
         x=self.q1_dense1(x)
         x=self.q1_layernorm(x)
-        x=tf.keras.activations.tanh(x)
+        #x=tf.keras.activations.tanh(x)
         x=self.q1_dense2(x)
         x=self.q1_dense3(x)
         return x
@@ -206,7 +226,7 @@ class ACRDNet(tf.keras.Model):
         x=tf.concat([latent,action],-1)
         x=self.q2_dense1(x)
         x=self.q2_layernorm(x)
-        x=tf.keras.activations.tanh(x)
+        #x=tf.keras.activations.tanh(x)
         x=self.q2_dense2(x)
         x=self.q2_dense3(x)
         return x

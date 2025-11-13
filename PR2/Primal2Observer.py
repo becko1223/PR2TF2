@@ -134,7 +134,7 @@ class Primal2Observer(ObservationBuilder):
                     goal_map[i - top_left[0], j - top_left[1]] = 1
                 if self.world.state[i, j] > 0 and self.world.state[i, j] != agent_id:
                     # other agents' positions
-                    visible_agents.append(self.world.state[i, j])
+                    visible_agents.append([self.world.state[i, j],i-(top_left[0] + (self.observation_size-1)/2.0),j-(top_left[1] + (self.observation_size-1)/2.0)])
                     poss_map[i - top_left[0], j - top_left[1]] = 1
                     # updated_poss_map[i - top_left[0], j - top_left[1]] = self.world.state[i, j]
 
@@ -145,11 +145,7 @@ class Primal2Observer(ObservationBuilder):
         time3 = time.time() - start_time
         start_time = time.time()
 
-        for agent in visible_agents:
-            x, y = self.world.getGoal(agent)
-            min_node = (max(top_left[0], min(top_left[0] + self.observation_size - 1, x)),
-                        max(top_left[1], min(top_left[1] + self.observation_size - 1, y)))
-            goals_map[min_node[0] - top_left[0], min_node[1] - top_left[1]] = 1
+        
 
         dx = self.world.getGoal(agent_id)[0] - agent_pos[0]
         dy = self.world.getGoal(agent_id)[1] - agent_pos[1]
@@ -222,17 +218,18 @@ class Primal2Observer(ObservationBuilder):
                     index = distance_list.index(dist_mag)
                     pathlength_map[i, j] = (index + 1) * step_size
 
-        state = np.array([poss_map, goal_map, goals_map, obs_map, pathlength_map, blocking_map, deltax_map,
+        state = np.array([poss_map, goal_map, obs_map, pathlength_map, blocking_map, deltax_map,
                           deltay_map])
         state = np.concatenate((state, future_map), axis=0)
 
         time6 = time.time() - start_time
         start_time = time.time()
 
-        return state, [dx, dy, mag], np.array([time1, time2, time3, time4, time5, time6])
+        return state, [dx, dy, mag], visible_agents, np.array([time1, time2, time3, time4, time5, time6])
 
     def get_many(self,joint_tentative_actions={}, handles=None):
         observations = {}
+        visible_agents = {}
         if (not TENTATIVE):
             all_astar_maps = self.get_astar_map()
             all_tentative_maps = None
@@ -245,12 +242,13 @@ class Primal2Observer(ObservationBuilder):
         times = np.zeros((1, 6))
 
         for h in handles:
-            state, vector, time = self._get(h, all_astar_maps,all_tentative_maps)
+            state, vector, visible_agents, time = self._get(h, all_astar_maps,all_tentative_maps)
             observations[h] = [state, vector]
+            visible_agents[h] = visible_agents
             times += time
         if self.printTime:
             print(times)
-        return observations
+        return observations, visible_agents
 
     def get_astar_map(self):
         """

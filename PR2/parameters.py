@@ -22,6 +22,8 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
+mask_size               =10
+
 random_term             =300
 guide_term              =1500
 
@@ -95,6 +97,8 @@ joint_rewards           = [{} for _ in range(NUM_META_AGENTS)]
 joint_done              = [{} for _ in range(NUM_META_AGENTS)]
 
 joint_tentative_actions = [{} for _ in range(NUM_META_AGENTS)]
+joint_encoded_obs           = [{} for _ in range(NUM_META_AGENTS)]
+
 
 
 env_params              = [[ [WALL_COMPONENTS[0], WALL_COMPONENTS[1]] , [OBSTACLE_DENSITY[0],OBSTACLE_DENSITY[1]]]  for _ in range(NUM_META_AGENTS)]
