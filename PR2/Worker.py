@@ -408,7 +408,7 @@ class Worker():
                             lambda: tf.zeros_like(V) ,
                             lambda: -distance_from_goalguide*0.1)
 
-        #V+=penalty_tensor
+        V+=penalty_tensor
         
         return V
 

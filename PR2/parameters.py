@@ -46,7 +46,7 @@ NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
 SUMMARY_WINDOW          = 10
-load_model              = False
+load_model              = True
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
