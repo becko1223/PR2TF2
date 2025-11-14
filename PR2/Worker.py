@@ -522,12 +522,15 @@ class Worker():
         
         rollout = np.array(rollout, dtype=object)
         obs=np.stack(rollout[:, 0])
-        goals=np.stack(rollout[:,-4])
+        goals=np.stack(rollout[:,5])
         rewards = np.stack(rollout[:, 2])
         actions = np.stack(rollout[:, 1])
         
-        rnn_states=np.stack(rollout[:,-1])
+        rnn_states=np.stack(rollout[:,8])
         valids = np.stack(rollout[:, 4])
+
+        visible_latents = np.stack(rollout[:, 9])
+        masks = np.stack(rollout[:, 10])
 
        
 
@@ -560,6 +563,8 @@ class Worker():
         np_states=np.stack([rnn_states[i] for i in chosen])
         np_valids=np.stack([valids[i:i+horizon+1] for i in chosen])
         np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
+        np_visible_latents=np.stack([visible_latents[i:i+horizon+1] for i in chosen])
+        np_masks=np.stack([masks[i:i+horizon+1] for i in chosen])
 
         batch_obs = tf.convert_to_tensor(np_obs,dtype=tf.float32) 
         batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
@@ -570,10 +575,12 @@ class Worker():
         #batch_train_value=tf.stack([train_value[i:i+horizon+1] for i in chosen])
         batch_states=tf.convert_to_tensor(np_states,dtype=tf.float32)
         batch_valids=tf.convert_to_tensor(np_valids,dtype=tf.float32)
+        batch_visible_latents=tf.convert_to_tensor(np_visible_latents,dtype=tf.float32)
+        batch_masks=tf.convert_to_tensor(np_masks,dtype=tf.int32)
         rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for j in chosen])
 
         @tf.function
-        def tape_calc(self,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
+        def tape_calc(self,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids, batch_visible_latents, batch_masks):
             variables_for_actor=self.local_ACRD.policy_dense1.trainable_variables+self.local_ACRD.policy_dense2.trainable_variables+self.local_ACRD.policy_dense3.trainable_variables
             actor_variable_names = set([v.name for v in variables_for_actor])
             all_trainable_variables = self.local_ACRD.trainable_variables
@@ -596,7 +603,8 @@ class Worker():
                 batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
 
                 with self.inferenceLock:
-                    latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+                    encoded_obs,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+                    latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs,axis=2),batch_visible_latents,batch_masks)
 
                 #latent,rewardの予測値
                 batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
@@ -854,8 +862,12 @@ class Worker():
                     self.synchronize()
                     visible_agents=visible_agents_dict[self.agentID]
                     num=len(visible_agents)
-                    visible_latents=tf.zeros([1,1,num,RNN_SIZE])
+                    visible_latents=tf.zeros([1,1,num+1,RNN_SIZE])
+                    visible_latents_for_buffer=tf.zeros([num_agents,RNN_SIZE])
                     visible_latents[0][0][0]=encoded_obs[0][0]
+                    visible_latents_for_buffer[0][0][0]=encoded_obs[0][0]
+                    mask_for_buffer=tf.zeros([1,num_agents])
+                    mask_for_buffer[0,:num+1]=tf.constant([1])
 
                     def get_angles(pos, i, d_model):
                         angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
@@ -884,8 +896,13 @@ class Worker():
                         pos_encoding2=positional_encoding(dx,RNN_SIZE)
                         latent=joint_encoded_obs[id]+pos_encoding1+pos_encoding2
                         visible_latents[0][0][i+1]=latent[0][0]
+                        visible_latents[0][0][i+1]=latent[0][0]
 
                     latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs,axis=0),visible_latents,tf.ones([1,1,1,num+1]))
+
+                    
+
+
                     
 
 
@@ -994,7 +1011,7 @@ class Worker():
                     if not skipping_state:
                         episode_buffer.append(
                             [s[0], a, joint_rewards[self.metaAgentID][self.agentID]+error_reward, s1, train_valid, s[1],
-                                train_val, train_policy, rnn_state])
+                                train_val, train_policy, rnn_state, visible_latents_for_buffer, mask_for_buffer])
                         episode_values.append(q[0, 0])
                     episode_reward += r
                     episode_step_count += 1
