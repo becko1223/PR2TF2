@@ -208,9 +208,10 @@ def main():
 
         global_summary = tf.summary.create_file_writer(train_path)
         checkpoint = tf.train.Checkpoint(model=global_network, world_optimizer=world_optimizer,policy_optimizer=policy_optimizer)
+
         if not os.path.exists(model_path):
             checkpoint_manager=tf.train.CheckpointManager(checkpoint,"drive/MyDrive/MAPF/PR2TF2/PR2/"+model_path,1)
-            print("checkpoint:", "drive/MyDrive/MAPF/PR2TF2/PR2/"+model_path)
+            print("checkpoint:", "./drive/MyDrive/MAPF/PR2TF2/PR2/"+model_path)
         checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
 
    
