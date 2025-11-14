@@ -23,7 +23,7 @@ from parameters import *
 class Runner(object):
     """Actor object to start running simulation on workers.
         Gradient computation is also executed on this object."""
-    def __init__(self, metaAgentID):
+    def __init__(self, metaAgentID,mean_finishes):
         # tensorflow must be imported within the constructor
         # because this class will be instantiated on a remote ray node
        
@@ -105,7 +105,7 @@ class Runner(object):
         self.localNetwork.policy(dummy_latents)
         self.localNetwork.reward(dummy_latents,dummy_actions)
         self.localNetwork.q1(dummy_latents,dummy_actions)
-        self.localNetwork.q2(dummy_latents,dummy_actions)
+   
         
        
         
@@ -271,11 +271,11 @@ cpu=multiprocessing.cpu_count()
 
 @ray.remote(num_cpus=cpu / (NUM_META_AGENTS  + 1), num_gpus= 1.0 / (NUM_META_AGENTS  + 1))
 class RLRunner(Runner):
-    def __init__(self, metaAgentID):        
-        super().__init__(metaAgentID)
+    def __init__(self, metaAgentID, mean_finishes):        
+        super().__init__(metaAgentID,mean_finishes)
 
 
 @ray.remote(num_cpus=(cpu*1)//19, num_gpus=0)
 class imitationRunner(Runner):
     def __init__(self, metaAgentID):        
-        super().__init__(metaAgentID)
+        super().__init__(metaAgentID,mean_finishes)

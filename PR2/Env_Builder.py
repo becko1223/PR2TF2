@@ -702,6 +702,14 @@ class World:
                 not_checked_list.remove(agentID)
                 # collide, stay at the same place
 
+
+        #confirm stop move
+        for agentID in copy.deepcopy(not_checked_list):
+            if movement_dict[agentID]==0:
+                status_dict[agentID] = 0
+                newPos_dict.update({agentID: Assumed_newPos_dict[agentID]})
+                not_checked_list.remove(agentID)
+
         # detect swap collision
 
         for agentID in copy.deepcopy(not_checked_list):
@@ -718,6 +726,9 @@ class World:
                         newPos_dict.update({collided_ID: self.getPos(collided_ID)})  # stand still
                         Assumed_newPos_dict[collided_ID] = self.getPos(collided_ID)
                         not_checked_list.remove(collided_ID)
+        
+        
+
 
         # detect cell-wise collision
         for agentID in copy.deepcopy(not_checked_list):
@@ -873,6 +884,8 @@ class MAPFEnv(gym.Env):
                     self.world.state[newPos] = 0
                     self.world.goals_map[newPos] = 0
         free_agents = list(range(1, self.num_agents + 1))
+
+        print("agent1 status:",status_dict[1], " agent1 move:",movement_dict[1])
 
         if put_goal_list and not self.isOneShot:
             self.world.put_goals(put_goal_list)

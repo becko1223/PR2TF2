@@ -351,9 +351,9 @@ class Worker():
         for t in tf.range(a_size):
             actions_expanded=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
             q1_value=self.local_ACRD.q1(current_latents,actions_expanded)
-            q2_value=self.local_ACRD.q2(current_latents,actions_expanded)
-            q_value=tf.minimum(q1_value,q2_value)
-            q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value
+            #q2_value=self.local_ACRD.q2(current_latents,actions_expanded)
+            #q_value=tf.minimum(q1_value,q2_value)
+            q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q1_value
 
 
         #last_actions=tf.squeeze(last_actions)
@@ -375,7 +375,7 @@ class Worker():
 
 
         #系列評価ペナルティ
-        wait_action = tf.constant([1.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)
+       
         def compute_penalty(B_bool, penalty_weight):
             penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_weight
             return penalty_tensor
@@ -384,13 +384,13 @@ class Worker():
         actions=samples[0]
         actions_expanded = tf.expand_dims(actions, axis=1)
 
-        is_wait_action = tf.reduce_all(tf.equal(actions, wait_action), axis=1) # shape [B] (boolean)
-
+        """
         validActions_expanded = tf.expand_dims(validActions, axis=0) 
         validActions_tiled = tf.tile(validActions_expanded, [B_size, 1, 1]) # [B, N, A_SIZE]
         all_equal_to_valid = tf.reduce_all(tf.equal(actions_expanded, validActions_tiled), axis=2) # [B, N]
         is_valid_action = tf.reduce_any(all_equal_to_valid, axis=1)
         is_invalid_action = tf.logical_not(is_valid_action)
+        """
 
         actions_dir=distribution_to_coordinate(actions)
         distance_from_goalguide=tf.math.reduce_euclidean_norm(actions_dir-guide_dir,axis=1)
@@ -398,15 +398,15 @@ class Worker():
         """
         penalty_tensor = tf.cond(is_guide_term_condition, 
             lambda: tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1) , 
-                            lambda: compute_penalty(is_wait_action, -0.1)+compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
+                            lambda: compute_penalty(is_invalid_action,-0.1) , 
+                            lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1),
             lambda: tf.zeros_like(V) 
         )
         """
 
         penalty_tensor=tf.cond(is_no_goalguide_condition,
-                            lambda: compute_penalty(is_invalid_action,-0.1) , 
-                            lambda: compute_penalty(is_invalid_action,-0.1)-distance_from_goalguide*0.1)
+                            lambda: tf.zeros_like(V) ,
+                            lambda: -distance_from_goalguide*0.2)
 
         V+=penalty_tensor
         
@@ -686,8 +686,8 @@ class Worker():
                 next_actions=tf.one_hot(next_actions,a_size)
                 with self.inferenceLock:
                     q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
-                    q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
-                batch_q=tf.minimum(q1_next,q2_next)
+                    #q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
+                batch_q=q1_next
                 batch_q=tf.squeeze(batch_q)
                 
                 batch_policies_sig=tf.sigmoid(policy)

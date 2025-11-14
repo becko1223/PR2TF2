@@ -189,7 +189,6 @@ def main():
         global_network.policy(dummy_latents)
         global_network.reward(dummy_latents,dummy_actions)
         global_network.q1(dummy_latents,dummy_actions)
-        global_network.q2(dummy_latents,dummy_actions)
         
 
         variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
@@ -227,11 +226,12 @@ def main():
         curr_episode = 0
 
 
+    global global_mean_finishes
         
     # launch all of the threads:
 
     il_agents = [imitationRunner.remote(i) for i in range(NUM_IL_META_AGENTS)]
-    rl_agents = [RLRunner.remote(i) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
+    rl_agents = [RLRunner.remote(i, global_mean_finishes) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
     meta_agents = il_agents + rl_agents
 
     

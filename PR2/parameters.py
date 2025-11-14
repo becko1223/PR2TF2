@@ -24,7 +24,8 @@ iterations              =1
 
 mask_size               =10
 
-random_term             =300
+
+random_term             =1000
 guide_term              =1500
 
 

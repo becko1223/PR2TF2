@@ -98,12 +98,14 @@ class ACRDNet(tf.keras.Model):
         self.q1_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.q1_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
 
+        """
         self.q2_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
         self.q2_layernorm=layers.LayerNormalization()
         #実行時tanh
         self.q2_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.q2_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
-
+        """
+        
         self.reward_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.reward_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.reward_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
@@ -218,6 +220,7 @@ class ACRDNet(tf.keras.Model):
         x=self.q1_dense3(x)
         return x
     
+    """
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
@@ -230,6 +233,7 @@ class ACRDNet(tf.keras.Model):
         x=self.q2_dense2(x)
         x=self.q2_dense3(x)
         return x
+    """
 
 
 
