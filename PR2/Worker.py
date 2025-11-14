@@ -686,8 +686,8 @@ class Worker():
                 next_actions=tf.one_hot(next_actions,a_size)
                 with self.inferenceLock:
                     q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
-                    q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
-                batch_q=tf.minimum(q1_next,q2_next)
+                    #q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
+                batch_q=q1_next
                 batch_q=tf.squeeze(batch_q)
                 
                 batch_policies_sig=tf.sigmoid(policy)
