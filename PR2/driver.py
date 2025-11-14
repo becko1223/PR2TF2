@@ -209,8 +209,17 @@ def main():
         global_summary = tf.summary.create_file_writer(train_path)
         checkpoint = tf.train.Checkpoint(model=global_network, world_optimizer=world_optimizer,policy_optimizer=policy_optimizer)
 
-        print("os.path.exists :",os.path.exists(model_path))
-        checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
+        try:
+        # get_ipython() が存在すれば IPython (Colab/Jupyterセル) で実行中
+            get_ipython()
+            is_colab_cell = True
+        except NameError:
+            # 存在しなければ 通常のPythonスクリプト (ターミナル) で実行中
+            is_colab_cell = False
+        if is_colab_cell:
+            checkpoint_manager=tf.train.CheckpointManager(checkpoint,'/content/drive/MyDrive/MAPF/PR2TF2/PR2/'+model_path,1)
+        else:
+            checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
 
    
     if load_model == True:
