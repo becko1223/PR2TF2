@@ -189,7 +189,6 @@ def main():
         global_network.policy(dummy_latents)
         global_network.reward(dummy_latents,dummy_actions)
         global_network.q1(dummy_latents,dummy_actions)
-        global_network.q2(dummy_latents,dummy_actions)
         
 
         variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
