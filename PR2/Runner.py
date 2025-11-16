@@ -37,8 +37,9 @@ class Runner(object):
                                                         num_future_steps=NUM_FUTURE_STEPS),
                               map_generator=maze_generator(
                                    env_size=ENVIRONMENT_SIZE,
-                                   wall_components=WALL_COMPONENTS,
-                                   obstacle_density=OBSTACLE_DENSITY),
+                                   wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]),
+                                   obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0])
+                                   ),
                               IsDiagonal=DIAG_MVMT,
                                isOneShot=False)
         
@@ -277,5 +278,5 @@ class RLRunner(Runner):
 
 @ray.remote(num_cpus=(cpu*1)//19, num_gpus=0)
 class imitationRunner(Runner):
-    def __init__(self, metaAgentID):        
+    def __init__(self, metaAgentID, mean_finishes):        
         super().__init__(metaAgentID,mean_finishes)
