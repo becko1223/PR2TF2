@@ -754,11 +754,14 @@ class Worker():
 
             # Initial state from the environment
             if self.agentID == 1:
-                self.env._reset(maze_generator(
-                                    env_size=ENVIRONMENT_SIZE,
-                                    wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+(WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
-                                    obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+(OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0]))
-                                ))
+                if episode_count > random_term:
+                    self.env._reset(maze_generator(
+                                        env_size=ENVIRONMENT_SIZE,
+                                        wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+(WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
+                                        obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+(OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0]))
+                                    ))
+                else:
+                    self.env._reset()
                 joint_observations[self.metaAgentID] = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads

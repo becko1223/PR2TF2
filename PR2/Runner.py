@@ -37,8 +37,8 @@ class Runner(object):
                                                         num_future_steps=NUM_FUTURE_STEPS),
                               map_generator=maze_generator(
                                    env_size=ENVIRONMENT_SIZE,
-                                   wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]),
-                                   obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0])
+                                   wall_components=WALL_COMPONENTS,
+                                   obstacle_density=OBSTACLE_DENSITY
                                    ),
                               IsDiagonal=DIAG_MVMT,
                                isOneShot=False)
