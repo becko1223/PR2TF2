@@ -954,7 +954,7 @@ class Worker():
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
                     error_reward=min([0.5*float(model_error.numpy()),0.05]) 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-1.8):
                         episode_collision_count+=1
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
