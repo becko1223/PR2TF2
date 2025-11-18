@@ -44,7 +44,7 @@ class Primal2Env(MAPFEnv):
         never get punishment.
         """
         collision_status = self.world.agents[agentID].status
-        if collision_status == 0:
+        if collision_status == 0 or collision_status == -1:
             reward = self.ACTION_COST
             self.isStandingOnGoal[agentID] = False
         elif collision_status == 1:
