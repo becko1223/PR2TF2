@@ -984,6 +984,7 @@ class Worker():
                             train_buffer = episode_buffer[:]
 
                         if joint_done[self.metaAgentID][self.agentID]:
+                            train_buffer.append(s1[0],0,0,s1,train_valid,s1[1],train_val, train_policy, rnn_state)   #TDMPCのホライゾン区間ごとの訓練で終端のゴール報酬を学べるようにさせるため
                             s1Value = 0  # Terminal state
                             episode_buffer = []
                             joint_done[self.metaAgentID][self.agentID] = False
