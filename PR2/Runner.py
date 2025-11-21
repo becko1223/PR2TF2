@@ -153,24 +153,34 @@ class Runner(object):
 
         
         jobResults = []
+        obsResults = []
+        goalsResults = []
+        actionsResults=[]
+        rewardsResults=[]
+        statesResults=[]
+        validsResults=[]
+
+
         loss_metrics = []
         perf_metrics = []
         is_imitation = None
         for w in workers:
             if w.learningAgent:
-                if JOB_TYPE == JOB_OPTIONS.getGradient:
-                    jobResults = jobResults + w.allGradients
-                elif JOB_TYPE == JOB_OPTIONS.getExperience:
-                    jobResults.append(w.experienceBuffer)
+                obsResults = obsResults + w.all_obs_buffer
+                goalsResults = goalsResults + w.all_goals_buffer
+                actionsResults = actionsResults + w.all_actions_buffer
+                rewardsResults = rewardsResults + w.all_rewards_buffer
+                statesResults = statesResults + w.all_states_buffer
+                validsResults = validsResults + w.all_valids_buffer
+    
             
             is_imitation = False # w.is_imitation
 
-            loss_metrics.append(w.loss_metrics)
             perf_metrics.append(w.perf_metrics)
 
         for i, x in enumerate(loss_metrics):
             print(i, type(x), np.shape(x))
-        avg_loss_metrics = list(np.mean(np.array(loss_metrics), axis=0))
+       
 
 
         if not is_imitation:
@@ -191,20 +201,19 @@ class Runner(object):
             episode_reward = np.sum(perf_metrics[:,6])
             targets_done = np.sum(perf_metrics[:, 7])
             avg_perf_metrics = list(avg_perf_metrics) + [episode_reward, targets_done]            
-            all_metrics = avg_loss_metrics + avg_perf_metrics
-        else:
-            all_metrics = avg_loss_metrics
+            all_metrics = avg_perf_metrics
+    
 
 
-        print(f"Number of gradients returned: {len(jobResults)}")
-        for i, grads in enumerate(jobResults):
+        print(f"Number of gradients returned: {len(obsResults)}")
+        for i, grads in enumerate(obsResults):
             if grads is None:
                 print(f"gradient[{i}] is None")
             else:
                 print(f"gradient[{i}] length: {len(grads)}")
         print("mean_finishes:",mean_finishes)
         
-        return jobResults, all_metrics, is_imitation
+        return obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, all_metrics, is_imitation
     
 
     def imitationLearningJob(self, episodeNumber):

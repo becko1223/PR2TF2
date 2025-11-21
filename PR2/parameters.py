@@ -57,6 +57,9 @@ GIFS_FREQUENCY_RL       = 512
 OUTPUT_IL_GIFS          = False
 IL_GIF_PROB             = 0.
 
+replay_buffer_size      =4000  #8で割った値が最大の過去利用量。だがだんだん1エピソードの長さが短くなるのでバッファの保有ステップ数が減ってく。
+batch_size              =512
+
 
 # Imitation options
 PRIMING_LENGTH          = 0   # number of episodes at the beginning to train only on demonstrations

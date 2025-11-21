@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import os
 import ray
+import pickle
 
 import pynvml
 
@@ -103,27 +104,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
     global global_step
     global_step+=1
 
-def writeImitationDataToTensorboard(global_summary, metrics, curr_episode):  
-    with global_summary.as_default():
-        tf.summary.scalar('Losses/Imitation loss',metrics[0],curr_episode)
-        global_summary.flush()
 
-
-def writeEpisodeRatio(global_summary, numIL, numRL,  curr_episode):
-    with global_summary.as_default():
-      
-        current_learning_rate = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
-
-    if (numRL + numIL) != 0:
-        RL_IL_Ratio = numRL / (numRL + numIL)
-    else:
-        RL_IL_Ratio = 0 
-        tf.summary.scalar('Perf/Num IL Ep.', numIL,curr_episode)
-        tf.summary.scalar('Perf/Num RL Ep.', numRL,curr_episode)
-        tf.summary.scalar('Perf/ RL IL ratio Ep.', RL_IL_Ratio,curr_episode)
-        tf.summary.scalar('Perf/Learning Rate', current_learning_rate,curr_episode)
-        
-        global_summary.flush()
 
     
 
@@ -168,6 +149,121 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
         tf.summary.scalar('Losses/policyGrad Norm',policygradNorm,curr_episode)
         tf.summary.scalar('Losses/Var Norm',varNorm,curr_episode)
         global_summary.flush()
+
+
+
+class ReplayBuffer():
+    def __init__(self):
+        os.makedirs("replay_buffer", exist_ok=True)
+
+        # バッファの定義  [episode_num,step_num,--]
+        self.obs_buffer = []
+        self.goals_buffer = []
+        self.actions_buffer = []
+        self.rewards_buffer = []
+        self.states_buffer = []
+        self.valids_buffer = []
+
+        self.indexlist = []
+
+        if os.path.exists("replay_buffer/obs_buffer.pkl"):
+            with open('replay_buffer/obs_buffer.pkl', 'rb') as f:
+                self.obs_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/goals_buffer.pkl"):
+            with open("replay_buffer/goals_buffer.pkl", "rb") as f:
+                self.goals_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/actions_buffer.pkl"):
+            with open("replay_buffer/actions_buffer.pkl", "rb") as f:
+                self.actions_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/rewards_buffer.pkl"):
+            with open("replay_buffer/rewards_buffer.pkl", "rb") as f:
+                self.rewards_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/states_buffer.pkl"):
+            with open("replay_buffer/states_buffer.pkl", "rb") as f:
+                self.states_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/valids_buffer.pkl"):
+            with open("replay_buffer/valids_buffer.pkl", "rb") as f:
+                self.valids_buffer = pickle.load(f)
+
+        if os.path.exists("replay_buffer/indexlist.pkl"):
+            with open("replay_buffer/indexlist.pkl", "rb") as f:
+                self.indexlist = pickle.load(f)
+       
+
+        self.episode_length = max_episode_length
+        self.iter = 0
+
+
+    def add(self, obs, goals, actions, rewards, states, valids):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
+        if self.iter >= replay_buffer_size:
+            self.obs_buffer.pop(0)
+            self.obs_buffer.append(obs)
+            self.goals_buffer.pop(0)
+            self.goals_buffer.append(goals)
+            self.actions_buffer.pop(0)
+            self.actions_buffer.append(actions)
+            self.rewards_buffer.pop(0)
+            self.rewards_buffer.append(rewards)
+            self.states_buffer.pop(0)
+            self.states_buffer.append(states)
+            self.valids_buffer.pop(0)
+            self.valids_buffer.append(valids)
+
+            self.indexlist=[i for i in self.indexlist if i[0]!=0]
+            for i in len(self.indexlist):
+                self.indexlist[i][0]-=1
+            episode_length=len(obs)
+            for i in range(len(obs)-horizon):
+                index=np.array([replay_buffer_size-1,i])
+                self.indexlist.append(index)
+
+        else:
+            self.obs_buffer.append(obs)
+            self.goals_buffer.append(goals)
+            self.actions_buffer.append(actions)
+            self.rewards_buffer.append(rewards)
+            self.states_buffer.append(states)
+            self.valids_buffer.append(valids)
+
+            for i in range(len(obs)-horizon):
+                index=np.array([self.iter,i])
+                self.indexlist.append(index)
+            self.iter += 1
+
+
+    def sample(self, batch_size, horizon):
+
+        rng = np.random.default_rng()
+        r=rng.normal(0,len(self.indexlist)//10,batch_size)
+        r=np.abs(r)
+        r=np.clip(r,0,len(self.indexlist)-1)
+        r=r.astype(int)
+
+        sample_id=-r+(len(self.indexlist)-1)
+        # バッファから取得する要素の index をサンプリング
+        idx = np.random.randint(self.iter, size=batch_size)
+        idy = np.random.randint(self.episode_length - horizon, size=batch_size)
+
+        
+
+        # バッファからデータを取得
+        obss = np.empty((horizon+1, batch_size, 11,11,11), dtype=np.float32)
+        goals= np.empty((horizon+1,batch_size,3))
+        actions = np.empty((horizon, batch_size, a_size), dtype=np.float32)
+        rewards = np.empty((horizon, batch_size, 1), dtype=np.float32)
+        for t in range(horizon):
+            obss[t] = self.obs_buffer[idx, idy+t]
+            actions[t] = self.action_buffer[idx, idy+t]
+            rewards[t] = self.reward_buffer[idx, idy+t]
+        obss[horizon] = self.obs_buffer[idx, idy+horizon]
+        return jnp.array(obss), jnp.array(actions), jnp.array(rewards)
+
+        
 
 
     
@@ -266,17 +362,10 @@ def main():
             #jobResults, metrics, info = ray.get(done_id)[0]
 
 
-            res = ray.get(done_id)[0]
+            obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, metrics, info= ray.get(done_id)[0]
 
-            if not res["ok"]:
-                # 例外が発生しているので中身を表示して中断
-                print("Remote job error:")
-                print(f"Type: {res['error_type']}")
-                print(res["traceback"])
-                break  # or continue, or raise 例外を再発生させるなど対応
-
-            # 成功時は result の中身をアンパック
-            jobResults, metrics, info = res["result"]
+            
+            if obsResults and goalsResults and actionsResults and rewardsResults and statesResults and validsResults:
 
 
 
@@ -295,9 +384,7 @@ def main():
                     numRLEpisodes += 1
 
 
-            # Write ratio of RL to IL episodes to tensorboard
-            writeEpisodeRatio(global_summary, numImitationEpisodes, numRLEpisodes, curr_episode)
-
+           
             
             if JOB_TYPE == JOB_OPTIONS.getGradient:
                 if jobResults:

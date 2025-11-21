@@ -81,6 +81,13 @@ class Worker():
         self.mean_finishes = mean_finishes
         self.learningAgent = learningAgent
         self.allGradients = []
+        self.allbuffer = [] #[[[obs1][obs2][actions][rewards][states][valids]]]
+        self.all_obs_buffer=[]
+        self.all_goals_buffer=[]
+        self.all_actions_buffer=[]
+        self.all_rewards_buffer=[]
+        self.all_states_buffer=[]
+        self.all_valids_buffer=[]
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
         
@@ -522,12 +529,12 @@ class Worker():
         
         rollout = np.array(rollout, dtype=object)
         obs=np.stack(rollout[:, 0])
-        goals=np.stack(rollout[:,-4])
+        goals=np.stack(rollout[:,-2])
         rewards = np.stack(rollout[:, 2])
         actions = np.stack(rollout[:, 1])
         
         rnn_states=np.stack(rollout[:,-1])
-        valids = np.stack(rollout[:, 4])
+        valids = np.stack(rollout[:, 3])
 
        
 
@@ -555,11 +562,11 @@ class Worker():
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
         np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
-        np_rewards=np.stack([rewards[i:i+horizon+1] for i in chosen])
-        np_actions=np.stack([actions[i:i+horizon+1] for i in chosen])
+        np_rewards=np.stack([rewards[i:i+horizon] for i in chosen])
+        np_actions=np.stack([actions[i:i+horizon] for i in chosen])
         np_states=np.stack([rnn_states[i] for i in chosen])
-        np_valids=np.stack([valids[i:i+horizon+1] for i in chosen])
-        np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
+        np_valids=np.stack([valids[i:i+horizon] for i in chosen])
+        np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon] for i in chosen])
 
         batch_obs = tf.convert_to_tensor(np_obs,dtype=tf.float32) 
         batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
@@ -593,7 +600,7 @@ class Worker():
                         rewards= self.local_ACRD.reward(prev_latents,elem)
                     return (latents,rewards)
                 
-                batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
+                batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
                 with self.inferenceLock:
                     latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
@@ -610,11 +617,11 @@ class Worker():
 
                 batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
                 batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
-                batch_reward_preds=tf.squeeze(batch_reward_preds)
+                #batch_reward_preds=tf.squeeze(batch_reward_preds) #なにこれ
             
                 #valueの予測値を出す
                 with self.inferenceLock:
-                    batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                    batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
                     #batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
                     batch_q1value_preds=tf.squeeze(batch_q1value_preds)
                     #batch_q2value_preds=tf.squeeze(batch_q2value_preds)
@@ -651,10 +658,10 @@ class Worker():
                 q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
                 """
 
-                q_target=batch_discounted_rewards[:,1:]
+                q_target=batch_discounted_rewards[:,:]
                 
 
-                reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
+                reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
                 q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
                 #q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
                 q2value_loss=tf.constant(0.0)
@@ -669,7 +676,7 @@ class Worker():
             with tf.GradientTape() as tape:
                 
                 with self.inferenceLock:
-                    policy=self.local_ACRD.policy(batch_latent_preds)
+                    policy=self.local_ACRD.policy(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1])
                 policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
                 #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
@@ -685,17 +692,17 @@ class Worker():
                 next_actions = tf.squeeze(next_actions, axis=-1)
                 next_actions=tf.one_hot(next_actions,a_size)
                 with self.inferenceLock:
-                    q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
+                    q1_next=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
                     #q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
                 batch_q=q1_next
-                batch_q=tf.squeeze(batch_q)
+                #batch_q=tf.squeeze(batch_q) #なにこれ
                 
                 batch_policies_sig=tf.sigmoid(policy)
 
 
                 policy_loss=-tf.reduce_mean(rhos*batch_q)
                 
-                valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+                valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
                 entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
                 total_loss=0.5*policy_loss+16*valid_loss+entropy
@@ -749,8 +756,14 @@ class Worker():
 
         
         while self.shouldRun(coord, episode_count):
-            episode_buffer, episode_values = [], []
-            episode_reward = episode_step_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= 0
+            obs_buffer = [] #np.zeros((256,11,11,11))
+            goals_buffer = [] #np.zeros((256,3))
+            actions_buffer = [] #np.zeros((256,1))
+            rewards_buffer = [] #np.zeros((256,1))
+            valids_buffer = [] #np.zeros((256,5))
+            states_buffer = []
+            episode_values = []
+            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
@@ -853,7 +866,7 @@ class Worker():
 
 
 
-                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    latent_init,next_rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
@@ -875,7 +888,7 @@ class Worker():
                         guide_dir=action2dir(a_guide)
 
 
-                    rnn_state=[rnn_state[0],rnn_state[1]]
+                   
 
 
                     if(episode_count>random_term):
@@ -962,55 +975,44 @@ class Worker():
                     self.synchronize()
                     # Append to Appropriate buffers 
                     if not skipping_state:
-                        episode_buffer.append(
-                            [s[0], a, joint_rewards[self.metaAgentID][self.agentID]+error_reward, s1, train_valid, s[1],
-                                train_val, train_policy, rnn_state])
-                        episode_values.append(q[0, 0])
+                        obs_buffer.append(s[0])
+                        goals_buffer.append(s[1])
+                        actions_buffer.append(a)
+                        rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID]+error_reward)
+                        valids_buffer.append(train_valid)
+                        states_buffer.append(rnn_state)
+                        
                     episode_reward += r
                     episode_step_count += 1
 
                     # Update State
                     s = s1
+                    rnn_state=next_rnn_state
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
-                    if (len(episode_buffer) > horizon) and (
-                            (len(episode_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
+                    if (len(obs_buffer) > horizon) and (
+                            (len(obs_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
                         self.agentID] or episode_step_count == max_episode_length):
-                        # Since we don't know what the true final return is,
-                        # we "bootstrap" from our current value estimation.
-                        if len(episode_buffer) >= EXPERIENCE_BUFFER_SIZE:
-                            train_buffer = episode_buffer[-EXPERIENCE_BUFFER_SIZE:]
-                        else:
-                            train_buffer = episode_buffer[:]
+                        
+
 
                         if joint_done[self.metaAgentID][self.agentID]:
-                            s1Value = 0  # Terminal state
-                            episode_buffer = []
                             joint_done[self.metaAgentID][self.agentID] = False
                             targets_done += 1
                             pred_latent=tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
-                        else:
-                            ob=tf.expand_dims(s[0],0)
-                            ob=tf.expand_dims(ob,0)
-                            ob=tf.cast(ob,dtype=tf.float32)
-                            goal=tf.expand_dims(s[1],0)
-                            goal=tf.expand_dims(goal,0)
-                            goal=tf.cast(goal,dtype=tf.float32)
-                            latent_init,_=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
-                           
-                            s1Value=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(mean[0],0),0))[0][0][0]
+                   
                             
 
-                        
-                        self.loss_metrics, world_grads, policy_grads = self.calculateGradient(train_buffer, episode_count,
-                                                                            rnn_state0,s1Value)
+                       
+                        self.all_obs_buffer.append(obs_buffer)
+                        self.all_goals_buffer.append(goals_buffer)
+                        self.all_actions_buffer.append(actions_buffer)
+                        self.all_rewards_buffer.append(rewards_buffer)
+                        self.all_states_buffer.append(states_buffer)
+                        self.all_valids_buffer.append(valids_buffer)
 
-                        grads=(world_grads,policy_grads)
-                        self.allGradients.append(grads)
-
-                        rnn_state0 = rnn_state
 
                     self.synchronize()
 
