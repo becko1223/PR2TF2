@@ -22,7 +22,7 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
-random_term             =800
+random_term             =0
 guide_term              =1500
 
 
