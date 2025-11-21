@@ -555,11 +555,11 @@ class Worker():
 
         np_obs=np.stack([obs[i:i+horizon+1] for i in chosen])  #長さhorizon+1
         np_goals=np.stack([goals[i:i+horizon+1] for i in chosen])
-        np_rewards=np.stack([rewards[i:i+horizon+1] for i in chosen])
-        np_actions=np.stack([actions[i:i+horizon+1] for i in chosen])
+        np_rewards=np.stack([rewards[i:i+horizon] for i in chosen])
+        np_actions=np.stack([actions[i:i+horizon] for i in chosen])
         np_states=np.stack([rnn_states[i] for i in chosen])
-        np_valids=np.stack([valids[i:i+horizon+1] for i in chosen])
-        np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon+1] for i in chosen])
+        np_valids=np.stack([valids[i:i+horizon] for i in chosen])
+        np_discounted_rewards=np.stack([discounted_rewards[i:i+horizon] for i in chosen])
 
         batch_obs = tf.convert_to_tensor(np_obs,dtype=tf.float32) 
         batch_goals = tf.convert_to_tensor(np_goals,dtype=tf.float32)
@@ -593,7 +593,7 @@ class Worker():
                         rewards= self.local_ACRD.reward(prev_latents,elem)
                     return (latents,rewards)
                 
-                batch_actions_T = tf.transpose(batch_actions[:, :-1], [1, 0, 2])  # [horizon, batch, action_dim]
+                batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
                 with self.inferenceLock:
                     latent_init,batch_states_step1=self.local_ACRD.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
@@ -610,11 +610,11 @@ class Worker():
 
                 batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
                 batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
-                batch_reward_preds=tf.squeeze(batch_reward_preds)
+                batch_reward_preds=tf.squeeze(batch_reward_preds)   #[b,h,1] to [b,h,]?
             
                 #valueの予測値を出す
                 with self.inferenceLock:
-                    batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
+                    batch_q1value_preds=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
                     #batch_q2value_preds=self.local_ACRD.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:-1])
                     batch_q1value_preds=tf.squeeze(batch_q1value_preds)
                     #batch_q2value_preds=tf.squeeze(batch_q2value_preds)
@@ -651,10 +651,10 @@ class Worker():
                 q_target=batch_rewards[:,1:]+gammma_tdmpc*q_next
                 """
 
-                q_target=batch_discounted_rewards[:,1:]
+                q_target=batch_discounted_rewards[:,:]
                 
 
-                reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,1:]))
+                reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
                 q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
                 #q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
                 q2value_loss=tf.constant(0.0)
@@ -669,7 +669,7 @@ class Worker():
             with tf.GradientTape() as tape:
                 
                 with self.inferenceLock:
-                    policy=self.local_ACRD.policy(batch_latent_preds)
+                    policy=self.local_ACRD.policy(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1])
                 policy=tf.clip_by_value(policy,-10.0,10.0)
                 policy=tf.nn.softmax(policy)
                 #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
@@ -685,7 +685,7 @@ class Worker():
                 next_actions = tf.squeeze(next_actions, axis=-1)
                 next_actions=tf.one_hot(next_actions,a_size)
                 with self.inferenceLock:
-                    q1_next=self.local_ACRD.q1(batch_latent_preds,next_actions)
+                    q1_next=self.local_ACRD.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
                     #q2_next=self.local_ACRD.q2(batch_latent_preds,next_actions)
                 batch_q=q1_next
                 batch_q=tf.squeeze(batch_q)
@@ -695,7 +695,7 @@ class Worker():
 
                 policy_loss=-tf.reduce_mean(rhos*batch_q)
                 
-                valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,1:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,1:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+                valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
                 entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
                 total_loss=0.5*policy_loss+16*valid_loss+entropy
@@ -853,7 +853,7 @@ class Worker():
 
 
 
-                    latent_init,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    latent_init,next_rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
@@ -874,8 +874,6 @@ class Worker():
                         a_guide=distance_list_replace.index(min(distance_list_replace))
                         guide_dir=action2dir(a_guide)
 
-
-                    rnn_state=[rnn_state[0],rnn_state[1]]
 
 
                     if(episode_count>random_term):
@@ -971,6 +969,7 @@ class Worker():
 
                     # Update State
                     s = s1
+                    rnn_state = next_rnn_state
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
