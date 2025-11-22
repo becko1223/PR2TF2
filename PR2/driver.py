@@ -244,7 +244,7 @@ class ReplayBuffer():
         r=np.clip(r,0,len(self.indexlist)-1)
         r=r.astype(int)
 
-        sample_id=-r+(len(self.indexlist)-1)
+        sample_ids=-r+(len(self.indexlist)-1)
         # バッファから取得する要素の index をサンプリング
         idx = np.random.randint(self.iter, size=batch_size)
         idy = np.random.randint(self.episode_length - horizon, size=batch_size)
@@ -252,10 +252,17 @@ class ReplayBuffer():
         
 
         # バッファからデータを取得
-        obss = np.empty((horizon+1, batch_size, 11,11,11), dtype=np.float32)
-        goals= np.empty((horizon+1,batch_size,3))
-        actions = np.empty((horizon, batch_size, a_size), dtype=np.float32)
-        rewards = np.empty((horizon, batch_size, 1), dtype=np.float32)
+        obs = np.empty(( batch_size, horizon+1,11,11,11), dtype=np.float32)
+        goals= np.empty((batch_size,horizon+1,3))
+        actions = np.empty(( batch_size,horizon, a_size), dtype=np.float32)
+        rewards = np.empty((batch_size,horizon,  1), dtype=np.float32)
+        states = np.empty((batch_size,1,1),dtype=np.float32)
+        valids = np.empty((batch_size,horizon,5),dtype=np.float32)
+
+        for i in range(batch_size):
+            obs[i]=self.obs_buffer[sample_ids[i][0],sample_ids[i][1]:sample_ids[i][1]+t+1]
+
+
         for t in range(horizon):
             obss[t] = self.obs_buffer[idx, idy+t]
             actions[t] = self.action_buffer[idx, idy+t]
