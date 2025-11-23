@@ -426,7 +426,7 @@ class ReplayBuffer():
         # バッファからデータを取得
         obs = np.empty(( batch_size, horizon+1,11,11,11), dtype=np.float32)
         goals= np.empty((batch_size,horizon+1,3))
-        actions = np.empty(( batch_size,horizon, a_size), dtype=np.float32)
+        actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  1), dtype=np.float32)
         states = np.empty((batch_size,1,512),dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
@@ -604,6 +604,7 @@ def main():
                 print ('Saving Model', end='\n')
                 #checkpoint_numberのところにエピソードナンバーを保存しておく
                 checkpoint_manager.save(checkpoint_number=curr_episode)
+                replaybuffer.save()
                 print ('Saved Model', end='\n')
 
             

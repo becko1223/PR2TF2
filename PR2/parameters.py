@@ -22,8 +22,7 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
-random_term             =25
-guide_term              =1500
+random_term             =3
 
 
 # observer parameters
