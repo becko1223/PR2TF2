@@ -386,7 +386,7 @@ class Worker():
         def compute_penalty(B_bool, penalty_weight):
             penalty_tensor = tf.cast(B_bool, dtype=tf.float32) * penalty_weight
             return penalty_tensor
-        is_guide_term_condition = tf.less(self.currEpisode, guide_term)
+       
 
         actions=samples[0]
         actions_expanded = tf.expand_dims(actions, axis=1)

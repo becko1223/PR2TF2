@@ -44,7 +44,7 @@ NUM_THREADS             = 8 # int(multiprocessing.cpu_count() / (2 * NUM_META_AG
 NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
-SUMMARY_WINDOW          = 10
+SUMMARY_WINDOW          = 1
 load_model              = False
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
@@ -56,7 +56,7 @@ GIFS_FREQUENCY_RL       = 512
 OUTPUT_IL_GIFS          = False
 IL_GIF_PROB             = 0.
 
-replay_buffer_size      =10000  #8で割った値が最大の過去利用量。だがだんだん1エピソードの長さが短くなるのでバッファの保有ステップ数が減ってく。
+replay_buffer_size      =6  #8で割った値が最大の過去利用量。だがだんだん1エピソードの長さが短くなるのでバッファの保有ステップ数が減ってく。
 batch_size              =512
 
 
