@@ -3,6 +3,7 @@ import tensorflow as tf
 import os
 import ray
 import pickle
+import collections
 
 import pynvml
 
@@ -71,8 +72,8 @@ if not os.path.exists(gifs_path):
 global_step = 0 #これはcurrent_episodeと同じ。混在していてちょっと良くない。
 
 global_mean_finishes=0
-global_10epi_finishes_0=0
-global_10epi_finishes_1=0
+
+goals_numbers=collections.deque([], 10)
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -307,10 +308,13 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
             mean_length, mean_value, mean_invalid, \
             mean_stop, mean_astar,mean_collision, mean_reward, mean_finishes = firstEpisode
 
-    global global_mean_finishes, global_10epi_finishes_0, global_10epi_finishes_1
-    global_10epi_finishes_1=global_10epi_finishes_0
-    global_10epi_finishes_0=mean_finishes
-    global_mean_finishes=(global_10epi_finishes_0+global_10epi_finishes_1)/2.0
+    global global_mean_finishes
+    goals_numbers.append(mean_finishes)
+    total=sum(goals_numbers)
+    number=len(goals_numbers)
+    if number>0:
+        global_mean_finishes=total/number
+    
 
     with global_summary.as_default():
         tf.summary.scalar('Perf/Reward',mean_reward,curr_episode)
