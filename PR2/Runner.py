@@ -68,7 +68,7 @@ class Runner(object):
             if gpus:
                 try:
                     
-                    fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 1)
+                    fraction = 1.0 / (NUM_META_AGENTS - NUM_IL_META_AGENTS + 2)
                     for gpu in gpus:
                         tf.config.experimental.set_virtual_device_configuration(
                             gpu,
