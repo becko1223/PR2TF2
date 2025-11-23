@@ -106,6 +106,7 @@ class Runner(object):
         self.localNetwork.policy(dummy_latents)
         self.localNetwork.reward(dummy_latents,dummy_actions)
         self.localNetwork.q1(dummy_latents,dummy_actions)
+        self.localNetwork.q2(dummy_latents,dummy_actions)
    
         
        
