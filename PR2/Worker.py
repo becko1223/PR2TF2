@@ -999,6 +999,14 @@ class Worker():
 
                         if joint_done[self.metaAgentID][self.agentID]:
                             joint_done[self.metaAgentID][self.agentID] = False
+                            obs_buffer.append(s[0])      #終端の報酬予測経験を学習できるようにするために。
+                            goals_buffer.append(s[1])
+                            actions_buffer.append(0)
+                            rewards_buffer.append(0)
+                            states_buffer.append(rnn_state)
+                            train_valid = np.zeros(a_size)
+                            train_valid[validActions] = 1
+                            valids_buffer.append(train_valid)
                             targets_done += 1
                             pred_latent=tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
 
@@ -1012,6 +1020,13 @@ class Worker():
                         self.all_rewards_buffer.append(rewards_buffer)
                         self.all_states_buffer.append(states_buffer)
                         self.all_valids_buffer.append(valids_buffer)
+
+                        obs_buffer=[]
+                        goals_buffer=[]
+                        actions_buffer=[]
+                        rewards_buffer=[]
+                        states_buffer=[]
+                        valids_buffer=[]
 
 
                     self.synchronize()
