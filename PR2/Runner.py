@@ -265,7 +265,7 @@ class Runner(object):
             }
 
             result= obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, metrics, info
-            return {"ok": True, "result": result}
+            return result
         except Exception as e:
             import traceback
             tb = "".join(traceback.format_exception(type(e), e, e.__traceback__))
