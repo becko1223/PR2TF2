@@ -463,8 +463,8 @@ class ReplayBuffer():
     
 def main():    
     with tf.device("/GPU:0"):
-        world_optimizer = tf.keras.optimizers.Nadam(learning_rate=float(lr))
-        policy_optimizer= tf.keras.optimizers.Nadam(learning_rate=float(lr))
+        world_optimizer = tf.keras.optimizers.Nadam(learning_rate=float(1))
+        policy_optimizer= tf.keras.optimizers.Nadam(learning_rate=float(1))
         global_network = ACRDNet()
 
         #ダミーデータでのネットワーク構築
