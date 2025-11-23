@@ -120,15 +120,17 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
     rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
 
+    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    actor_variable_names = set([v.name for v in variables_for_actor])
+    all_trainable_variables = global_network.trainable_variables
+    variables_except_for_actor = [
+        v for v in all_trainable_variables 
+        if v.name not in actor_variable_names
+    ]
+
     @tf.function
     def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
-        variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
-        actor_variable_names = set([v.name for v in variables_for_actor])
-        all_trainable_variables = global_network.trainable_variables
-        variables_except_for_actor = [
-            v for v in all_trainable_variables 
-            if v.name not in actor_variable_names
-        ]
+        
 
         #アクター以外訓練
         with tf.GradientTape() as tape:
@@ -249,15 +251,6 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
     loss_list.append(world_grad_norms)
     loss_list.append(policy_grad_norms)
     loss_list.append(var_norms)
-
-
-    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
-    actor_variable_names = set([v.name for v in variables_for_actor])
-    all_trainable_variables = global_network.trainable_variables
-    variables_except_for_actor = [
-        v for v in all_trainable_variables 
-        if v.name not in actor_variable_names
-    ]
     
     
     world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
