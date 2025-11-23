@@ -118,7 +118,7 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
     batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
     batch_states=tf.convert_to_tensor(states,dtype=tf.float32)
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
-    rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in batch_size])
+    rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
 
     @tf.function
     def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
