@@ -578,7 +578,7 @@ def main():
                 for i in range(len(obsResults)):
                     replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],statesResults[i],validsResults[i])
                 if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
-                    for i in range(10):
+                    for i in range(NUM_THREADS*max_episode_length):
                         obs,goals,actions,rewards,states,valids=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,states,valids,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
@@ -609,7 +609,7 @@ def main():
             jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,global_mean_finishes)])
 
             
-            if curr_episode % 100 == 0:
+            if curr_episode % 1 == 0:
                 print ('Saving Model', end='\n')
                 #checkpoint_numberのところにエピソードナンバーを保存しておく
                 checkpoint_manager.save(checkpoint_number=curr_episode)
