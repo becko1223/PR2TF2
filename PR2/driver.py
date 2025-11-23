@@ -109,16 +109,8 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
     global_step+=1
 
 
-def update(global_network, obs,goals,actions,rewards,states,valids, world_optimizer,policy_optimizer, curr_episode):
-
-    batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
-    batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
-    batch_rewards=tf.convert_to_tensor(rewards,dtype=tf.float32)
-    batch_actions=tf.convert_to_tensor(actions,dtype=tf.int32)
-    batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
-    batch_states=tf.convert_to_tensor(states,dtype=tf.float32)
-    batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
-    rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
+@tf.function
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
 
     variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
@@ -128,118 +120,139 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
         if v.name not in actor_variable_names
     ]
 
-    @tf.function
-    def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
+    rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
+    
+
+    #アクター以外訓練
+    with tf.GradientTape() as tape:
+
+        def dynamics(carry, elem):
+            elem=tf.expand_dims(elem,axis=1)
+            prev_latents,_=carry
+            latents = global_network.dynamics(prev_latents,elem)
+            rewards= global_network.reward(prev_latents,elem)
+            return (latents,rewards)
+        
+        batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
+
+        latent_init,batch_states_step1=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+
+        #latent,rewardの予測値
+        batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
+            fn=dynamics,
+            elems=batch_actions_T,     
+            initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
+            )
+        
+        batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
+        batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
+
+        batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
+        batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
+        batch_reward_preds=tf.squeeze(batch_reward_preds) #[b,h,1] to [b,h,]
+    
+        #valueの予測値を出す
+        batch_q1value_preds=global_network.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
+        batch_q2value_preds=global_network.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
+        batch_q1value_preds=tf.squeeze(batch_q1value_preds)
+        batch_q2value_preds=tf.squeeze(batch_q2value_preds)
+
+
+        #latentのターゲットを出す(b,s,h,w,c)
+        batch_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
+
+
+        #q target出す
+        policy=global_network.policy(batch_latent_preds)
+        policy=tf.clip_by_value(policy,-10.0,10.0)
+        policy=tf.nn.softmax(policy)
+        logits = tf.math.log(policy + 1e-10)
+        B = tf.shape(logits)[0]
+        H = tf.shape(logits)[1]
+        A = tf.shape(logits)[2]
+        flat_logits = tf.reshape(logits, [-1, A])
+        flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+        next_actions = tf.reshape(flat_actions, [B, H, 1])
+
+        next_actions = tf.squeeze(next_actions, axis=-1)
+        next_actions=tf.one_hot(next_actions,a_size)
+
+        q1_next=global_network.q1(batch_latent_preds,next_actions)
+        q2_next=global_network.q2(batch_latent_preds,next_actions)
+
+        q_next=tf.math.minimum(q1_next,q2_next)
+        q_next=tf.squeeze(q_next)
+        q_target=batch_rewards[:,:]+gammma_tdmpc*q_next
+
+            
+
+        reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
+        q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
+        q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
+        
+        consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
+
+        total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
+    world_grads=tape.gradient(total_loss,variables_except_for_actor)
+
+
+    with tf.GradientTape() as tape:
+        
+        policy=global_network.policy(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1])
+        policy=tf.clip_by_value(policy,-10.0,10.0)
+        batch_policies_sig=tf.sigmoid(policy)
+        policy=tf.nn.softmax(policy)
+        #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
+
+        logits = tf.math.log(policy + 1e-10)
+        B = tf.shape(logits)[0]
+        H = tf.shape(logits)[1]
+        A = tf.shape(logits)[2]
+        flat_logits = tf.reshape(logits, [-1, A])
+        flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
+        next_actions = tf.reshape(flat_actions, [B, H, 1])
+
+        next_actions = tf.squeeze(next_actions, axis=-1)
+        next_actions=tf.one_hot(next_actions,a_size)
+        q1_next=global_network.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
+        q2_next=global_network.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
+        batch_q=tf.math.minimum(q1_next,q2_next)
+        batch_q=tf.squeeze(batch_q) 
+        
         
 
-        #アクター以外訓練
-        with tf.GradientTape() as tape:
 
-            def dynamics(carry, elem):
-                elem=tf.expand_dims(elem,axis=1)
-                prev_latents,_=carry
-                latents = global_network.dynamics(prev_latents,elem)
-                rewards= global_network.reward(prev_latents,elem)
-                return (latents,rewards)
-            
-            batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
-
-            latent_init,batch_states_step1=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
-
-            #latent,rewardの予測値
-            batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
-                fn=dynamics,
-                elems=batch_actions_T,     
-                initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
-                )
-            
-            batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
-            batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
-
-            batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
-            batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
-            batch_reward_preds=tf.squeeze(batch_reward_preds) #[b,h,1] to [b,h,]
+        policy_loss=-tf.reduce_mean(rhos*batch_q)
         
-            #valueの予測値を出す
-            batch_q1value_preds=global_network.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
-            batch_q2value_preds=global_network.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],batch_actions[:,:])
-            batch_q1value_preds=tf.squeeze(batch_q1value_preds)
-            batch_q2value_preds=tf.squeeze(batch_q2value_preds)
+        valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+        entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+
+        total_loss=0.5*policy_loss+16*valid_loss+entropy
+    
+    policy_grads=tape.gradient(total_loss,variables_for_actor)
+    return world_grads,policy_grads,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy]
 
 
-            #latentのターゲットを出す(b,s,h,w,c)
-            batch_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
 
+def update(global_network, obs,goals,actions,rewards,states,valids, world_optimizer,policy_optimizer, curr_episode):
 
-            #q target出す
-            policy=global_network.policy(batch_latent_preds)
-            policy=tf.clip_by_value(policy,-10.0,10.0)
-            policy=tf.nn.softmax(policy)
-            logits = tf.math.log(policy + 1e-10)
-            B = tf.shape(logits)[0]
-            H = tf.shape(logits)[1]
-            A = tf.shape(logits)[2]
-            flat_logits = tf.reshape(logits, [-1, A])
-            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
-            next_actions = tf.reshape(flat_actions, [B, H, 1])
+    batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
+    batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
+    batch_rewards=tf.convert_to_tensor(rewards,dtype=tf.float32)
+    batch_actions=tf.convert_to_tensor(actions,dtype=tf.int32)
+    batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
+    batch_states=tf.convert_to_tensor(states,dtype=tf.float32)
+    batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
+    
 
-            next_actions = tf.squeeze(next_actions, axis=-1)
-            next_actions=tf.one_hot(next_actions,a_size)
+    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    actor_variable_names = set([v.name for v in variables_for_actor])
+    all_trainable_variables = global_network.trainable_variables
+    variables_except_for_actor = [
+        v for v in all_trainable_variables 
+        if v.name not in actor_variable_names
+    ]
 
-            q1_next=global_network.q1(batch_latent_preds,next_actions)
-            q2_next=global_network.q2(batch_latent_preds,next_actions)
-
-            q_next=tf.math.minimum(q1_next,q2_next)
-            q_next=tf.squeeze(q_next)
-            q_target=batch_rewards[:,:]+gammma_tdmpc*q_next
-
-                
-
-            reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
-            q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
-            q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
-            
-            consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
-
-            total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
-        world_grads=tape.gradient(total_loss,variables_except_for_actor)
-
-
-        with tf.GradientTape() as tape:
-            
-            policy=global_network.policy(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1])
-            policy=tf.clip_by_value(policy,-10.0,10.0)
-            batch_policies_sig=tf.sigmoid(policy)
-            policy=tf.nn.softmax(policy)
-            #next_actions=tf.map_fn(lambda probs: tf.random.categorical(probs, 1),elems=policy,dtype=tf.int64)  
-
-            logits = tf.math.log(policy + 1e-10)
-            B = tf.shape(logits)[0]
-            H = tf.shape(logits)[1]
-            A = tf.shape(logits)[2]
-            flat_logits = tf.reshape(logits, [-1, A])
-            flat_actions = tf.random.categorical(flat_logits, num_samples=1, dtype=tf.int64)
-            next_actions = tf.reshape(flat_actions, [B, H, 1])
-
-            next_actions = tf.squeeze(next_actions, axis=-1)
-            next_actions=tf.one_hot(next_actions,a_size)
-            q1_next=global_network.q1(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
-            q2_next=global_network.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
-            batch_q=tf.math.minimum(q1_next,q2_next)
-            batch_q=tf.squeeze(batch_q) 
-            
-            
-
-
-            policy_loss=-tf.reduce_mean(rhos*batch_q)
-            
-            valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
-            entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
-
-            total_loss=0.5*policy_loss+16*valid_loss+entropy
-        
-        policy_grads=tape.gradient(total_loss,variables_for_actor)
-        return world_grads,policy_grads,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy]
     
     world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids)
 
