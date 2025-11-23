@@ -569,7 +569,7 @@ def main():
             if obsResults and goalsResults and actionsResults and rewardsResults and statesResults and validsResults:
                 for i in range(len(obsResults)):
                     replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],statesResults[i],validsResults[i])
-                if curr_episode>(random_term-1):
+                if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(NUM_THREADS*max_episode_length):
                         obs,goals,actions,rewards,states,valids=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,states,valids,world_optimizer,policy_optimizer,curr_episode)

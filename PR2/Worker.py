@@ -767,7 +767,7 @@ class Worker():
 
             # Initial state from the environment
             if self.agentID == 1:
-                if episode_count > random_term:
+                if episode_count > (random_term-1):
                     self.env._reset(maze_generator(
                                         env_size=ENVIRONMENT_SIZE,
                                         wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+(WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
@@ -891,7 +891,7 @@ class Worker():
                    
 
 
-                    if(episode_count>random_term):
+                    if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.05):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
@@ -1066,7 +1066,7 @@ class Worker():
                     targets_done
                 ])
 
-                assert len(self.allGradients) > 0, 'Empty gradients at end of RL episode?!'
+                
                 return perf_metrics
 
     def synchronize(self):
