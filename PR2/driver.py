@@ -609,7 +609,7 @@ def main():
             jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,global_mean_finishes)])
 
             
-            if curr_episode % 1 == 0:
+            if curr_episode % 10 == 0:
                 print ('Saving Model', end='\n')
                 #checkpoint_numberのところにエピソードナンバーを保存しておく
                 checkpoint_manager.save(checkpoint_number=curr_episode)
