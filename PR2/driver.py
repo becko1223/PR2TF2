@@ -347,20 +347,21 @@ class ReplayBuffer():
         self.addcount=0
 
         if os.path.exists("replay_buffer/rb_data.pkl"):
-            with open("replay_buffer/rb_data.pkl",'rb') as f:
-                data=pickle.load(f)
-                self.obs_buffer=data["obs_buffer"]
-                self.goals_buffer=data["goals_buffer"]
-                self.actions_buffer=data["actions_buffer"]
-                self.rewards_buffer=data["rewards_buffer"]
-                self.states_buffer=data["states_buffer"]
-                self.valids_buffer=data["valids_buffer"]
-                self.indexlist=data["indexlist"]
-                
-                self.deletecount=data["deletecount"]
-                self.addcount=data["addcount"]
+            if load_model == True:
+                with open("replay_buffer/rb_data.pkl",'rb') as f:
+                    data=pickle.load(f)
+                    self.obs_buffer=data["obs_buffer"]
+                    self.goals_buffer=data["goals_buffer"]
+                    self.actions_buffer=data["actions_buffer"]
+                    self.rewards_buffer=data["rewards_buffer"]
+                    self.states_buffer=data["states_buffer"]
+                    self.valids_buffer=data["valids_buffer"]
+                    self.indexlist=data["indexlist"]
+                    
+                    self.deletecount=data["deletecount"]
+                    self.addcount=data["addcount"]
 
-        
+            
 
         self.iter=len(self.goals_buffer)
        
