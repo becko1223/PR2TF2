@@ -188,6 +188,7 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
             q2_next=global_network.q2(batch_latent_preds,next_actions)
 
             q_next=tf.math.minimum(q1_next,q2_next)
+            q_next=tf.squeeze(q_next)
             q_target=batch_rewards[:,:]+gammma_tdmpc*q_next
 
                 
