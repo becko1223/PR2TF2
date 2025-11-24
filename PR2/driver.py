@@ -324,7 +324,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
         tf.summary.scalar('Perf/Stop Rate',mean_stop/mean_length,curr_episode)
         tf.summary.scalar('Perf/Astar Rate',mean_astar/mean_length,curr_episode)
         tf.summary.scalar('Perf/Collision Rate',mean_collision/mean_length,curr_episode)
-        tf.summary.scalar('Perf/Collision Rate',mean_wall_collision/mean_length,curr_episode)
+        tf.summary.scalar('Perf/Wall_Collision Rate',mean_wall_collision/mean_length,curr_episode)
 
         tf.summary.scalar('Losses/Reward Loss',rewardLoss,curr_episode)
         tf.summary.scalar('Losses/Value Loss',valueLoss,curr_episode)
