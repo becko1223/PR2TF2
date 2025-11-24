@@ -763,7 +763,7 @@ class Worker():
             valids_buffer = [] #np.zeros((256,5))
             states_buffer = []
             episode_values = []
-            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count, episode_wall_collision_count= 0
+            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_collision_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
