@@ -198,9 +198,9 @@ class Runner(object):
 
             
             perf_metrics = np.array(perf_metrics)
-            avg_perf_metrics = np.mean(perf_metrics[:, :6], axis=0)
-            episode_reward = np.sum(perf_metrics[:,6])
-            targets_done = np.sum(perf_metrics[:, 7])
+            avg_perf_metrics = np.mean(perf_metrics[:, :7], axis=0)
+            episode_reward = np.sum(perf_metrics[:,7])
+            targets_done = np.sum(perf_metrics[:, 8])
             avg_perf_metrics = list(avg_perf_metrics) + [episode_reward, targets_done]            
             all_metrics = avg_perf_metrics
     

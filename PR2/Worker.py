@@ -763,7 +763,7 @@ class Worker():
             valids_buffer = [] #np.zeros((256,5))
             states_buffer = []
             episode_values = []
-            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= 0
+            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count, episode_wall_collision_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
@@ -898,7 +898,7 @@ class Worker():
                             a=np.random.choice(indices, p=probabilities)
                             
                         else:
-                            if(random.random() > max([min([0.4*(30.0-self.mean_finishes)/25.0, 0.4]), 0.0])):
+                            if(random.random() > max([min([0.3*(30.0-self.mean_finishes)/20.0, 0.3]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
@@ -969,6 +969,8 @@ class Worker():
                     error_reward=min([0.5*float(model_error.numpy()),0.05]) 
                     if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
                         episode_collision_count+=1
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-0.6):
+                        episode_wall_collision_count+=1
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
@@ -1062,6 +1064,7 @@ class Worker():
                     episode_stop_count,
                     episode_astar_count,
                     episode_collision_count,
+                    episode_wall_collision_count,
                     episode_reward,
                     targets_done
                 ])

@@ -300,13 +300,13 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
 
         rewardLoss, valueLoss, consistencyLoss, policyLoss, validLoss, entropy, worldgradNorm, policygradNorm, varNorm, \
             mean_length, mean_value, mean_invalid, \
-            mean_stop, mean_astar,mean_collision, mean_reward, mean_finishes = tensorboardData
+            mean_stop, mean_astar,mean_collision,mean_wall_collision, mean_reward, mean_finishes = tensorboardData
         
     else:
         firstEpisode = tensorboardData[0]
         rewardLoss, valueLoss, consistencyLoss, policyLoss, validLoss, entropy, worldgradNorm, policygradNorm, varNorm, \
             mean_length, mean_value, mean_invalid, \
-            mean_stop, mean_astar,mean_collision, mean_reward, mean_finishes = firstEpisode
+            mean_stop, mean_astar,mean_collision, mean_wall_collision, mean_reward, mean_finishes = firstEpisode
 
     global global_mean_finishes
     goals_numbers.append(mean_finishes)
@@ -324,6 +324,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
         tf.summary.scalar('Perf/Stop Rate',mean_stop/mean_length,curr_episode)
         tf.summary.scalar('Perf/Astar Rate',mean_astar/mean_length,curr_episode)
         tf.summary.scalar('Perf/Collision Rate',mean_collision/mean_length,curr_episode)
+        tf.summary.scalar('Perf/Collision Rate',mean_wall_collision/mean_length,curr_episode)
 
         tf.summary.scalar('Losses/Reward Loss',rewardLoss,curr_episode)
         tf.summary.scalar('Losses/Value Loss',valueLoss,curr_episode)
