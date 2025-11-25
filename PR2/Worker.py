@@ -413,7 +413,7 @@ class Worker():
 
         penalty_tensor=tf.cond(is_no_goalguide_condition,
                             lambda: tf.zeros_like(V) ,
-                            lambda: -distance_from_goalguide*0.2)
+                            lambda: -distance_from_goalguide*0.3)
 
         V+=penalty_tensor
         
