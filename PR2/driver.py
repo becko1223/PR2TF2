@@ -427,12 +427,16 @@ class ReplayBuffer():
     def sample(self, batch_size, horizon):
 
         rng = np.random.default_rng()
+        """
         r=rng.normal(0,len(self.indexlist)//10,batch_size)
         r=np.abs(r)
         r=np.clip(r,0,len(self.indexlist)-1)
         r=r.astype(int)
 
         sample_ids=-r+(len(self.indexlist)-1)
+        """
+
+        sample_ids=rng.integers(0,len(self.indexlist),batch_size)
         
 
         # バッファからデータを取得
