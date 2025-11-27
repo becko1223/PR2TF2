@@ -123,6 +123,9 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
     rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
     
+    #latentのターゲットを出す(b,s,h,w,c)
+    batch_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
+
 
     #アクター以外訓練
     with tf.GradientTape() as tape:
@@ -159,9 +162,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         batch_q2value_preds=tf.squeeze(batch_q2value_preds)
 
 
-        #latentのターゲットを出す(b,s,h,w,c)
-        batch_latent_targets,_=tf.stop_gradient(global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1]))
-
+        
 
         #q target出す
         policy=global_network.policy(batch_latent_preds)
