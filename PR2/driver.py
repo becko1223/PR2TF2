@@ -160,7 +160,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
 
         #latentのターゲットを出す(b,s,h,w,c)
-        batch_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
+        batch_latent_targets,_=tf.stop_gradient(global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1]))
 
 
         #q target出す
