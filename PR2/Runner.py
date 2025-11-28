@@ -95,13 +95,11 @@ class Runner(object):
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,11,11,11])
-        dummy_goals=tf.zeros([1,1,3])   
-        dummy_h_state=tf.zeros([1,512]) 
-        dummy_c_state=tf.zeros([1,512])  
-        dummy_latents=tf.zeros([1,1,512])
+        dummy_goals=tf.zeros([1,1,3])    
+        dummy_latents=tf.zeros([1,1,1,1,64])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        self.localNetwork.encode(dummy_obs,dummy_goals,dummy_h_state,dummy_c_state)
+        self.localNetwork.encode(dummy_obs,dummy_goals)
         self.localNetwork.dynamics(dummy_latents,dummy_actions) 
         self.localNetwork.policy(dummy_latents)
         self.localNetwork.reward(dummy_latents,dummy_actions)
@@ -158,7 +156,6 @@ class Runner(object):
         goalsResults = []
         actionsResults=[]
         rewardsResults=[]
-        statesResults=[]
         validsResults=[]
 
 
@@ -171,7 +168,6 @@ class Runner(object):
                 goalsResults = goalsResults + w.all_goals_buffer
                 actionsResults = actionsResults + w.all_actions_buffer
                 rewardsResults = rewardsResults + w.all_rewards_buffer
-                statesResults = statesResults + w.all_states_buffer
                 validsResults = validsResults + w.all_valids_buffer
     
             
@@ -214,7 +210,7 @@ class Runner(object):
                 print(f"gradient[{i}] length: {len(grads)}")
         print("mean_finishes:",mean_finishes)
         
-        return obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, all_metrics, is_imitation
+        return obsResults, goalsResults, actionsResults, rewardsResults, validsResults, all_metrics, is_imitation
     
 
     def imitationLearningJob(self, episodeNumber):

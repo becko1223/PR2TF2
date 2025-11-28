@@ -111,9 +111,9 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 
 
 @tf.function
-def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids):
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids):
 
-    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
     all_trainable_variables = global_network.trainable_variables
     variables_except_for_actor = [
@@ -123,9 +123,9 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
     rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
     
-    _,batch_states_step1=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+
     #latentのターゲットを出す(b,s,h,w,c)
-    batch_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],batch_states_step1[0],batch_states_step1[1])
+    batch_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
 
 
     #アクター以外訓練
@@ -140,7 +140,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
-        latent_init,batch_states_step1=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_states[:,0],[-1,512]),tf.reshape(batch_states[:,1],[-1,512]))
+        latent_init=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
 
         #latent,rewardの予測値
         batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
@@ -237,18 +237,17 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
 
 
-def update(global_network, obs,goals,actions,rewards,states,valids, world_optimizer,policy_optimizer, curr_episode):
+def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode):
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
     batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
     batch_rewards=tf.convert_to_tensor(rewards,dtype=tf.float32)
     batch_actions=tf.convert_to_tensor(actions,dtype=tf.int32)
     batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
-    batch_states=tf.convert_to_tensor(states,dtype=tf.float32)
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
     
 
-    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
     all_trainable_variables = global_network.trainable_variables
     variables_except_for_actor = [
@@ -257,7 +256,7 @@ def update(global_network, obs,goals,actions,rewards,states,valids, world_optimi
     ]
 
     
-    world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions, batch_states, batch_valids)
+    world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids)
 
     var_norms = tf.linalg.global_norm(global_network.trainable_variables)
 
@@ -350,7 +349,6 @@ class ReplayBuffer():
         self.goals_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
-        self.states_buffer = []
         self.valids_buffer = []
 
         self.indexlist = []
@@ -368,7 +366,6 @@ class ReplayBuffer():
                     self.goals_buffer=data["goals_buffer"]
                     self.actions_buffer=data["actions_buffer"]
                     self.rewards_buffer=data["rewards_buffer"]
-                    self.states_buffer=data["states_buffer"]
                     self.valids_buffer=data["valids_buffer"]
                     self.indexlist=data["indexlist"]
                     
@@ -381,7 +378,7 @@ class ReplayBuffer():
        
 
 
-    def add(self, obs, goals, actions, rewards, states, valids):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
+    def add(self, obs, goals, actions, rewards, valids):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
         if self.iter >= replay_buffer_size:
             deleted_obs=self.obs_buffer.pop(0)
             self.obs_buffer.append(obs)
@@ -391,8 +388,6 @@ class ReplayBuffer():
             self.actions_buffer.append(actions)
             self.rewards_buffer.pop(0)
             self.rewards_buffer.append(rewards)
-            self.states_buffer.pop(0)
-            self.states_buffer.append(states)
             self.valids_buffer.pop(0)
             self.valids_buffer.append(valids)
 
@@ -416,7 +411,6 @@ class ReplayBuffer():
             self.goals_buffer.append(goals)
             self.actions_buffer.append(actions)
             self.rewards_buffer.append(rewards)
-            self.states_buffer.append(states)
             self.valids_buffer.append(valids)
 
             for i in range(len(obs)-horizon):
@@ -446,7 +440,6 @@ class ReplayBuffer():
         goals= np.empty((batch_size,horizon+1,3))
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
-        states = np.empty((batch_size,2,1,512),dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
 
         for i in range(batch_size):
@@ -454,12 +447,11 @@ class ReplayBuffer():
             goals[i]=np.stack(self.goals_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             actions[i]=np.stack(self.actions_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
             rewards[i]=np.stack(self.rewards_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
-            states[i]=np.stack(self.states_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]])
             valids[i]=np.stack(self.valids_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
 
 
         
-        return obs,goals,actions,rewards,states,valids
+        return obs,goals,actions,rewards,valids
     
     def save(self):
         with open("replay_buffer/rb_data.pkl",'wb') as f:
@@ -468,7 +460,6 @@ class ReplayBuffer():
                 data["goals_buffer"]=self.goals_buffer
                 data["actions_buffer"]=self.actions_buffer
                 data["rewards_buffer"]=self.rewards_buffer
-                data["states_buffer"]=self.states_buffer
                 data["valids_buffer"]=self.valids_buffer
                 data["indexlist"]=self.indexlist
                 
@@ -488,12 +479,10 @@ def main():
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,11,11,11])
         dummy_goals=tf.zeros([1,1,3])   
-        dummy_h_state=tf.zeros([1,512]) 
-        dummy_c_state=tf.zeros([1,512])  
-        dummy_latents=tf.zeros([1,1,512])
+        dummy_latents=tf.zeros([1,1,11,11,64])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        global_network.encode(dummy_obs,dummy_goals,dummy_h_state,dummy_c_state)
+        global_network.encode(dummy_obs,dummy_goals)
         global_network.dynamics(dummy_latents,dummy_actions) 
         global_network.policy(dummy_latents)
         global_network.reward(dummy_latents,dummy_actions)
@@ -501,7 +490,7 @@ def main():
         global_network.q2(dummy_latents,dummy_actions)
         
 
-        variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+        variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
         actor_variable_names = set([v.name for v in variables_for_actor])
         all_trainable_variables = global_network.trainable_variables
         variables_except_for_actor = [
@@ -581,17 +570,17 @@ def main():
             #jobResults, metrics, info = ray.get(done_id)[0]
 
 
-            obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, metrics, info= ray.get(done_id)[0]
+            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, metrics, info= ray.get(done_id)[0]
 
             all_loss=[]
             
-            if obsResults and goalsResults and actionsResults and rewardsResults and statesResults and validsResults:
+            if obsResults and goalsResults and actionsResults and rewardsResults and validsResults:
                 for i in range(len(obsResults)):
-                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],statesResults[i],validsResults[i])
+                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i])
                 if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(NUM_THREADS*max_episode_length):
-                        obs,goals,actions,rewards,states,valids=replaybuffer.sample(batch_size,horizon)
-                        loss_list=update(global_network,obs,goals,actions,rewards,states,valids,world_optimizer,policy_optimizer,curr_episode)
+                        obs,goals,actions,rewards,valids=replaybuffer.sample(batch_size,horizon)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
                         print("update loop")
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))

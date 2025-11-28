@@ -8,6 +8,7 @@ GRAD_CLIP = 10.0
 KEEP_PROB1 = 1  # was 0.5
 KEEP_PROB2 = 1  # was 0.7
 RNN_SIZE = 512
+FILTER=64
 GOAL_REPR_SIZE = 12
 A_SIZE=5
 
@@ -42,175 +43,160 @@ class ACRDNet(tf.keras.Model):
         w_init = tf.keras.initializers.VarianceScaling()
 
         #エンコード
-        self.vgg1_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.maxpool1=layers.MaxPool2D(2)
+        self.encode_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.encode_res1_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.encode_res1_conv2=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.encode_layernorm1=layers.LayerNormalization()
+        self.encode_res2_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.encode_res2_conv2=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.encode_layernorm2=layers.LayerNormalization()
+        
 
-        self.vgg2_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.maxpool2=layers.MaxPool2D(2)
-
-        self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
-
-        self.flat=layers.Flatten()
-        self.actflat=layers.ReLU()
-
-        self.goal_layer=layers.Dense(units=GOAL_REPR_SIZE,activation='relu')
-
-
-        self.h1=layers.Dense(units=RNN_SIZE,activation='relu')
-        self.d1=layers.Dropout(rate=1-KEEP_PROB1)
-        self.h2=layers.Dense(units=RNN_SIZE,activation='relu')
-        self.d2=layers.Dropout(rate=1-KEEP_PROB2)
-
-        self.h3=layers.ReLU()
-
-        self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)
-
-        self.h0=tf.zeros((1,RNN_SIZE))
-        self.c0=tf.zeros((1,RNN_SIZE))
 
 
         #状態遷移
-        self.dynamics_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.dynamics_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.dynamics_dense3=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
-        
+        self.dynamics_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.dynamics_res1_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.dynamics_res1_conv2=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.dynamics_layernorm1=layers.LayerNormalization()
+        self.dynamics_res2_conv1=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.dynamics_res2_conv2=layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.dynamics_layernorm2=layers.LayerNormalization()
 
                          
         #方策、価値、報酬
-        self.policy_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.policy_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.policy_dense3=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
+        self.policy_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')  #flattenに際し、チャンネル数を減らす。
+        self.policy_flatten=layers.Flatten()
+        self.policy_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.policy_dense2=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
-        self.q1_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
-        self.q1_layernorm=layers.LayerNormalization()
-        #実行時tanh
-        self.q1_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.q1_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+        self.q1_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.q1_flatten=layers.Flatten()
+        self.q1_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.q1_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
         
-        self.q2_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None))
-        self.q2_layernorm=layers.LayerNormalization()
-        #実行時tanh
-        self.q2_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.q2_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+        self.q2_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.q2_flatten=layers.Flatten()
+        self.q2_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.q2_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
        
         
-        self.reward_dense1=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.reward_dense2=layers.Dense(units=512,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
-        self.reward_dense3=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0))
+        self.reward_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.reward_flatten=layers.Flatten()
+        self.reward_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
+        self.reward_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
 
 
     @tf.function(input_signature=[
                         tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
                         tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
-                        tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
-                        tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
                     ])
-    def encode(self,inputs,goal_pos,h_state,c_state):
+    def encode(self,inputs,goal_pos):
         x=inputs
         
             
         x=tf.transpose(x, perm=[0, 1, 3, 4, 2])
 
-        x=layers.TimeDistributed(self.vgg1_conv1)(x)
-        x=layers.TimeDistributed(self.vgg1_conv2)(x)
-        x=layers.TimeDistributed(self.vgg1_conv3)(x)
-        x=layers.TimeDistributed(self.maxpool1)(x)
+        y=tf.expand_dims(tf.expand_dims(goal_pos,2),2)
+        y=tf.tile(y,[y.shape[0],y.shape[1],11,11,y.shape[-1]])
 
-        x=layers.TimeDistributed(self.vgg2_conv1)(x)
-        x=layers.TimeDistributed(self.vgg2_conv2)(x)
-        x=layers.TimeDistributed(self.vgg2_conv3)(x)
-        x=layers.TimeDistributed(self.maxpool2)(x)
+        x=tf.concat([x,y],axis=-1)
 
-        x=layers.TimeDistributed(self.conv3)(x)
-        x=tf.reshape(x,[tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[4]])
-        x=self.actflat(x)
-
-        y=goal_pos
-        
-        y=self.goal_layer(y)
-
-        x=tf.concat([x,y],-1)
+        x=layers.TimeDistributed(self.encode_conv1)(x)
+        skip=x
+        x=layers.TimeDistributed(self.encode_res1_conv1)(x)
+        x=layers.TimeDistributed(self.encode_res1_conv2)(x)
+        x=x+skip
+        x=layers.TimeDistributed(self.encode_layernorm1)(x)
 
         skip=x
+        x=layers.TimeDistributed(self.encode_res2_conv1)(x)
+        x=layers.TimeDistributed(self.encode_res2_conv2)(x)
+        x=x+skip
+        x=layers.TimeDistributed(self.encode_layernorm2)(x)
 
-        x=self.h1(x)
-        x=self.d1(x)
-        x=self.h2(x)
-        x=self.d2(x)
-
-        x=self.h3(x+skip)
-
-
-        #x=tf.expand_dims(x,0)
-        x = tf.reshape(x, [tf.shape(x)[0],tf.shape(x)[1], RNN_SIZE])
         
-
-        lstm_out, state_h, state_c = self.lstm(x, initial_state=[h_state,c_state])
-        return lstm_out,[state_h,state_c]
+        return x
     
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 11,11,FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, A_SIZE], dtype=tf.float32)
     ])
     def dynamics(self,latent,action):
-        x=tf.concat([latent,action],-1)
-        x=self.dynamics_dense1(x)
-        x=self.dynamics_dense2(x)
-        x=self.dynamics_dense3(x)
+        x=latent
+        y=action
+        y=tf.expand_dims(tf.expand_dims(y,2),2)
+        y=tf.tile(y,[y.shape[0],y.shape[1],11,11,y.shape[-1]])
+        x=tf.concat([x,y],axis=-1)
+        x=layers.TimeDistributed(self.dynamics_conv1)(x)
+        x=layers.TimeDistributed(self.dynamics_res1_conv1)(x)
+        x=layers.TimeDistributed(self.dynamics_res1_conv2)(x)
+        x=self.dynamics_layernorm1(x)
+        x=layers.TimeDistributed(self.dynamics_res2_conv1)(x)
+        x=layers.TimeDistributed(self.dynamics_res2_conv2)(x)
+        x=self.dynamics_layernorm2(x)
         return x
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None,11, 11, FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def reward(self,latent,action):
-        x=tf.concat([latent,action],-1)
+        x=latent
+        y=action
+        y=tf.expand_dims(tf.expand_dims(y,2),2)
+        y=tf.tile(y,[y.shape[0],y.shape[1],11,11,y.shape[-1]])
+        x=tf.concat([x,y],axis=-1)
+        x=layers.TimeDistributed(self.reward_conv1)(x)
+        x=self.reward_flatten(x)
         x=self.reward_dense1(x)
         x=self.reward_dense2(x)
-        x=self.reward_dense3(x)
-        return x
+        
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[None, None,11,11, FILTER], dtype=tf.float32)
     ])
     def policy(self,latent):
-        x=self.policy_dense1(latent)
+        x=layers.TimeDistributed(self.policy_conv1)(latent)
+        x=self.policy_flatten(x)
+        x=self.policy_dense1(x)
         x=self.policy_dense2(x)
-        x=self.policy_dense3(x)
       
         return x
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None,11,11, FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def q1(self,latent,action):
-        x=tf.concat([latent,action],-1)
+        x=latent
+        y=action
+        y=tf.expand_dims(tf.expand_dims(y,2),2)
+        y=tf.tile(y,[y.shape[0],y.shape[1],11,11,y.shape[-1]])
+        x=tf.concat([x,y],axis=-1)
+        x=layers.TimeDistributed(self.q1_conv1)(x)
+        x=self.q1_flatten(x)
         x=self.q1_dense1(x)
-        x=self.q1_layernorm(x)
-        x=tf.keras.activations.tanh(x)
         x=self.q1_dense2(x)
-        x=self.q1_dense3(x)
         return x
   
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None,11,11, FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def q2(self,latent,action):
-        x=tf.concat([latent,action],-1)
+        x=latent
+        y=action
+        y=tf.expand_dims(tf.expand_dims(y,2),2)
+        y=tf.tile(y,[y.shape[0],y.shape[1],11,11,y.shape[-1]])
+        x=tf.concat([x,y],axis=-1)
+        x=layers.TimeDistributed(self.q2_conv1)(x)
+        x=self.q2_flatten(x)
         x=self.q2_dense1(x)
-        x=self.q2_layernorm(x)
-        x=tf.keras.activations.tanh(x)
         x=self.q2_dense2(x)
-        x=self.q2_dense3(x)
         return x
    
 

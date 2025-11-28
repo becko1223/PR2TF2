@@ -16,6 +16,7 @@ from parameters import *
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
+FILTER_SIZE=64
 
 
 # helper functions
@@ -99,7 +100,7 @@ class Worker():
         
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, 1, RNN_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[None, 1,11,11, FILTER_SIZE], dtype=tf.float32)
     ])
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
 
@@ -282,7 +283,7 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
-        tf.TensorSpec(shape=[None,1,512],dtype=tf.float32),
+        tf.TensorSpec(shape=[None,1,11,11,FILTER_SIZE],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[1], dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)
@@ -458,7 +459,7 @@ class Worker():
 
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[1,1, 512], dtype=tf.float32),
+        tf.TensorSpec(shape=[1,1, 11,11,FILTER_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[1],dtype=tf.bool),
@@ -761,7 +762,6 @@ class Worker():
             actions_buffer = [] #np.zeros((256,1))
             rewards_buffer = [] #np.zeros((256,1))
             valids_buffer = [] #np.zeros((256,5))
-            states_buffer = []
             episode_values = []
             episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_collision_count= 0
 
@@ -785,11 +785,7 @@ class Worker():
 
             s = joint_observations[self.metaAgentID][self.agentID]
 
-            h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            rnn_state = [h_init, c_init]
-            rnn_state0 = rnn_state
-
+           
             is_first_step=True
 
             pred_latent = tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
@@ -831,42 +827,10 @@ class Worker():
                     goal=tf.expand_dims(goal,0)
                     goal=tf.cast(goal,dtype=tf.float32)
 
-                    #print("ob shape:",ob.shape)
-                    #print("goal shape:",goal.shape)
-                    try:
-                        tf.ensure_shape(rnn_state[0],[1,512])
-                        tf.ensure_shape(rnn_state[1],[1,512])
-                    except Exception as e:
-                        print("state ensure error, step:",episode_step_count)
-                        h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-                        c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-                        rnn_state = [h_init, c_init]
-
-                    try:
-                        tf.ensure_shape(rnn_state[0],[1,512])
-                        tf.ensure_shape(rnn_state[1],[1,512])
-                    except Exception as e:
-                        print("state ensure error2")
-                        h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-                        c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-                        rnn_state = [h_init, c_init]
+                    
 
 
-                    try:
-                        tf.ensure_shape(mean,[horizon,a_size])
-                    except Exception as e:
-                        print("mean ensure error, step:",episode_step_count)
-                        mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
-
-                    try:
-                        tf.ensure_shape(mean,[horizon,a_size])
-                    except Exception as e:
-                        print("mean ensure error2")
-                        mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
-
-
-
-                    latent_init,next_rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    latent_init=self.local_ACRD.encode(ob,goal)
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
@@ -982,14 +946,14 @@ class Worker():
                         actions_buffer.append(a)
                         rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID]+error_reward)
                         valids_buffer.append(train_valid)
-                        states_buffer.append(rnn_state)
+                        
                         
                     episode_reward += r
                     episode_step_count += 1
 
                     # Update State
                     s = s1
-                    rnn_state=next_rnn_state
+                    
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
@@ -1005,7 +969,6 @@ class Worker():
                             goals_buffer.append(s[1])
                             actions_buffer.append(0)
                             rewards_buffer.append(0)
-                            states_buffer.append(rnn_state)
                             train_valid = np.zeros(a_size)
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
@@ -1020,14 +983,12 @@ class Worker():
                         self.all_goals_buffer.append(goals_buffer)
                         self.all_actions_buffer.append(actions_buffer)
                         self.all_rewards_buffer.append(rewards_buffer)
-                        self.all_states_buffer.append(states_buffer)
                         self.all_valids_buffer.append(valids_buffer)
 
                         obs_buffer=[]
                         goals_buffer=[]
                         actions_buffer=[]
                         rewards_buffer=[]
-                        states_buffer=[]
                         valids_buffer=[]
 
 
