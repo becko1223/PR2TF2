@@ -65,24 +65,24 @@ class ACRDNet(tf.keras.Model):
 
                          
         #方策、価値、報酬
-        self.policy_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')  #flattenに際し、チャンネル数を減らす。
+        self.policy_conv1=layers.Conv2D(filters=FILTER//2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')  #flattenに際し、チャンネル数を減らす。
         self.policy_flatten=layers.Flatten()
         self.policy_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.policy_dense2=layers.Dense(units=A_SIZE,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
-        self.q1_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.q1_conv1=layers.Conv2D(filters=FILTER//2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.q1_flatten=layers.Flatten()
         self.q1_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.q1_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
         
-        self.q2_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.q2_conv1=layers.Conv2D(filters=FILTER//2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.q2_flatten=layers.Flatten()
         self.q2_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.q2_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
        
         
-        self.reward_conv1=layers.Conv2D(filters=FILTER/2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.reward_conv1=layers.Conv2D(filters=FILTER//2,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.reward_flatten=layers.Flatten()
         self.reward_dense1=layers.Dense(units=256,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="elu")
         self.reward_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
