@@ -136,6 +136,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
             prev_latents,_=carry
             latents = global_network.dynamics(prev_latents,elem)
             rewards= global_network.reward(prev_latents,elem)
+            rewards.set_shape([batch_size, 1, 1])
             return (latents,rewards)
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
@@ -146,8 +147,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
             fn=dynamics,
             elems=batch_actions_T,     
-            initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32)),
-            infer_shape=False
+            initializer=(latent_init,tf.zeros([batch_size,1,1], dtype=tf.float32))
             )
         
         batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
