@@ -245,7 +245,7 @@ class Runner(object):
                 jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-                obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
+                obsResults, goalsResults, actionsResults, rewardsResults,  validsResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
                 print("not implemented")
@@ -261,7 +261,7 @@ class Runner(object):
                 "is_imitation": is_imitation
             }
 
-            result= obsResults, goalsResults, actionsResults, rewardsResults, statesResults, validsResults, metrics, info
+            result= obsResults, goalsResults, actionsResults, rewardsResults, validsResults, metrics, info
             return result
         except Exception as e:
             import traceback
