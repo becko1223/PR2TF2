@@ -155,6 +155,7 @@ class ACRDNet(tf.keras.Model):
         x = layers.TimeDistributed(self.reward_flatten)(x)
         x=self.reward_dense1(x)
         x=self.reward_dense2(x)
+        return x
         
     
     @tf.function(input_signature=[
