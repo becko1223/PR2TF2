@@ -160,9 +160,7 @@ class ACRDNet(tf.keras.Model):
         y=tf.tile(y,[B,S,11,11,y.shape[-1]])
         x=tf.concat([x,y],axis=-1)
         x=layers.TimeDistributed(self.reward_conv1)(x)
-        x_shape=tf.shape(x)
-        #x=self.reward_flatten(x)
-        x=tf.reshape(x,[x_shape[0],x_shape[1],-1])
+        x = layers.TimeDistributed(self.reward_flatten)(x)
         x=self.reward_dense1(x)
         x=self.reward_dense2(x)
         
@@ -192,9 +190,7 @@ class ACRDNet(tf.keras.Model):
         y=tf.tile(y,[B,S,11,11,y.shape[-1]])
         x=tf.concat([x,y],axis=-1)
         x=layers.TimeDistributed(self.q1_conv1)(x)
-        x_shape=tf.shape(x)
-        #x=self.q1_flatten(x)
-        x=tf.reshape(x,[x_shape[0],x_shape[1],-1])
+        x = layers.TimeDistributed(self.q1_flatten)(x)
         x=self.q1_dense1(x)
         x=self.q1_dense2(x)
         return x
@@ -213,9 +209,7 @@ class ACRDNet(tf.keras.Model):
         y=tf.tile(y,[B,S,11,11,y.shape[-1]])
         x=tf.concat([x,y],axis=-1)
         x=layers.TimeDistributed(self.q2_conv1)(x)
-        x_shape=tf.shape(x)
-        #x=self.q2_flatten(x)
-        x=tf.reshape(x,[x_shape[0],x_shape[1],-1])
+        x = layers.TimeDistributed(self.q2_flatten)(x)
         x=self.q2_dense1(x)
         x=self.q2_dense2(x)
         return x
