@@ -788,7 +788,7 @@ class Worker():
            
             is_first_step=True
 
-            pred_latent = tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
+            pred_latent = tf.zeros([11,11,64], dtype=tf.float32)
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
@@ -973,7 +973,7 @@ class Worker():
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
                             targets_done += 1
-                            pred_latent=tf.zeros([1,1,RNN_SIZE], dtype=tf.float32)
+                            pred_latent=tf.zeros([11,11,64], dtype=tf.float32)
 
                    
                             
