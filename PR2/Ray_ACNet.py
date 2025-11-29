@@ -172,9 +172,7 @@ class ACRDNet(tf.keras.Model):
     ])
     def policy(self,latent):
         x=layers.TimeDistributed(self.policy_conv1)(latent)
-        x_shape=tf.shape(x)
-        #x=self.policy_flatten(x)
-        x=tf.reshape(x,[x_shape[0],x_shape[1],-1])
+        x = layers.TimeDistributed(self.policy_flatten)(x)
         x=self.policy_dense1(x)
         x=self.policy_dense2(x)
       
