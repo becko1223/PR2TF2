@@ -579,7 +579,7 @@ def main():
                 for i in range(len(obsResults)):
                     replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i])
                 if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
-                    for i in range(NUM_THREADS*max_episode_length):
+                    for i in range(NUM_THREADS*max_episode_length/4):
                         obs,goals,actions,rewards,valids=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
