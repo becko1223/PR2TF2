@@ -248,7 +248,7 @@ def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,pol
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
     
 
-    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
+    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
     all_trainable_variables = global_network.trainable_variables
     variables_except_for_actor = [
@@ -491,7 +491,7 @@ def main():
         global_network.q2(dummy_latents,dummy_actions)
         
 
-        variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
+        variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
         actor_variable_names = set([v.name for v in variables_for_actor])
         all_trainable_variables = global_network.trainable_variables
         variables_except_for_actor = [
