@@ -498,6 +498,9 @@ def main():
             v for v in all_trainable_variables 
             if v.name not in actor_variable_names
         ]
+        print(f"全訓練可能変数数: {len(all_trainable_variables)}")
+        print(f"アクター変数数: {len(variables_for_actor)}")
+        print(f"アクター以外変数数: {len(variables_except_for_actor)}")
 
         dummy_world_grads = [tf.zeros_like(v) for v in variables_except_for_actor]
         dummy_policy_grads = [tf.zeros_like(v) for v in variables_for_actor]
