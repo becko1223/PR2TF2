@@ -480,7 +480,7 @@ def main():
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,11,11,11])
         dummy_goals=tf.zeros([1,1,3])   
-        dummy_latents=tf.zeros([1,1,11,11,64])
+        dummy_latents=tf.zeros([1,1,11,11,32])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         global_network.encode(dummy_obs,dummy_goals)

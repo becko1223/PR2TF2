@@ -16,7 +16,7 @@ from parameters import *
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
-FILTER_SIZE=64
+FILTER_SIZE=32
 
 
 # helper functions
