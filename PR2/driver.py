@@ -86,7 +86,7 @@ else:
 
 def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer, curr_episode):
 
-    variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables+global_network.policy_dense3.trainable_variables
+    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
     all_trainable_variables = global_network.trainable_variables
     variables_except_for_actor = [
@@ -113,7 +113,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 @tf.function
 def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids):
 
-    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
+    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     actor_variable_names = set([v.name for v in variables_for_actor])
     all_trainable_variables = global_network.trainable_variables
     variables_except_for_actor = [

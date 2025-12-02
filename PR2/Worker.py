@@ -100,7 +100,7 @@ class Worker():
         
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, 1,11,11, FILTER_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[num_actor_traj, 1,11,11, FILTER_SIZE], dtype=tf.float32)
     ])
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
 
@@ -137,7 +137,6 @@ class Worker():
 
        
         current_latent = latent_inits 
-        B=tf.shape(current_latent)[0]
         
         actions_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
 
@@ -161,7 +160,7 @@ class Worker():
             actions_onehot = tf.expand_dims(actions_onehot, axis=1) 
             
             # Predict Next Latent (B, 1, dim)
-            current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot).set_shape([B,1,11,11,FILTER_SIZE])
+            current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot).set_shape([num_actor_traj,1,11,11,FILTER_SIZE])
             
             # 結果をTensorArrayに書き込む (B, A_SIZE)
             actions_ta = actions_ta.write(t, tf.squeeze(actions_onehot, axis=1))
