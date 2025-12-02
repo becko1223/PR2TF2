@@ -137,6 +137,7 @@ class Worker():
 
        
         current_latent = latent_inits 
+        B=tf.shape(current_latent)[0]
         
         actions_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False)
 
@@ -159,8 +160,8 @@ class Worker():
             actions_onehot = tf.one_hot(actions, a_size)
             actions_onehot = tf.expand_dims(actions_onehot, axis=1) 
             
-            # Predict Next Latent (B, 1, 512)
-            current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot)
+            # Predict Next Latent (B, 1, dim)
+            current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot).set_shape([B,1,11,11,FILTER_SIZE])
             
             # 結果をTensorArrayに書き込む (B, A_SIZE)
             actions_ta = actions_ta.write(t, tf.squeeze(actions_onehot, axis=1))
