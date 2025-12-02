@@ -649,7 +649,23 @@ def main():
             #jobResults, metrics, info = ray.get(done_id)[0]
 
 
-            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, metrics, info= ray.get(done_id)[0]
+
+            result = ray.get(done_id)[0]
+
+            # エラーチェック: 辞書型かつ "error" キーが含まれている場合は失敗とみなす
+            if isinstance(result, dict) and "error" in result:
+                print("\n========== WORKER ERROR DETECTED ==========")
+                print(f"Error Type: {result['error_type']}")
+                print(f"Error Message: {result['error']}")
+                print("Traceback:")
+                print(result['traceback'])
+                print("===========================================\n")
+                # エラーが起きたので、このエピソードはスキップするか、プログラムを停止する
+                # 必要に応じて exit() などを入れてください
+                continue 
+
+            # 正常終了の場合のみアンパックする
+            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, metrics, info = result
 
             all_loss=[]
             
