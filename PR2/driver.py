@@ -147,9 +147,9 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 
 
 @tf.function
-def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, variables_for_actor, variables_except_for_actor):
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids):
 
-    
+   
     rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
     
 
@@ -226,7 +226,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         consistency_loss=tf.reduce_mean(tf.expand_dims(tf.expand_dims(tf.expand_dims(rhos,axis=-1),-1),-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
         total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
-    world_grads=tape.gradient(total_loss,variables_except_for_actor)
+    world_grads=tape.gradient(total_loss,global_network.cashed_world_vars)
 
 
     with tf.GradientTape() as tape:
@@ -262,12 +262,12 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
         total_loss=0.5*policy_loss+16*valid_loss+entropy
     
-    policy_grads=tape.gradient(total_loss,variables_for_actor)
+    policy_grads=tape.gradient(total_loss,global_network.cashed_policy_vars)
     return world_grads,policy_grads,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy]
 
 
 
-def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode,variables_for_actor, variables_except_for_actor):
+def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode):
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
     batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
@@ -280,7 +280,7 @@ def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,pol
     
 
     
-    world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, variables_for_actor,variables_except_for_actor)
+    world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids)
 
     var_norms = tf.linalg.global_norm(global_network.trainable_variables)
 
@@ -292,8 +292,8 @@ def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,pol
     loss_list.append(var_norms)
     
     
-    world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
-    policy_optimizer.apply_gradients(zip(policy_grads,variables_for_actor))
+    world_optimizer.apply_gradients(zip(world_grads,global_network.cashed_world_vars))
+    policy_optimizer.apply_gradients(zip(policy_grads,global_network.cashed_policy_vars))
     
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
@@ -574,11 +574,14 @@ def main():
         for v in variables_for_actor:
             print(v.name)
 
-        dummy_world_grads = [tf.zeros_like(v) for v in variables_except_for_actor]
-        dummy_policy_grads = [tf.zeros_like(v) for v in variables_for_actor]
+        global_network.cashed_actor_vars=variables_for_actor
+        global_network.cashed_world_vars=variables_except_for_actor
 
-        world_optimizer.apply_gradients(zip(dummy_world_grads, variables_except_for_actor))
-        policy_optimizer.apply_gradients(zip(dummy_policy_grads, variables_for_actor))
+        dummy_world_grads = [tf.zeros_like(v) for v in global_network.cashed_world_vars]
+        dummy_policy_grads = [tf.zeros_like(v) for v in global_network.cashed_actor_vars]
+
+        world_optimizer.apply_gradients(zip(dummy_world_grads, global_network.cashed_world_vars))
+        policy_optimizer.apply_gradients(zip(dummy_policy_grads, global_network.cashed_actor_vars))
      
 
         global_summary = tf.summary.create_file_writer(train_path)
@@ -656,7 +659,7 @@ def main():
                 if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(NUM_THREADS*max_episode_length//4):
                         obs,goals,actions,rewards,valids=replaybuffer.sample(batch_size,horizon)
-                        loss_list=update(global_network,obs,goals,actions,rewards,valids,world_optimizer,policy_optimizer,curr_episode,variables_for_actor,variables_except_for_actor)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
                         print("update loop")
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
