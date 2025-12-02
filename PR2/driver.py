@@ -499,6 +499,7 @@ def main():
         world_optimizer = tf.keras.optimizers.Nadam(learning_rate=float(1))
         policy_optimizer= tf.keras.optimizers.Nadam(learning_rate=float(1))
         global_network = ACRDNet()
+        weights=global_network.get_weights()
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,11,11,11])
@@ -626,7 +627,7 @@ def main():
     rl_agents = [RLRunner.remote(i, global_mean_finishes) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
     meta_agents = rl_agents 
 
-    weights=global_network.get_weights()
+    
 
 
     # launch the first job (e.g. getGradient) on each runner
