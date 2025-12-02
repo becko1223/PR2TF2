@@ -502,6 +502,13 @@ def main():
         print(f"アクター変数数: {len(variables_for_actor)}")
         print(f"アクター以外変数数: {len(variables_except_for_actor)}")
 
+        print("全変数表示:")
+        for v in all_trainable_variables:
+            print(v.name)
+        print("アクター変数表示：")
+        for v in variables_for_actor:
+            print(v.name)
+
         dummy_world_grads = [tf.zeros_like(v) for v in variables_except_for_actor]
         dummy_policy_grads = [tf.zeros_like(v) for v in variables_for_actor]
 
