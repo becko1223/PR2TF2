@@ -708,6 +708,7 @@ def main():
 
     # launch the first job (e.g. getGradient) on each runner
     jobList = [] # Ray ObjectIDs 
+    weights = global_network.get_weights()
     for i, meta_agent in enumerate(meta_agents):
         jobList.append(meta_agent.job.remote(weights, curr_episode, global_mean_finishes))
         curr_episode += 1
