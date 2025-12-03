@@ -362,7 +362,7 @@ class Worker():
             actions_expanded=tf.expand_dims(tf.repeat(tf.expand_dims(tf.one_hot(t,a_size),axis=0),B_size,axis=0),axis=1)
             q1_value=self.local_ACRD.q1(current_latents,actions_expanded)
             q2_value=self.local_ACRD.q2(current_latents,actions_expanded)
-            q_value=tf.minimum(q1_value,q2_value).set_shape([B_size,1,1])
+            q_value=tf.minimum(q1_value,q2_value).set_shape([None,1,1])
             q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value
 
 
