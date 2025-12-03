@@ -335,6 +335,7 @@ class Worker():
             #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
+            current_latents.set_shape([None,1,11,11,FILTER_SIZE])
             rewards_ta=rewards_ta.write(t,rewards*discount)
             discount*=gammma_tdmpc
 
