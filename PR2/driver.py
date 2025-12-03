@@ -146,7 +146,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
     global_step+=1
 
 
-@tf.function(jit_compile=True)
+@tf.function
 def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, world_optimizer, policy_optimizer):
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     
