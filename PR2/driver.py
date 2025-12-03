@@ -654,8 +654,8 @@ def main():
             print(v.name)
 
 
-        dummy_world_grads = [tf.zeros_like(v) for v in global_network.cashed_world_vars]
-        dummy_policy_grads = [tf.zeros_like(v) for v in global_network.cashed_actor_vars]
+        dummy_world_grads = [tf.zeros_like(v) for v in variables_except_for_actor]
+        dummy_policy_grads = [tf.zeros_like(v) for v in variables_for_actor]
 
         world_optimizer.apply_gradients(zip(dummy_world_grads, variables_except_for_actor))
         policy_optimizer.apply_gradients(zip(dummy_policy_grads, variables_for_actor))
