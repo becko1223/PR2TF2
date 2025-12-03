@@ -149,52 +149,47 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 @tf.function
 def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids):
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
-        """
-        variables_except_for_actor = [
-            v for v in all_trainable_variables 
-            if v.name not in actor_variable_names
-        ]
-        """
-        variables_except_for_actor = (
-            # エンコーダ
-            global_network.encode_conv1.trainable_variables +
-            global_network.encode_res1_conv1.trainable_variables +
-            global_network.encode_res1_conv2.trainable_variables +
-            global_network.encode_layernorm1.trainable_variables +
-            global_network.encode_res2_conv1.trainable_variables +
-            global_network.encode_res2_conv2.trainable_variables +
-            global_network.encode_layernorm2.trainable_variables +
-            
-            # ダイナミクス
-            global_network.dynamics_conv1.trainable_variables +
-            global_network.dynamics_res1_conv1.trainable_variables +
-            global_network.dynamics_res1_conv2.trainable_variables +
-            global_network.dynamics_layernorm1.trainable_variables +
-            global_network.dynamics_res2_conv1.trainable_variables +
-            global_network.dynamics_res2_conv2.trainable_variables +
-            global_network.dynamics_layernorm2.trainable_variables +
+    
+    variables_except_for_actor = (
+        # エンコーダ
+        global_network.encode_conv1.trainable_variables +
+        global_network.encode_res1_conv1.trainable_variables +
+        global_network.encode_res1_conv2.trainable_variables +
+        global_network.encode_layernorm1.trainable_variables +
+        global_network.encode_res2_conv1.trainable_variables +
+        global_network.encode_res2_conv2.trainable_variables +
+        global_network.encode_layernorm2.trainable_variables +
+        
+        # ダイナミクス
+        global_network.dynamics_conv1.trainable_variables +
+        global_network.dynamics_res1_conv1.trainable_variables +
+        global_network.dynamics_res1_conv2.trainable_variables +
+        global_network.dynamics_layernorm1.trainable_variables +
+        global_network.dynamics_res2_conv1.trainable_variables +
+        global_network.dynamics_res2_conv2.trainable_variables +
+        global_network.dynamics_layernorm2.trainable_variables +
 
-            # Q1
-            global_network.q1_conv1.trainable_variables +
-            global_network.q1_layernorm1.trainable_variables +
-            global_network.q1_dense1.trainable_variables +
-            global_network.q1_layernorm2.trainable_variables +
-            global_network.q1_dense2.trainable_variables +
+        # Q1
+        global_network.q1_conv1.trainable_variables +
+        global_network.q1_layernorm1.trainable_variables +
+        global_network.q1_dense1.trainable_variables +
+        global_network.q1_layernorm2.trainable_variables +
+        global_network.q1_dense2.trainable_variables +
 
-            # Q2
-            global_network.q2_conv1.trainable_variables +
-            global_network.q2_layernorm1.trainable_variables +
-            global_network.q2_dense1.trainable_variables +
-            global_network.q2_layernorm2.trainable_variables +
-            global_network.q2_dense2.trainable_variables +
+        # Q2
+        global_network.q2_conv1.trainable_variables +
+        global_network.q2_layernorm1.trainable_variables +
+        global_network.q2_dense1.trainable_variables +
+        global_network.q2_layernorm2.trainable_variables +
+        global_network.q2_dense2.trainable_variables +
 
-            # 報酬
-            global_network.reward_conv1.trainable_variables +
-            global_network.reward_layernorm1.trainable_variables +
-            global_network.reward_dense1.trainable_variables +
-            global_network.reward_layernorm2.trainable_variables +
-            global_network.reward_dense2.trainable_variables
-        )
+        # 報酬
+        global_network.reward_conv1.trainable_variables +
+        global_network.reward_layernorm1.trainable_variables +
+        global_network.reward_dense1.trainable_variables +
+        global_network.reward_layernorm2.trainable_variables +
+        global_network.reward_dense2.trainable_variables
+    )
 
    
     rhos=tf.convert_to_tensor([[rho**i for i in range(horizon)] for _ in range(batch_size)])
@@ -317,52 +312,47 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode):
 
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
-        """
-        variables_except_for_actor = [
-            v for v in all_trainable_variables 
-            if v.name not in actor_variable_names
-        ]
-        """
-        variables_except_for_actor = (
-            # エンコーダ
-            global_network.encode_conv1.trainable_variables +
-            global_network.encode_res1_conv1.trainable_variables +
-            global_network.encode_res1_conv2.trainable_variables +
-            global_network.encode_layernorm1.trainable_variables +
-            global_network.encode_res2_conv1.trainable_variables +
-            global_network.encode_res2_conv2.trainable_variables +
-            global_network.encode_layernorm2.trainable_variables +
-            
-            # ダイナミクス
-            global_network.dynamics_conv1.trainable_variables +
-            global_network.dynamics_res1_conv1.trainable_variables +
-            global_network.dynamics_res1_conv2.trainable_variables +
-            global_network.dynamics_layernorm1.trainable_variables +
-            global_network.dynamics_res2_conv1.trainable_variables +
-            global_network.dynamics_res2_conv2.trainable_variables +
-            global_network.dynamics_layernorm2.trainable_variables +
+    
+    variables_except_for_actor = (
+        # エンコーダ
+        global_network.encode_conv1.trainable_variables +
+        global_network.encode_res1_conv1.trainable_variables +
+        global_network.encode_res1_conv2.trainable_variables +
+        global_network.encode_layernorm1.trainable_variables +
+        global_network.encode_res2_conv1.trainable_variables +
+        global_network.encode_res2_conv2.trainable_variables +
+        global_network.encode_layernorm2.trainable_variables +
+        
+        # ダイナミクス
+        global_network.dynamics_conv1.trainable_variables +
+        global_network.dynamics_res1_conv1.trainable_variables +
+        global_network.dynamics_res1_conv2.trainable_variables +
+        global_network.dynamics_layernorm1.trainable_variables +
+        global_network.dynamics_res2_conv1.trainable_variables +
+        global_network.dynamics_res2_conv2.trainable_variables +
+        global_network.dynamics_layernorm2.trainable_variables +
 
-            # Q1
-            global_network.q1_conv1.trainable_variables +
-            global_network.q1_layernorm1.trainable_variables +
-            global_network.q1_dense1.trainable_variables +
-            global_network.q1_layernorm2.trainable_variables +
-            global_network.q1_dense2.trainable_variables +
+        # Q1
+        global_network.q1_conv1.trainable_variables +
+        global_network.q1_layernorm1.trainable_variables +
+        global_network.q1_dense1.trainable_variables +
+        global_network.q1_layernorm2.trainable_variables +
+        global_network.q1_dense2.trainable_variables +
 
-            # Q2
-            global_network.q2_conv1.trainable_variables +
-            global_network.q2_layernorm1.trainable_variables +
-            global_network.q2_dense1.trainable_variables +
-            global_network.q2_layernorm2.trainable_variables +
-            global_network.q2_dense2.trainable_variables +
+        # Q2
+        global_network.q2_conv1.trainable_variables +
+        global_network.q2_layernorm1.trainable_variables +
+        global_network.q2_dense1.trainable_variables +
+        global_network.q2_layernorm2.trainable_variables +
+        global_network.q2_dense2.trainable_variables +
 
-            # 報酬
-            global_network.reward_conv1.trainable_variables +
-            global_network.reward_layernorm1.trainable_variables +
-            global_network.reward_dense1.trainable_variables +
-            global_network.reward_layernorm2.trainable_variables +
-            global_network.reward_dense2.trainable_variables
-        )
+        # 報酬
+        global_network.reward_conv1.trainable_variables +
+        global_network.reward_layernorm1.trainable_variables +
+        global_network.reward_dense1.trainable_variables +
+        global_network.reward_layernorm2.trainable_variables +
+        global_network.reward_dense2.trainable_variables
+    )
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
     batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
