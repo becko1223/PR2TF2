@@ -146,8 +146,8 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
     global_step+=1
 
 
-@tf.function
-def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids):
+@tf.function(jit_compile=True)
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, world_optimizer, policy_optimizer):
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     
     variables_except_for_actor = (
@@ -305,54 +305,19 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         total_loss=0.5*policy_loss+16*valid_loss+entropy
     
     policy_grads=tape.gradient(total_loss,variables_for_actor)
-    return world_grads,policy_grads,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy]
+
+    world_grads, world_grad_norms = tf.clip_by_global_norm(world_grads, GRAD_CLIP)
+    policy_grads, policy_grad_norms=tf.clip_by_global_norm(policy_grads, GRAD_CLIP )
+
+    world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
+    policy_optimizer.apply_gradients(zip(policy_grads,variables_for_actor))
+
+    return world_grad_norms,policy_grad_norms,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy]
 
 
 
 def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode):
 
-    variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
-    
-    variables_except_for_actor = (
-        # エンコーダ
-        global_network.encode_conv1.trainable_variables +
-        global_network.encode_res1_conv1.trainable_variables +
-        global_network.encode_res1_conv2.trainable_variables +
-        global_network.encode_layernorm1.trainable_variables +
-        global_network.encode_res2_conv1.trainable_variables +
-        global_network.encode_res2_conv2.trainable_variables +
-        global_network.encode_layernorm2.trainable_variables +
-        
-        # ダイナミクス
-        global_network.dynamics_conv1.trainable_variables +
-        global_network.dynamics_res1_conv1.trainable_variables +
-        global_network.dynamics_res1_conv2.trainable_variables +
-        global_network.dynamics_layernorm1.trainable_variables +
-        global_network.dynamics_res2_conv1.trainable_variables +
-        global_network.dynamics_res2_conv2.trainable_variables +
-        global_network.dynamics_layernorm2.trainable_variables +
-
-        # Q1
-        global_network.q1_conv1.trainable_variables +
-        global_network.q1_layernorm1.trainable_variables +
-        global_network.q1_dense1.trainable_variables +
-        global_network.q1_layernorm2.trainable_variables +
-        global_network.q1_dense2.trainable_variables +
-
-        # Q2
-        global_network.q2_conv1.trainable_variables +
-        global_network.q2_layernorm1.trainable_variables +
-        global_network.q2_dense1.trainable_variables +
-        global_network.q2_layernorm2.trainable_variables +
-        global_network.q2_dense2.trainable_variables +
-
-        # 報酬
-        global_network.reward_conv1.trainable_variables +
-        global_network.reward_layernorm1.trainable_variables +
-        global_network.reward_dense1.trainable_variables +
-        global_network.reward_layernorm2.trainable_variables +
-        global_network.reward_dense2.trainable_variables
-    )
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
     batch_goals = tf.convert_to_tensor(goals,dtype=tf.float32)
@@ -365,20 +330,16 @@ def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,pol
     
 
     
-    world_grads,policy_grads,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids)
+    world_grad_norms,policy_grad_norms,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, world_optimizer,policy_optimizer)
 
     var_norms = tf.linalg.global_norm(global_network.trainable_variables)
 
-    world_grads, world_grad_norms = tf.clip_by_global_norm(world_grads, GRAD_CLIP)
-    policy_grads, policy_grad_norms=tf.clip_by_global_norm(policy_grads, GRAD_CLIP )
+    
 
     loss_list.append(world_grad_norms)
     loss_list.append(policy_grad_norms)
     loss_list.append(var_norms)
     
-    
-    world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
-    policy_optimizer.apply_gradients(zip(policy_grads,variables_for_actor))
     
     if ADAPT_LR:
         lr = LR_Q / tf.sqrt(ADAPT_COEFF * curr_episode + 1.0)
