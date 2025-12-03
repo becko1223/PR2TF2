@@ -100,7 +100,7 @@ class Worker():
         
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[num_actor_traj, 1,11,11, FILTER_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[None,None,11,11, FILTER_SIZE], dtype=tf.float32)
     ])
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
 
