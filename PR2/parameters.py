@@ -2,9 +2,9 @@ import numpy as np
 # Learning parameters
 
 gamma                   = .95  # discount rate for advantage estimation and reward discounting
-LR_Q                    = 2.e-5  # 8.e-5 / NUM_THREADS # default: 1e-5
+LR_Q                    = 1.e-4  # 8.e-5 / NUM_THREADS # default: 1e-5
 ADAPT_LR                = True
-ADAPT_COEFF             = 5.e-5  # the coefficient A in LR_Q/sqrt(A*steps+1) for calculating LR
+ADAPT_COEFF             = 2.e-4  # the coefficient A in LR_Q/sqrt(A*steps+1) for calculating LR
 EXPERIENCE_BUFFER_SIZE  = 256
 max_episode_length      = 256
 IL_MAX_EP_LENGTH        = 64

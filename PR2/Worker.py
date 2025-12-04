@@ -16,7 +16,7 @@ from parameters import *
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
-FILTER_SIZE=32
+FILTER_SIZE=16
 
 
 # helper functions
@@ -791,7 +791,7 @@ class Worker():
            
             is_first_step=True
 
-            pred_latent = tf.zeros([11,11,32], dtype=tf.float32)
+            pred_latent = tf.zeros([11,11,FILTER_SIZE], dtype=tf.float32)
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
@@ -960,7 +960,7 @@ class Worker():
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
                     # make an update step using that experience rollout.
-                    if (len(obs_buffer) > horizon) and (
+                    if (
                             (len(obs_buffer) % EXPERIENCE_BUFFER_SIZE == 0) or joint_done[self.metaAgentID][
                         self.agentID] or episode_step_count == max_episode_length):
                         
@@ -976,17 +976,17 @@ class Worker():
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
                             targets_done += 1
-                            pred_latent=tf.zeros([11,11,32], dtype=tf.float32)
+                            pred_latent=tf.zeros([11,11,FILTER_SIZE], dtype=tf.float32)
 
                    
                             
 
-                       
-                        self.all_obs_buffer.append(obs_buffer)
-                        self.all_goals_buffer.append(goals_buffer)
-                        self.all_actions_buffer.append(actions_buffer)
-                        self.all_rewards_buffer.append(rewards_buffer)
-                        self.all_valids_buffer.append(valids_buffer)
+                        if(len(obs_buffer)>horizon):
+                            self.all_obs_buffer.append(obs_buffer)
+                            self.all_goals_buffer.append(goals_buffer)
+                            self.all_actions_buffer.append(actions_buffer)
+                            self.all_rewards_buffer.append(rewards_buffer)
+                            self.all_valids_buffer.append(valids_buffer)
 
                         obs_buffer=[]
                         goals_buffer=[]
