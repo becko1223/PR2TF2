@@ -8,9 +8,10 @@ GRAD_CLIP = 10.0
 KEEP_PROB1 = 1  # was 0.5
 KEEP_PROB2 = 1  # was 0.7
 RNN_SIZE = 512
-FILTER=16
+FILTER=32
 GOAL_REPR_SIZE = 12
 A_SIZE=5
+from parameters import horizon
 
 
 # Used to initialize weights for policy and value output layers (Do we need to use that? Maybe not now)
@@ -51,7 +52,19 @@ class ACRDNet(tf.keras.Model):
         self.encode_res2_conv2=layers.TimeDistributed(layers.Conv2D(filters=FILTER,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation=None))
         self.encode_layernorm2=layers.TimeDistributed(layers.LayerNormalization())
         
+        #コミュニケーション
+        self.comm_encode_down=layers.TimeDistributed(layers.Conv2D(filters=FILTER,kernel_size=3,strides=2,padding="same",data_format="channels_last",activation='relu'))
+        self.comm_encode_flatten = layers.TimeDistributed(layers.Flatten())
+        self.comm_encode_action_flatten= layers.TimeDistributed(layers.Flatten())
+        self.comm_encode_vector=layers.TimeDistributed(layers.Dense(FILTER, activation=None))
 
+        self.comm_mha=layers.TimeDistributed(layers.MultiHeadAttention(heads=4,key_dim=FILTER,dropout=0.1))
+        self.comm_mha_layernorm=layers.LayerNormalization()
+        self.comm_feedforward1=layers.Dense(units=FILTER*4,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
+        self.comm_feedforward2=layers.Dense(units=FILTER,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
+        self.comm_ff_layernorm=layers.LayerNormalization()
+        self.comm_integrate_conv=layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu")
+        self.comm_final_conv=layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu")
 
 
         #状態遷移
@@ -81,6 +94,8 @@ class ACRDNet(tf.keras.Model):
         self.q1_dense2=layers.Dense(units=1,kernel_initializer=NormalizedColumnsInitializer(1.0/float(A_SIZE)))
 
 
+
+
         
         self.q2_conv1=layers.TimeDistributed(layers.Conv2D(filters=FILTER,kernel_size=1,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu'))
         self.q2_layernorm1=layers.TimeDistributed(layers.LayerNormalization())
@@ -102,7 +117,7 @@ class ACRDNet(tf.keras.Model):
 
 
     @tf.function(input_signature=[
-                        tf.TensorSpec(shape=[None, None, 11, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
+                        tf.TensorSpec(shape=[None, None, 11, 11, 7], dtype=tf.float32),  # obs (B, S,C, H, W)
                         tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
                     ])
     def encode(self,inputs,goal_pos):
@@ -133,6 +148,42 @@ class ACRDNet(tf.keras.Model):
         
         return x
     
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None,None,11,11,FILTER],dtype=tf.float32),
+        tf.TensorSpec(shape=[None,None,horizon-1,A_SIZE])
+    ])
+    def comm_encode(self,own_latent,tentative_actions):
+        x=self.comm_encode_down(own_latent)
+        x=self.comm_encode_flatten(x)
+        y=self.comm_encode_action_flatten(tentative_actions)
+        x=tf.concat([x,y],axis=-1)
+        x=self.comm_encode_vector(x)
+        return x
+    
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None,None,11,11,7]),
+        tf.TensorSpec(shape=[None, None, 1, FILTER], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, FILTER], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
+    ])
+    def communication(self,own_latent,own_message,all_messages,mask):
+        mha_output=self.comm_mha(query=own_message,key=all_messages,attention_mask=mask)
+        mha_output=self.comm_mha_layernorm(mha_output+own_message)
+
+        ff_output=self.comm_feedforward1(mha_output)
+        ff_output=self.comm_feedforward2(ff_output)
+        output=self.comm_ff_layernorm(mha_output+ff_output)
+
+        output=tf.expand_dims(tf.expand_dims(output,2),2)
+        output=tf.tile(output,[1,1,11,11,1])
+
+        integrate=tf.concat([own_latent,output],axis=-1)
+        integrate=self.comm_integrate_conv(integrate)
+        integrate=self.comm_final_conv(integrate)
+        return integrate
+
+
+
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None, None, 11,11,FILTER], dtype=tf.float32),
