@@ -18,7 +18,7 @@ import scipy.signal as signal
 
 from parameters import *
 
-FILTER_SIZE=16
+FILTER_SIZE=32
 
 
 class Runner(object):
