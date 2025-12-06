@@ -229,10 +229,11 @@ class Primal2Observer(ObservationBuilder):
         time6 = time.time() - start_time
         start_time = time.time()
 
-        return state, [dx, dy, mag], np.array([time1, time2, time3, time4, time5, time6])
+        return state, [dx, dy, mag],visible_agents, np.array([time1, time2, time3, time4, time5, time6])
 
     def get_many(self,joint_tentative_actions={}, handles=None):
         observations = {}
+        all_visible_agents = {}
         if (not TENTATIVE):
             all_astar_maps = self.get_astar_map()
             all_tentative_maps = None
@@ -245,12 +246,13 @@ class Primal2Observer(ObservationBuilder):
         times = np.zeros((1, 6))
 
         for h in handles:
-            state, vector, time = self._get(h, all_astar_maps,all_tentative_maps)
+            state, vector,visible_agents, time = self._get(h, all_astar_maps,all_tentative_maps)
             observations[h] = [state, vector]
+            all_visible_agents[h]=visible_agents
             times += time
         if self.printTime:
             print(times)
-        return observations
+        return observations,all_visible_agents
 
     def get_astar_map(self):
         """

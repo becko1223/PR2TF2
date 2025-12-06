@@ -830,10 +830,11 @@ class Worker():
                     goal=tf.expand_dims(goal,0)
                     goal=tf.cast(goal,dtype=tf.float32)
 
-                    
 
+                    encoded_obs=self.local_ACRD.encode(ob,goal)
+                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs
 
-                    latent_init=self.local_ACRD.encode(ob,goal)
+                    self.synchronize()
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
