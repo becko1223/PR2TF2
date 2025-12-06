@@ -15,7 +15,7 @@ from parameters import *
 import random
 
 GRAD_CLIP = 10.0
-
+FILTER=32
 
 ray.init(num_gpus=1)
 
@@ -147,7 +147,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 
 
 @tf.function
-def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, world_optimizer, policy_optimizer):
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives, world_optimizer, policy_optimizer):
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     
     variables_except_for_actor = (
@@ -159,6 +159,19 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         global_network.encode_res2_conv1.trainable_variables +
         global_network.encode_res2_conv2.trainable_variables +
         global_network.encode_layernorm2.trainable_variables +
+
+        #コミュニケーション
+        global_network.comm_encode_down.trainable_variables +
+        global_network.comm_encode_flatten.trainable_variables +
+        global_network.comm_encode_action_flatten.trainable_variables +
+        global_network.comm_encode_vector.trainable_variables +
+        global_network.comm_mha.trainable_variables +
+        global_network.comm_mha_layernorm.trainable_variables +
+        global_network.comm_feedforward1.trainable_variables +
+        global_network.comm_feedforward2.trainable_variables +
+        global_network.comm_ff_layernorm.trainable_variables +
+        global_network.comm_integrate_conv.trainable_variables +
+        global_network.comm_final_conv.trainable_variables +
         
         # ダイナミクス
         global_network.dynamics_conv1.trainable_variables +
@@ -196,7 +209,9 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     
 
     #latentのターゲットを出す(b,s,h,w,c)
-    batch_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
+    batch_pre_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
+    batch_comm_encoded_targets=global_network.comm_encode(batch_pre_latent_targets,batch_tentatives[:,1:])
+    batch_latent_targets=global_network.comm_communication(batch_pre_latent_targets,batch_comm_encoded_targets,batch_messages[:,1:],batch_masks[:,1:])
 
 
     #アクター以外訓練
@@ -212,7 +227,11 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
-        latent_init=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
+        pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
+        comm_encoded=global_network.comm_encode(pre_latent,batch_tentatives[:,0:1])
+        messages=batch_messages[:,0:1]
+        messages[:,:,0]=comm_encoded
+        latent_init=global_network.communication(pre_latent,comm_encoded,messages,batch_masks[:,0:1])
 
         #latent,rewardの予測値
         batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
@@ -316,7 +335,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
 
 
-def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,policy_optimizer, curr_episode):
+def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tentatives, world_optimizer,policy_optimizer, curr_episode):
 
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
@@ -325,12 +344,15 @@ def update(global_network, obs,goals,actions,rewards,valids, world_optimizer,pol
     batch_actions=tf.convert_to_tensor(actions,dtype=tf.int32)
     batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
+    batch_messages=tf.convert_to_tensor(messages,dtype=tf.float32)
+    batch_masks=tf.convert_to_tensor(masks,dtype=tf.float32)
+    batch_tentatves=tf.convert_to_tensor(tentatives,dtype=tf.float32)
     
 
     
 
     
-    world_grad_norms,policy_grad_norms,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, world_optimizer,policy_optimizer)
+    world_grad_norms,policy_grad_norms,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatves, world_optimizer,policy_optimizer)
 
     var_norms = tf.linalg.global_norm(global_network.trainable_variables)
 
@@ -420,6 +442,9 @@ class ReplayBuffer():
         self.actions_buffer = []
         self.rewards_buffer = []
         self.valids_buffer = []
+        self.messages_buffer = []
+        self.masks_buffer = []
+        self.tentatives_buffer = []
 
         self.indexlist = []
 
@@ -437,6 +462,9 @@ class ReplayBuffer():
                     self.actions_buffer=data["actions_buffer"]
                     self.rewards_buffer=data["rewards_buffer"]
                     self.valids_buffer=data["valids_buffer"]
+                    self.messages_buffer=data["messages_buffer"]
+                    self.masks_buffer=data["masks_buffer"]
+                    self.tentatives_buffer=data["tentatives_buffer"]
                     self.indexlist=data["indexlist"]
                     
                     self.deletecount=data["deletecount"]
@@ -448,7 +476,7 @@ class ReplayBuffer():
        
 
 
-    def add(self, obs, goals, actions, rewards, valids):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
+    def add(self, obs, goals, actions, rewards, valids, messages, masks, tentatives):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
         if self.iter >= replay_buffer_size:
             deleted_obs=self.obs_buffer.pop(0)
             self.obs_buffer.append(obs)
@@ -460,6 +488,12 @@ class ReplayBuffer():
             self.rewards_buffer.append(rewards)
             self.valids_buffer.pop(0)
             self.valids_buffer.append(valids)
+            self.messages_buffer.pop(0)
+            self.messages_buffer.append(messages)
+            self.masks_buffer.pop(0)
+            self.masks_buffer.append(masks)
+            self.tentatives_buffer.pop(0)
+            self.tentatives_buffer.append(tentatives)
 
             """
             self.indexlist=[i for i in self.indexlist if i[0]!=0] #古いやつのインデックス候補消す
@@ -482,6 +516,9 @@ class ReplayBuffer():
             self.actions_buffer.append(actions)
             self.rewards_buffer.append(rewards)
             self.valids_buffer.append(valids)
+            self.messages_buffer.append(messages)
+            self.masks_buffer.append(masks)
+            self.tentatives_buffer.append(tentatives)
 
             for i in range(len(obs)-horizon):
                 index=np.array([self.addcount,i])
@@ -506,11 +543,15 @@ class ReplayBuffer():
         
 
         # バッファからデータを取得
-        obs = np.empty(( batch_size, horizon+1,11,11,11), dtype=np.float32)
+        obs = np.empty(( batch_size, horizon+1,11,11,4), dtype=np.float32)
         goals= np.empty((batch_size,horizon+1,3))
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
+        messages = np.empty((batch_size,horizon,NUM_THREADS,FILTER))
+        masks = np.empty((batch_size,horizon,1,NUM_THREADS))
+        tentatives = np.empty((batch_size,horizon,horizon-1,a_size))
+
 
         for i in range(batch_size):
             obs[i]=np.stack(self.obs_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
@@ -518,10 +559,11 @@ class ReplayBuffer():
             actions[i]=np.stack(self.actions_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
             rewards[i]=np.stack(self.rewards_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
             valids[i]=np.stack(self.valids_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon])
-
-
+            messages[i]=np.stack(self.messages_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
+            masks[i]=np.stack(self.masks_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
+            tentatives[i]=np.stack(self.tentatives_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
         
-        return obs,goals,actions,rewards,valids
+        return obs,goals,actions,rewards,valids,messages,masks,tentatives
     
     def save(self):
         with open("replay_buffer/rb_data.pkl",'wb') as f:
@@ -531,6 +573,9 @@ class ReplayBuffer():
                 data["actions_buffer"]=self.actions_buffer
                 data["rewards_buffer"]=self.rewards_buffer
                 data["valids_buffer"]=self.valids_buffer
+                data["messages_buffer"]=self.messages_buffer
+                data["masks_buffer"]=self.masks_buffer
+                data["tentatives_buffer"]=self.tentatives_buffer
                 data["indexlist"]=self.indexlist
                 
                 data["deletecount"]=self.deletecount
@@ -547,12 +592,18 @@ def main():
         global_network = ACRDNet()
 
         #ダミーデータでのネットワーク構築
-        dummy_obs=tf.zeros([1,1,11,11,11])
+        dummy_obs=tf.zeros([1,1,11,11,4])
         dummy_goals=tf.zeros([1,1,3])   
-        dummy_latents=tf.zeros([1,1,11,11,16])
+        dummy_latents=tf.zeros([1,1,11,11,FILTER])
+        dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
+        dummy_message=tf.zeros([1,1,FILTER])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER])
+        dummy_masks=tf.ones([1,1,1,NUM_THREADS])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         global_network.encode(dummy_obs,dummy_goals)
+        global_network.comm_encode(dummy_latents,dummy_tentatives)
+        global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
         global_network.dynamics(dummy_latents,dummy_actions) 
         global_network.policy(dummy_latents)
         global_network.reward(dummy_latents,dummy_actions)
@@ -576,6 +627,19 @@ def main():
             global_network.encode_res2_conv1.trainable_variables +
             global_network.encode_res2_conv2.trainable_variables +
             global_network.encode_layernorm2.trainable_variables +
+
+            #コミュニケーション
+            global_network.comm_encode_down.trainable_variables +
+            global_network.comm_encode_flatten.trainable_variables +
+            global_network.comm_encode_action_flatten.trainable_variables +
+            global_network.comm_encode_vector.trainable_variables +
+            global_network.comm_mha.trainable_variables +
+            global_network.comm_mha_layernorm.trainable_variables +
+            global_network.comm_feedforward1.trainable_variables +
+            global_network.comm_feedforward2.trainable_variables +
+            global_network.comm_ff_layernorm.trainable_variables +
+            global_network.comm_integrate_conv.trainable_variables +
+            global_network.comm_final_conv.trainable_variables +
             
             # ダイナミクス
             global_network.dynamics_conv1.trainable_variables +
@@ -704,17 +768,17 @@ def main():
                 continue 
 
             # 正常終了の場合のみアンパックする
-            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, metrics, info = result
+            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, messagesResults, masksResults, tentativesResults, metrics, info = result
 
             all_loss=[]
             
-            if obsResults and goalsResults and actionsResults and rewardsResults and validsResults:
+            if obsResults and goalsResults and actionsResults and rewardsResults and validsResults and messagesResults and masksResults and tentativesResults:
                 for i in range(len(obsResults)):
-                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i])
+                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i],messagesResults[i],masksResults[i],tentativesResults[i])
                 if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(max_episode_length*NUM_THREADS//4):
-                        obs,goals,actions,rewards,valids=replaybuffer.sample(batch_size,horizon)
-                        loss_list=update(global_network,obs,goals,actions,rewards,valids,world_optimizer,policy_optimizer,curr_episode)
+                        obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
                         print("update loop")
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))

@@ -16,7 +16,7 @@ from parameters import *
 
 GRAD_CLIP = 10.0
 RNN_SIZE = 512
-FILTER_SIZE=16
+FILTER_SIZE=32
 
 
 # helper functions
@@ -89,6 +89,9 @@ class Worker():
         self.all_rewards_buffer=[]
         self.all_states_buffer=[]
         self.all_valids_buffer=[]
+        self.all_messages_buffer=[]
+        self.all_masks_buffer=[]
+        self.all_tentatives_buffer=[]
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
         
@@ -765,6 +768,9 @@ class Worker():
             actions_buffer = [] #np.zeros((256,1))
             rewards_buffer = [] #np.zeros((256,1))
             valids_buffer = [] #np.zeros((256,5))
+            messages_buffer = []
+            masks_buffer = []
+            tentatives_buffer = []
             episode_values = []
             episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_collision_count= 0
 
@@ -778,7 +784,7 @@ class Worker():
                                     ))
                 else:
                     self.env._reset()
-                joint_observations[self.metaAgentID] = self.env._observe()
+                joint_observations[self.metaAgentID],visible_agents_dict = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads
 
@@ -831,14 +837,60 @@ class Worker():
                     goal=tf.cast(goal,dtype=tf.float32)
 
 
-                    encoded_obs=self.local_ACRD.encode(ob,goal)
+                    first_latent=self.local_ACRD.encode(ob,goal)
+                    tentative=mean[:-1]
+                    encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
                     joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs
 
                     self.synchronize()
 
+                    #コミュニケーションを挟む
+                    visible_agents=visible_agents_dict[self.agentID]
+                    num=len(visible_agents)
+                    visible_messages=tf.zeros([1,1,num+1,FILTER_SIZE])
+                    visible_messages_for_buffer=tf.zeros([num_agents,FILTER_SIZE])
+                    visible_messages[0][0][0]=encoded_obs[0][0]
+                    visible_messages_for_buffer[0]=encoded_obs[0][0]
+                    masks_for_buffer=tf.zeros([1,num_agents])
+                    masks_for_buffer[0,:num+1]=tf.constant([1]) #自エージェント＋visible agents
+
+                    def get_angles(pos, i, d_model):
+                        angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+                        return pos * angle_rates
+                    
+                    def positional_encoding(position, d_model):
+                        angle_rad = get_angles(position,
+                                                np.arange(d_model),
+                                                d_model)
+
+                        # 配列中の偶数インデックスにはsinを適用; 2i
+                        angle_rad[0::2] = np.sin(angle_rad[0::2])
+
+                        # 配列中の奇数インデックスにはcosを適用; 2i+1
+                        angle_rad[1::2] = np.cos(angle_rad[1::2])
+
+                        pos_encoding = angle_rad[np.newaxis, np.newaxis, ...]
+
+                        return tf.cast(pos_encoding, dtype=tf.float32)
+
+                    for i in range(num):
+                        dy=visible_agents[i][1]
+                        dx=visible_agents[i][2]
+                        id=visible_agents[i][0]
+                        pos_encoding1=positional_encoding(dy,FILTER_SIZE)
+                        pos_encoding2=positional_encoding(dx,FILTER_SIZE)
+                        message=joint_encoded_obs[id]+pos_encoding1+pos_encoding2
+                        visible_messages[0][0][i+1]=message[0][0]
+                        visible_messages_for_buffer[i+1]=message[0][0]
+
+                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),visible_messages,tf.ones([1,1,1,num+1]))
+
+
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
 
+
+                    #行動選択
                     is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
                     astar_map=s[0][4]
@@ -950,6 +1002,10 @@ class Worker():
                         actions_buffer.append(a)
                         rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID]+error_reward)
                         valids_buffer.append(train_valid)
+                        messages_buffer.append(visible_messages_for_buffer)
+                        masks_buffer.append(masks_for_buffer)
+                        tentatives_buffer.append(tentative)
+                        
                         
                         
                     episode_reward += r
@@ -976,6 +1032,12 @@ class Worker():
                             train_valid = np.zeros(a_size)
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
+                            messages_buffer.append(tf.zeros([num_agents,FILTER_SIZE]))
+                            masks_buffer.append(tf.zeros([1,num_agents]))
+                            dummy_tentative=tf.constant([1,0,0,0,0],dtype=tf.float32)
+                            dummy_tentative=tf.expand_dims(dummy_tentative,axis=0)
+                            dummy_tentative=tf.tile(dummy_tentative,[horizon-1,1])
+                            tentatives_buffer.append(dummy_tentative)
                             targets_done += 1
                             pred_latent=tf.zeros([11,11,FILTER_SIZE], dtype=tf.float32)
 
@@ -988,12 +1050,18 @@ class Worker():
                             self.all_actions_buffer.append(actions_buffer)
                             self.all_rewards_buffer.append(rewards_buffer)
                             self.all_valids_buffer.append(valids_buffer)
+                            self.all_messages_buffer.append(messages_buffer)
+                            self.all_masks_buffer.append(masks_buffer)
+                            self.all_tentatives_buffer.append(tentatives_buffer)
 
                         obs_buffer=[]
                         goals_buffer=[]
                         actions_buffer=[]
                         rewards_buffer=[]
                         valids_buffer=[]
+                        messages_buffer=[]
+                        masks_buffer=[]
+                        tentatives_buffer=[]
 
 
                     self.synchronize()

@@ -117,7 +117,7 @@ class ACRDNet(tf.keras.Model):
 
 
     @tf.function(input_signature=[
-                        tf.TensorSpec(shape=[None, None, 11, 11, 7], dtype=tf.float32),  # obs (B, S,C, H, W)
+                        tf.TensorSpec(shape=[None, None, 11, 11, 4], dtype=tf.float32),  # obs (B, S,C, H, W)
                         tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
                     ])
     def encode(self,inputs,goal_pos):
@@ -150,7 +150,7 @@ class ACRDNet(tf.keras.Model):
     
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,None,11,11,FILTER],dtype=tf.float32),
-        tf.TensorSpec(shape=[None,None,horizon-1,A_SIZE])
+        tf.TensorSpec(shape=[None,None,horizon-1,A_SIZE])   #horizon-1じゃなくてhorizonでもいいかも？
     ])
     def comm_encode(self,own_latent,tentative_actions):
         x=self.comm_encode_down(own_latent)
@@ -161,7 +161,7 @@ class ACRDNet(tf.keras.Model):
         return x
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None,None,11,11,7]),
+        tf.TensorSpec(shape=[None,None,11,11,FILTER]),
         tf.TensorSpec(shape=[None, None, 1, FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, None, FILTER], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)

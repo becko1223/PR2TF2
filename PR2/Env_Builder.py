@@ -826,19 +826,19 @@ class MAPFEnv(gym.Env):
         else:
             return True, self.world.corridor_map[(agent_pos[0], agent_pos[1])][0]
 
-    def _observe(self, joint_tentative_actions={}, handles=None):
+    def _observe(self,  handles=None):
         """
         Returns Dict of observation {agentid:[], ...}
         """
         if handles is None:
-            self.obs_dict = self.observer.get_many(joint_tentative_actions, list(range(1, self.num_agents + 1)))
+            self.obs_dict,visible_agents = self.observer.get_many( list(range(1, self.num_agents + 1)))
         elif handles in list(range(1, self.num_agents + 1)):
-            self.obs_dict = self.observer.get_many(joint_tentative_actions, [handles])
+            self.obs_dict,visible_agents = self.observer.get_many( [handles])
         elif set(handles) == set(handles) & set(list(range(1, self.num_agents + 1))):
-            self.obs_dict = self.observer.get_many(joint_tentative_actions, handles)
+            self.obs_dict,visible_agents = self.observer.get_many(handles)
         else:
             raise ValueError("Invalid agent_id given")
-        return self.obs_dict
+        return self.obs_dict,visible_agents
 
     def step_all(self, movement_dict,joint_tentative_actions):
         """

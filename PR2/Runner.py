@@ -18,7 +18,7 @@ import scipy.signal as signal
 
 from parameters import *
 
-FILTER_SIZE=16
+FILTER_SIZE=32
 
 
 class Runner(object):
@@ -95,12 +95,18 @@ class Runner(object):
 
 
         #ダミーデータでのネットワーク構築
-        dummy_obs=tf.zeros([1,1,11,11,11])
-        dummy_goals=tf.zeros([1,1,3])    
+        dummy_obs=tf.zeros([1,1,11,11,4])
+        dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER_SIZE])
+        dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
+        dummy_message=tf.zeros([1,1,FILTER_SIZE])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER_SIZE])
+        dummy_masks=tf.ones([1,1,1,NUM_THREADS])
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         self.localNetwork.encode(dummy_obs,dummy_goals)
+        self.localNetwork.comm_encode(dummy_latents,dummy_tentatives)
+        self.localNetwork.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
         self.localNetwork.dynamics(dummy_latents,dummy_actions) 
         self.localNetwork.policy(dummy_latents)
         self.localNetwork.reward(dummy_latents,dummy_actions)
@@ -158,6 +164,9 @@ class Runner(object):
         actionsResults=[]
         rewardsResults=[]
         validsResults=[]
+        messagesResults=[]
+        masksResults=[]
+        tentativeResults=[]
 
 
         loss_metrics = []
@@ -170,6 +179,9 @@ class Runner(object):
                 actionsResults = actionsResults + w.all_actions_buffer
                 rewardsResults = rewardsResults + w.all_rewards_buffer
                 validsResults = validsResults + w.all_valids_buffer
+                messagesResults = messagesResults+ w.all_messages_buffer
+                masksResults = masksResults + w.all_masks_buffer
+                tentativeResults = tentativeResults + w.all_tentative_buffer
     
             
             is_imitation = False # w.is_imitation
@@ -211,7 +223,7 @@ class Runner(object):
                 print(f"gradient[{i}] length: {len(grads)}")
         print("mean_finishes:",mean_finishes)
         
-        return obsResults, goalsResults, actionsResults, rewardsResults, validsResults, all_metrics, is_imitation
+        return obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults, all_metrics, is_imitation
     
 
     def imitationLearningJob(self, episodeNumber):
