@@ -893,7 +893,7 @@ class Worker():
                     #行動選択
                     is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
-                    astar_map=s[0][4]
+                    astar_map=s[0][3]
                     distance_list=[]
                     distance_list.append(1000) #待機が最短経路になることはない
                     distance_list.append(astar_map[5,6])
