@@ -607,7 +607,13 @@ def main():
 
         global_network.encode(dummy_obs,dummy_goals)
         global_network.comm_encode(dummy_latents,dummy_tentatives)
-        global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
+        #global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
+        self.localNetwork.communication.get_concrete_function(
+            tf.TensorSpec(shape=[None, None, 11, 11, FILTER], dtype=tf.float32), # own_latent
+            tf.TensorSpec(shape=[None, None, 1, FILTER+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
+            tf.TensorSpec(shape=[None, None, None, FILTER+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
+            tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)                 # mask (4次元目をNoneに！)
+        )
         global_network.dynamics(dummy_latents,dummy_actions) 
         global_network.policy(dummy_latents)
         global_network.reward(dummy_latents,dummy_actions)
