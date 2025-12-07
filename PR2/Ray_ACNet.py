@@ -58,7 +58,7 @@ class ACRDNet(tf.keras.Model):
         self.comm_encode_action_flatten= layers.TimeDistributed(layers.Flatten())
         self.comm_encode_vector=layers.TimeDistributed(layers.Dense(FILTER, activation=None))
 
-        self.comm_mha=layers.TimeDistributed(layers.MultiHeadAttention(heads=4,key_dim=FILTER,dropout=0.1))
+        self.comm_mha=layers.TimeDistributed(layers.MultiHeadAttention(num_heads=4,key_dim=FILTER,dropout=0.1))
         self.comm_mha_layernorm=layers.LayerNormalization()
         self.comm_feedforward1=layers.Dense(units=FILTER*4,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
         self.comm_feedforward2=layers.Dense(units=FILTER,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
