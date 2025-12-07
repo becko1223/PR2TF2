@@ -349,7 +349,7 @@ def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tenta
     batch_actions=tf.one_hot(batch_actions,a_size,dtype=tf.float32)
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
     batch_messages=tf.convert_to_tensor(messages,dtype=tf.float32)
-    batch_masks=tf.convert_to_tensor(masks,dtype=tf.float32)
+    batch_masks=tf.convert_to_tensor(masks,dtype=tf.bool)
     batch_tentatives=tf.convert_to_tensor(tentatives,dtype=tf.float32)
     
 
@@ -552,7 +552,7 @@ class ReplayBuffer():
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
-        messages = np.empty((batch_size,horizon,NUM_THREADS,FILTER))
+        messages = np.empty((batch_size,horizon,NUM_THREADS,FILTER+(horizon-1)*a_size))
         masks = np.empty((batch_size,horizon,1,NUM_THREADS))
         tentatives = np.empty((batch_size,horizon,horizon-1,a_size))
 
@@ -600,8 +600,8 @@ def main():
         dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
-        dummy_message=tf.zeros([1,1,1,FILTER])
-        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER])
+        dummy_message=tf.zeros([1,1,1,FILTER+(horizon-1)*a_size])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER+(horizon-1)*a_size])
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 

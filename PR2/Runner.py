@@ -99,8 +99,8 @@ class Runner(object):
         dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
-        dummy_message=tf.zeros([1,1,1,FILTER_SIZE])
-        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER_SIZE])
+        dummy_message=tf.zeros([1,1,1,FILTER_SIZE+(horizon-1)*a_size])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size])
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 

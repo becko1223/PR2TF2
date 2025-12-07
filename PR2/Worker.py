@@ -840,19 +840,19 @@ class Worker():
                     first_latent=self.local_ACRD.encode(ob,goal)
                     tentative=mean[:-1]
                     encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
-                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs
+                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs.numpy()
 
                     self.synchronize()
 
                     #コミュニケーションを挟む
                     visible_agents=visible_agents_dict[self.agentID]
                     num=len(visible_agents)
-                    visible_messages=tf.zeros([1,1,num+1,FILTER_SIZE])
-                    visible_messages_for_buffer=tf.zeros([num_agents,FILTER_SIZE])
-                    visible_messages[0][0][0]=encoded_obs[0][0]
-                    visible_messages_for_buffer[0]=encoded_obs[0][0]
-                    masks_for_buffer=tf.zeros([1,num_agents])
-                    masks_for_buffer[0,:num+1]=tf.constant([1]) #自エージェント＋visible agents
+                    visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size])
+                    visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size])
+                    visible_messages[0][0][0]=encoded_obs[0][0].mumpy()
+                    visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
+                    masks_for_buffer=np.zeros([1,num_agents])
+                    masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
 
                     def get_angles(pos, i, d_model):
                         angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
@@ -877,13 +877,13 @@ class Worker():
                         dy=visible_agents[i][1]
                         dx=visible_agents[i][2]
                         id=visible_agents[i][0]
-                        pos_encoding1=positional_encoding(dy,FILTER_SIZE)
-                        pos_encoding2=positional_encoding(dx,FILTER_SIZE)
+                        pos_encoding1=positional_encoding(dy,FILTER_SIZE+(horizon-1)*a_size)
+                        pos_encoding2=positional_encoding(dx,FILTER_SIZE+(horizon-1)*a_size)
                         message=joint_encoded_obs[id]+pos_encoding1+pos_encoding2
                         visible_messages[0][0][i+1]=message[0][0]
                         visible_messages_for_buffer[i+1]=message[0][0]
 
-                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),visible_messages,tf.ones([1,1,1,num+1]))
+                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1]))
 
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
@@ -1032,7 +1032,7 @@ class Worker():
                             train_valid = np.zeros(a_size)
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
-                            messages_buffer.append(tf.zeros([num_agents,FILTER_SIZE]))
+                            messages_buffer.append(tf.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size]))
                             masks_buffer.append(tf.zeros([1,num_agents]))
                             dummy_tentative=tf.constant([1,0,0,0,0],dtype=tf.float32)
                             dummy_tentative=tf.expand_dims(dummy_tentative,axis=0)

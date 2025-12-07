@@ -155,15 +155,15 @@ class ACRDNet(tf.keras.Model):
     def comm_encode(self,own_latent,tentative_actions):
         x=self.comm_encode_down(own_latent)
         x=self.comm_encode_flatten(x)
+        x=self.comm_encode_vector(x)
         y=self.comm_encode_action_flatten(tentative_actions)
         x=tf.concat([x,y],axis=-1)
-        x=self.comm_encode_vector(x)
         return x
     
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,None,11,11,FILTER]),
-        tf.TensorSpec(shape=[None, None, 1, FILTER], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None, None, FILTER], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1, FILTER+(horizon-1)*A_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, FILTER+(horizon-1)*A_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
     ])
     def communication(self,own_latent,own_message,all_messages,mask):
@@ -184,7 +184,7 @@ class ACRDNet(tf.keras.Model):
         ff_output=self.comm_feedforward2(ff_output)
         output=self.comm_ff_layernorm(mha_output+ff_output)
 
-        output=tf.expand_dims(tf.expand_dims(output,2),2)
+        output=tf.expand_dims(output,2)
         output=tf.tile(output,[1,1,11,11,1])
 
         integrate=tf.concat([own_latent,output],axis=-1)
