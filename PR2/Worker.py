@@ -847,8 +847,8 @@ class Worker():
                     #コミュニケーションを挟む
                     visible_agents=visible_agents_dict[self.agentID]
                     num=len(visible_agents)
-                    visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size])
-                    visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size])
+                    visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
+                    visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
                     masks_for_buffer=np.zeros([1,num_agents])
@@ -883,7 +883,7 @@ class Worker():
                         visible_messages[0][0][i+1]=message[0][0]
                         visible_messages_for_buffer[i+1]=message[0][0]
 
-                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1]))
+                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
 
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
@@ -954,7 +954,7 @@ class Worker():
                             episode_inv_count += 1
                         train_valid = np.zeros(a_size)
                         train_valid[validActions] = 1
-                        
+
 
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
@@ -972,7 +972,7 @@ class Worker():
 
                     if self.agentID == 1:
                         print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
-                        all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
+                        all_obs,visible_agents_dict, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
