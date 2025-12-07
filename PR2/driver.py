@@ -212,7 +212,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     batch_pre_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
     batch_comm_encoded_targets=global_network.comm_encode(batch_pre_latent_targets,batch_tentatives[:,1:])
     batch_other_messages = batch_messages[:, 1:, 1:, :]
-    batch_curr_own_message = tf.expand_dims(comm_encoded, axis=2)
+    batch_curr_own_message = tf.expand_dims(batch_comm_encoded_targets, axis=2)
     batch_replaced_messages=tf.concat([batch_curr_own_message,batch_other_messages],axis=2)
     batch_latent_targets=global_network.comm_communication(batch_pre_latent_targets,batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
 
@@ -600,7 +600,7 @@ def main():
         dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
-        dummy_message=tf.zeros([1,1,FILTER])
+        dummy_message=tf.zeros([1,1,1,FILTER])
         dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER])
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
