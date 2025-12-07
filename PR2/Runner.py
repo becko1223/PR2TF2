@@ -101,7 +101,7 @@ class Runner(object):
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,FILTER_SIZE])
         dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER_SIZE])
-        dummy_masks=tf.ones([1,1,1,NUM_THREADS])
+        dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         self.localNetwork.encode(dummy_obs,dummy_goals)

@@ -211,7 +211,10 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     #latentのターゲットを出す(b,s,h,w,c)
     batch_pre_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
     batch_comm_encoded_targets=global_network.comm_encode(batch_pre_latent_targets,batch_tentatives[:,1:])
-    batch_latent_targets=global_network.comm_communication(batch_pre_latent_targets,batch_comm_encoded_targets,batch_messages[:,1:],batch_masks[:,1:])
+    batch_other_messages = batch_messages[:, 1:, 1:, :]
+    batch_curr_own_message = tf.expand_dims(comm_encoded, axis=2)
+    batch_replaced_messages=tf.concat([batch_curr_own_message,batch_other_messages],axis=2)
+    batch_latent_targets=global_network.comm_communication(batch_pre_latent_targets,batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
 
 
     #アクター以外訓練
@@ -229,9 +232,10 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
         pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
         comm_encoded=global_network.comm_encode(pre_latent,batch_tentatives[:,0:1])
-        messages=batch_messages[:,0:1]
-        messages[:,:,0]=comm_encoded
-        latent_init=global_network.communication(pre_latent,comm_encoded,messages,batch_masks[:,0:1])
+        other_messages = batch_messages[:, 0:1, 1:, :]
+        curr_own_message = tf.expand_dims(comm_encoded, axis=2)
+        messages=tf.concat([curr_own_message,other_messages],axis=2)
+        latent_init=global_network.communication(pre_latent,curr_own_message,messages,batch_masks[:,0:1])
 
         #latent,rewardの予測値
         batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
@@ -598,7 +602,7 @@ def main():
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,FILTER])
         dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER])
-        dummy_masks=tf.ones([1,1,1,NUM_THREADS])
+        dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         global_network.encode(dummy_obs,dummy_goals)
