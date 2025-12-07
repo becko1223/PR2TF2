@@ -92,7 +92,7 @@ class Primal2Observer(ObservationBuilder):
                     goal_map[i - top_left[0], j - top_left[1]] = 1
                 if self.world.state[i, j] > 0 and self.world.state[i, j] != agent_id:
                     # other agents' positions
-                    visible_agents.append(self.world.state[i, j])
+                    visible_agents.append([self.world.state[i, j],i-(top_left[0] + (self.observation_size-1)/2.0),j-(top_left[1] + (self.observation_size-1)/2.0)])
                     poss_map[i - top_left[0], j - top_left[1]] = 1
                     # updated_poss_map[i - top_left[0], j - top_left[1]] = self.world.state[i, j]
 
