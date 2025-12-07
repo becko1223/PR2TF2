@@ -214,7 +214,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     batch_other_messages = batch_messages[:, 1:, 1:, :]
     batch_curr_own_message = tf.expand_dims(batch_comm_encoded_targets, axis=2)
     batch_replaced_messages=tf.concat([batch_curr_own_message,batch_other_messages],axis=2)
-    batch_latent_targets=global_network.comm_communication(batch_pre_latent_targets,batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
+    batch_latent_targets=global_network.communication(batch_pre_latent_targets,batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
 
 
     #アクター以外訓練
