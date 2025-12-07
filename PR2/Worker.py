@@ -889,11 +889,11 @@ class Worker():
 
                     if(episode_count>(random_term-1)):
                         latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
+                        model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     else:
-                        latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
+                        latent_init=first_latent
+                        model_error=tf.constant([0.0])
 
-
-                    model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
                     is_first_step=False
 
 
