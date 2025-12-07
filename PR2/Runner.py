@@ -95,7 +95,7 @@ class Runner(object):
 
 
         #ダミーデータでのネットワーク構築
-        dummy_obs=tf.zeros([1,1,11,11,4])
+        dummy_obs=tf.zeros([1,1,4,11,11])
         dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
