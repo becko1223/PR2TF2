@@ -126,19 +126,14 @@ class Primal2Env(MAPFEnv):
                 direction = action2dir(action)
                 new_pos = tuple_plus(direction, pos)
                 lastpos = None
-                blocking_valid = self.get_blocking_validity(agent_obs, agent_ID, new_pos)
-                if not blocking_valid:
-                    continue
+               
                 try:
                     lastpos = self.world.agents[agent_ID].position_history[-2]
                 except:
                     pass
                 if new_pos == lastpos:
                     continue
-                if self.world.corridor_map[new_pos[0], new_pos[1]][1] == 1:
-                    valid = self.get_convention_validity(agent_obs, agent_ID, new_pos)
-                    if not valid:
-                        continue
+                
                 if self.world.state[new_pos[0], new_pos[1]] == 0:
                     available_actions.append(action)
 
