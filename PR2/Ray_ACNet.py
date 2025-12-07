@@ -56,15 +56,16 @@ class ACRDNet(tf.keras.Model):
         self.comm_encode_down=layers.TimeDistributed(layers.Conv2D(filters=FILTER,kernel_size=3,strides=2,padding="same",data_format="channels_last",activation='relu'))
         self.comm_encode_flatten = layers.TimeDistributed(layers.Flatten())
         self.comm_encode_action_flatten= layers.TimeDistributed(layers.Flatten())
-        self.comm_encode_vector=layers.TimeDistributed(layers.Dense(FILTER, activation=None))
+        self.comm_encode_vector=layers.Dense(FILTER, activation=None)
+        self.comm_encode_layernorm=layers.TimeDistributed(layers.LayerNormalization())
 
         self.comm_mha=layers.MultiHeadAttention(num_heads=4,key_dim=FILTER,dropout=0.1)
-        self.comm_mha_layernorm=layers.LayerNormalization()
+        self.comm_mha_layernorm=layers.TimeDistributed(layers.LayerNormalization())
         self.comm_feedforward1=layers.Dense(units=FILTER*4,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
         self.comm_feedforward2=layers.Dense(units=FILTER+(horizon-1)*A_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
-        self.comm_ff_layernorm=layers.LayerNormalization()
-        self.comm_integrate_conv=layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu")
-        self.comm_final_conv=layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu")
+        self.comm_ff_layernorm=layers.TimeDistributed(layers.LayerNormalization())
+        self.comm_integrate_conv=layers.TimeDistributed(layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu"))
+        self.comm_final_conv=layers.TimeDistributed(layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu"))
 
 
         #状態遷移
@@ -156,6 +157,7 @@ class ACRDNet(tf.keras.Model):
         x=self.comm_encode_down(own_latent)
         x=self.comm_encode_flatten(x)
         x=self.comm_encode_vector(x)
+        x=self.comm_encode_layernorm(x)
         y=self.comm_encode_action_flatten(tentative_actions)
         x=tf.concat([x,y],axis=-1)
         return x
