@@ -346,13 +346,13 @@ def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tenta
     batch_valids=tf.convert_to_tensor(valids,dtype=tf.float32)
     batch_messages=tf.convert_to_tensor(messages,dtype=tf.float32)
     batch_masks=tf.convert_to_tensor(masks,dtype=tf.float32)
-    batch_tentatves=tf.convert_to_tensor(tentatives,dtype=tf.float32)
+    batch_tentatives=tf.convert_to_tensor(tentatives,dtype=tf.float32)
     
 
     
 
     
-    world_grad_norms,policy_grad_norms,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatves, world_optimizer,policy_optimizer)
+    world_grad_norms,policy_grad_norms,loss_list=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives, world_optimizer,policy_optimizer)
 
     var_norms = tf.linalg.global_norm(global_network.trainable_variables)
 
