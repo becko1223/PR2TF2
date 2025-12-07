@@ -854,7 +854,8 @@ class Worker():
                     visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
                     masks_for_buffer=np.zeros([1,num_agents])
-                    masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
+                    if(episode_count>(random_term-1)):
+                        masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
 
                     def get_angles(pos, i, d_model):
                         angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
