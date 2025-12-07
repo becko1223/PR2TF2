@@ -181,7 +181,7 @@ class Runner(object):
                 validsResults = validsResults + w.all_valids_buffer
                 messagesResults = messagesResults+ w.all_messages_buffer
                 masksResults = masksResults + w.all_masks_buffer
-                tentativeResults = tentativeResults + w.all_tentative_buffer
+                tentativeResults = tentativeResults + w.all_tentatives_buffer
     
             
             is_imitation = False # w.is_imitation
