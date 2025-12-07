@@ -838,9 +838,9 @@ class Worker():
 
 
                     first_latent=self.local_ACRD.encode(ob,goal)
-                    print("mean shape",tf.shape(mean))
+                    #print("mean shape",tf.shape(mean))
                     tentative=mean[:-1]
-                    print("tentative shape",tf.shape(tentative))
+                    #print("tentative shape",tf.shape(tentative))
                     encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
                     joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs.numpy()
 
@@ -974,7 +974,8 @@ class Worker():
 
                     if self.agentID == 1:
                         print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
-                        all_obs,visible_agents_dict, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
+                        observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
+                        all_obs,visible_agents_dict=observe_result
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
