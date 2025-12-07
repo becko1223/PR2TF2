@@ -840,7 +840,7 @@ class MAPFEnv(gym.Env):
             raise ValueError("Invalid agent_id given")
         return self.obs_dict,visible_agents
 
-    def step_all(self, movement_dict,joint_tentative_actions):
+    def step_all(self, movement_dict):
         """
         Agents are forced to freeze self.frozen_steps steps if they are standing on their goals.
         The new goal will be generated at the FIRST step it remains on its goal.
@@ -894,7 +894,7 @@ class MAPFEnv(gym.Env):
 
             for frozen_agent in freeze_list:
                 free_agents.remove(frozen_agent)
-        return self._observe(joint_tentative_actions,free_agents), self.individual_rewards
+        return self._observe(free_agents), self.individual_rewards
 
     def give_moving_reward(self, agentID):
         raise NotImplementedError

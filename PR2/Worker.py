@@ -954,15 +954,13 @@ class Worker():
                             episode_inv_count += 1
                         train_valid = np.zeros(a_size)
                         train_valid[validActions] = 1
-
                         
 
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
                             episode_stop_count += 1
 
-                        tentative_actions=distribution_to_coordinate(mean).numpy().astype(np.int32)
-                        joint_tentative_actions[self.metaAgentID][self.agentID]=tentative_actions
+            
 
                         if not(is_no_guide):
                             if a==a_guide:
@@ -974,7 +972,7 @@ class Worker():
 
                     if self.agentID == 1:
                         print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
-                        all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID],joint_tentative_actions[self.metaAgentID])
+                        all_obs, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
