@@ -784,7 +784,7 @@ class Worker():
                                     ))
                 else:
                     self.env._reset()
-                joint_observations[self.metaAgentID],visible_agents_dict = self.env._observe()
+                joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID] = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads
 
@@ -845,7 +845,7 @@ class Worker():
                     self.synchronize()
 
                     #コミュニケーションを挟む
-                    visible_agents=visible_agents_dict[self.agentID]
+                    visible_agents=joint_visible_agents[self.metaAgentID][self.agentID]
                     num=len(visible_agents)
                     visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
@@ -879,7 +879,7 @@ class Worker():
                         id=visible_agents[i][0]
                         pos_encoding1=positional_encoding(dy,FILTER_SIZE+(horizon-1)*a_size)
                         pos_encoding2=positional_encoding(dx,FILTER_SIZE+(horizon-1)*a_size)
-                        message=joint_encoded_obs[id]+pos_encoding1+pos_encoding2
+                        message=joint_encoded_obs[self.metaAgentID][id]+pos_encoding1+pos_encoding2
                         visible_messages[0][0][i+1]=message[0][0]
                         visible_messages_for_buffer[i+1]=message[0][0]
 
@@ -977,6 +977,7 @@ class Worker():
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
                             joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
+                            joint_visible_agents[self.metaAgentID][i]=visible_agents_dict[i]
                         if saveGIF and self.agentID == 1:
                             GIF_frames.append(self.env._render())
 
