@@ -886,8 +886,7 @@ class Worker():
                         visible_messages[0][0][i+1]=message[0][0]
                         visible_messages_for_buffer[i+1]=message[0][0]
 
-                    with self.inferenceLock:
-                        latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
+                    latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
 
 
                     model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
