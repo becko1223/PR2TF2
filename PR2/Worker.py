@@ -849,7 +849,7 @@ class Worker():
                     num=len(visible_agents)
                     visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size])
                     visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size])
-                    visible_messages[0][0][0]=encoded_obs[0][0].mumpy()
+                    visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
                     masks_for_buffer=np.zeros([1,num_agents])
                     masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
