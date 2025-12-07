@@ -167,7 +167,17 @@ class ACRDNet(tf.keras.Model):
         tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
     ])
     def communication(self,own_latent,own_message,all_messages,mask):
-        mha_output=layers.TimeDistributed(self.comm_mha)([own_message,all_messages,all_messages,mask])
+        B = tf.shape(own_message)[0]
+        T = tf.shape(own_message)[1]
+        D = tf.shape(own_message)[3] # FILTER
+        L = tf.shape(all_messages)[2]
+
+        own_message_flat = tf.reshape(own_message, [B * T, 1, D])
+        all_messages_flat = tf.reshape(all_messages, [B * T, L, D])
+        mask_flat = tf.reshape(mask, [B * T, 1, L])
+        mha_output_flat=self.comm_mha(query=own_message_flat,value=all_messages_flat,key=all_messages_flat,attention_mask=mask_flat)
+        mha_output = tf.reshape(mha_output_flat, [B, T, 1, D])
+
         mha_output=self.comm_mha_layernorm(mha_output+own_message)
 
         ff_output=self.comm_feedforward1(mha_output)
