@@ -838,7 +838,9 @@ class Worker():
 
 
                     first_latent=self.local_ACRD.encode(ob,goal)
+                    print("mean shape",tf.shape(mean))
                     tentative=mean[:-1]
+                    print("tentative shape",tf.shape(tentative))
                     encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
                     joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs.numpy()
 
