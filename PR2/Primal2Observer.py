@@ -83,6 +83,7 @@ class Primal2Observer(ObservationBuilder):
                 if self.world.state[i, j] == -1:
                     # obstacles
                     obs_map[i - top_left[0], j - top_left[1]] = 1
+                    pathlength_map[i - top_left[0], j - top_left[1]] = -1
                 if self.world.state[i, j] == agent_id:
                     # agent's position
                     poss_map[i - top_left[0], j - top_left[1]] = 1
