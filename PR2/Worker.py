@@ -1005,7 +1005,7 @@ class Worker():
                             shaping_reward=0.1
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
                             shaping_reward=-0.1
-                        shaping_reward=shaping_reward*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
+                        shaping_reward=shaping_reward #*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
                     
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+shaping_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
