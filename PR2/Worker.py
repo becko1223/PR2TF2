@@ -797,7 +797,6 @@ class Worker():
            
             is_first_step=True
 
-            pred_latent = tf.zeros([11,11,FILTER_SIZE], dtype=tf.float32)
 
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
@@ -827,7 +826,7 @@ class Worker():
                 # start RL
                 self.env.finished = False
                 while not self.env.finished:
-
+                    is_collision_for_shaping=False
 
                     ob=tf.expand_dims(s[0],0)
                     ob=tf.expand_dims(ob,0)
@@ -889,24 +888,24 @@ class Worker():
 
                     if(episode_count>(random_term-1)):
                         latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
-                        model_error=tf.reduce_mean(tf.square(latent_init-pred_latent)) if not(is_first_step) else tf.constant([0.0])
+                        
                     else:
                         latent_init=first_latent
-                        model_error=tf.constant([0.0])
+                        
 
                     is_first_step=False
 
 
-                    #行動選択
+                    #補正用データ
                     is_no_guide=tf.constant([False],tf.bool)
                     guide_dir=tf.zeros([2],dtype=tf.float32)
-                    astar_map=s[0][3]
+                    cost_map=s[0][3]
                     distance_list=[]
                     distance_list.append(1000) #待機が最短経路になることはない
-                    distance_list.append(astar_map[5,6])
-                    distance_list.append(astar_map[6,5])
-                    distance_list.append(astar_map[5,4])
-                    distance_list.append(astar_map[4,5])
+                    distance_list.append(cost_map[5,6])
+                    distance_list.append(cost_map[6,5])
+                    distance_list.append(cost_map[5,4])
+                    distance_list.append(cost_map[4,5])
                     distance_list_replace=[1000 if i<0 else i for i in distance_list]
                     if(distance_list_replace.count(0)>1):
                         is_no_guide=tf.constant([True],tf.bool)
@@ -917,7 +916,7 @@ class Worker():
 
                    
 
-
+                    #行動選択
                     if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.05):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
@@ -925,7 +924,7 @@ class Worker():
                             a=np.random.choice(indices, p=probabilities)
                             
                         else:
-                            if(random.random() > max([min([0.3*(30.0-self.mean_finishes)/20.0, 0.3]), 0.0])):
+                            if(random.random() > max([min([correction_rate*(30.0-self.mean_finishes)/20.0, 0.3]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
@@ -943,13 +942,12 @@ class Worker():
 
                     a_onehot=tf.one_hot(a,a_size)
                     a_onehot=tf.expand_dims(tf.expand_dims(a_onehot,axis=0),axis=0)
-                    pred_latent=self.local_ACRD.dynamics(latent_init,a_onehot)
+                    
                     
 
                    
 
                     skipping_state = False
-                    train_policy = train_val = 1
 
                     if not skipping_state:
                         '''
@@ -969,9 +967,8 @@ class Worker():
 
             
 
-                        if not(is_no_guide):
-                            if a==a_guide:
-                                episode_astar_count += 1
+                        if a==a_guide:
+                            episode_astar_count += 1
 
                     # Make A Single Agent Gather All Information
 
@@ -993,12 +990,19 @@ class Worker():
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
-                    error_reward=min([0.5*float(model_error.numpy()),0.05]) 
                     if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
                         episode_collision_count+=1
-                    if(joint_rewards[self.metaAgentID][self.agentID]==-0.6):
-                        episode_wall_collision_count+=1
-                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+error_reward
+                        is_collision_for_shaping=True
+                    #シェーピング報酬の計算
+                    action=action2dir(a)
+                    if s[2][5+action[0]][5+action[1]]==1:
+                        is_collision_for_shaping=True
+                    if is_collision_for_shaping:
+                        shaping_reward=0
+                    else:
+                        shaping_reward=(cost_map[5][5]-cost_map[5+action[0]][5+action[1]])*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0]) #*0.5
+                    
+                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+shaping_reward*0
                     validActions = self.env.listValidActions(self.agentID, s1)
 
                     self.synchronize()
@@ -1007,7 +1011,7 @@ class Worker():
                         obs_buffer.append(s[0])
                         goals_buffer.append(s[1])
                         actions_buffer.append(a)
-                        rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID]+error_reward)
+                        rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID])
                         valids_buffer.append(train_valid)
                         messages_buffer.append(visible_messages_for_buffer)
                         masks_buffer.append(masks_for_buffer)
@@ -1046,7 +1050,7 @@ class Worker():
                             dummy_tentative=tf.tile(dummy_tentative,[horizon-1,1])
                             tentatives_buffer.append(dummy_tentative)
                             targets_done += 1
-                            pred_latent=tf.zeros([11,11,FILTER_SIZE], dtype=tf.float32)
+                           
 
                    
                             
