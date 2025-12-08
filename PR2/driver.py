@@ -785,8 +785,16 @@ def main():
             if obsResults and goalsResults and actionsResults and rewardsResults and validsResults and messagesResults and masksResults and tentativesResults:
                 for i in range(len(obsResults)):
                     replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i],messagesResults[i],masksResults[i],tentativesResults[i])
-                if curr_episode>(random_term-2): #random_term個分が終わったタイミングから学習を始めたい。
+                if curr_episode>(random_term-1): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(max_episode_length*NUM_THREADS//4): #max_episode_length*NUM_THREADS//4
+                        obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
+                        all_loss.append(loss_list)
+                        print("update loop")
+                    avg_loss=list(np.mean(np.array(all_loss), axis=0))
+                    all_metrics=avg_loss+metrics
+                elif curr_episode==random_term-1:
+                    for i in range(max_episode_length*NUM_THREADS//4*(random_term-1)):
                         obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
