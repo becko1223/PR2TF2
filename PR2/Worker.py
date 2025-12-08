@@ -995,7 +995,7 @@ class Worker():
                         is_collision_for_shaping=True
                     #シェーピング報酬の計算
                     action=action2dir(a)
-                    if s[2][5+action[0]][5+action[1]]==1:
+                    if s[0][2][5+action[0]][5+action[1]]==1:
                         is_collision_for_shaping=True
                     if is_collision_for_shaping:
                         shaping_reward=0
