@@ -887,7 +887,9 @@ class Worker():
                         visible_messages_for_buffer[i+1]=message[0][0]
 
                     if(episode_count>(random_term-1)):
-                        latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),tf.ones([1,1,1,num+1],dtype=tf.bool))
+                        mask=tf.ones([1,1,1,num+1],dtype=tf.bool)
+                        mask.set_shape([1,1,1,num+1])
+                        latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),mask)
                         
                     else:
                         latent_init=first_latent
@@ -929,8 +931,7 @@ class Worker():
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
                             a=a.numpy().item()
-                        q=self.local_ACRD.q1(latent_init,tf.expand_dims(tf.expand_dims(tf.one_hot(a,a_size),0),0))
-                        q=q.numpy()
+                        
                         mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
                        
 
@@ -997,12 +998,16 @@ class Worker():
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
                         is_collision_for_shaping=True
-                    if is_collision_for_shaping:
-                        shaping_reward=0
-                    else:
-                        shaping_reward=(cost_map[5][5]-cost_map[5+action[0]][5+action[1]])*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0]) #*0.5
+                
+                    shaping_reward=0
+                    if not is_collision_for_shaping:
+                        if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
+                            shaping_reward=0.1
+                        elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
+                            shaping_reward=-0.1
+                        shaping_reward=shaping_reward*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
                     
-                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+shaping_reward*0
+                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+shaping_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
                     self.synchronize()
@@ -1011,7 +1016,7 @@ class Worker():
                         obs_buffer.append(s[0])
                         goals_buffer.append(s[1])
                         actions_buffer.append(a)
-                        rewards_buffer.append( joint_rewards[self.metaAgentID][self.agentID])
+                        rewards_buffer.append(r)
                         valids_buffer.append(train_valid)
                         messages_buffer.append(visible_messages_for_buffer)
                         masks_buffer.append(masks_for_buffer)
