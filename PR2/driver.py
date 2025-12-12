@@ -549,7 +549,7 @@ class ReplayBuffer():
 
         # バッファからデータを取得
         obs = np.empty(( batch_size, horizon+1,4,11,11), dtype=np.float32)
-        goals= np.empty((batch_size,horizon+1,3))
+        goals= np.empty((batch_size,horizon+1,8))
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
