@@ -796,7 +796,7 @@ def main():
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
-                    for i in range(max_episode_length*NUM_THREADS//20):
+                    for i in range(max_episode_length*NUM_THREADS//4):
                         obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
