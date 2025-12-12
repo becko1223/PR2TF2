@@ -1011,7 +1011,7 @@ class Worker():
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
                         extra_reward-=0.2
-                    if ((np.array(action)+np.array(pre_action))==np.array([0,0]) & (action!=(0,0))):
+                    if ((np.array(action)+np.array(pre_action))==np.array([0,0]) and (action!=(0,0))):
                         extra_reward-=0.2
                     pre_action=action
                     
