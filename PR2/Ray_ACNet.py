@@ -65,6 +65,7 @@ class ACRDNet(tf.keras.Model):
         self.comm_feedforward2=layers.Dense(units=FILTER+(horizon-1)*A_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
         self.comm_ff_layernorm=layers.TimeDistributed(layers.LayerNormalization())
         self.comm_integrate_conv=layers.TimeDistributed(layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu"))
+        self.comm_integrate_layernorm=layers.TimeDistributed(layers.LayerNormalization())
         self.comm_final_conv=layers.TimeDistributed(layers.Conv2D(filters=FILTER, kernel_size=3, strides=1, padding="same", activation="relu"))
 
 
@@ -119,7 +120,7 @@ class ACRDNet(tf.keras.Model):
 
     @tf.function(input_signature=[
                         tf.TensorSpec(shape=[None, None, 4, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
-                        tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
+                        tf.TensorSpec(shape=[None, None, 8], dtype=tf.float32),          # goal (B, S, F)
                     ])
     def encode(self,inputs,goal_pos):
         x=inputs
@@ -191,6 +192,7 @@ class ACRDNet(tf.keras.Model):
 
         integrate=tf.concat([own_latent,output],axis=-1)
         integrate=self.comm_integrate_conv(integrate)
+        integrate=self.comm_integrate_layernorm(integrate)
         integrate=self.comm_final_conv(integrate)
         return integrate
 

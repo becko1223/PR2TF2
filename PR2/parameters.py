@@ -22,8 +22,8 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
-random_term             =25
-correction_rate         =0
+random_term             =5
+correction_rate         =0.2
 
 # observer parameters
 OBS_SIZE                = 11   # the size of the FOV grid to apply to each agent

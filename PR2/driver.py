@@ -171,6 +171,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         global_network.comm_feedforward2.trainable_variables +
         global_network.comm_ff_layernorm.trainable_variables +
         global_network.comm_integrate_conv.trainable_variables +
+        global_network.comm_integrate_layernorm.trainable_variables +
         global_network.comm_final_conv.trainable_variables +
         
         # ダイナミクス
@@ -597,7 +598,7 @@ def main():
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
-        dummy_goals=tf.zeros([1,1,3])   
+        dummy_goals=tf.zeros([1,1,8])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,1,FILTER+(horizon-1)*a_size])
@@ -649,6 +650,7 @@ def main():
             global_network.comm_feedforward2.trainable_variables +
             global_network.comm_ff_layernorm.trainable_variables +
             global_network.comm_integrate_conv.trainable_variables +
+            global_network.comm_integrate_layernorm.trainable_variables +
             global_network.comm_final_conv.trainable_variables +
             
             # ダイナミクス
@@ -794,7 +796,7 @@ def main():
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
-                    for i in range(max_episode_length*NUM_THREADS//4*(random_term-1)):
+                    for i in range(max_episode_length*NUM_THREADS//20):
                         obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)

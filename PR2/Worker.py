@@ -420,7 +420,7 @@ class Worker():
 
         penalty_tensor=tf.cond(is_no_goalguide_condition,
                             lambda: tf.zeros_like(V) ,
-                            lambda: -distance_from_goalguide*0.3)
+                            lambda: -distance_from_goalguide*0.2)
 
         V+=penalty_tensor
         
@@ -795,9 +795,9 @@ class Worker():
             s = joint_observations[self.metaAgentID][self.agentID]
 
            
-            is_first_step=True
-
-
+            
+            pre_action=(0,0)
+            a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
             self.synchronize()  # synchronize starting time of the threads
@@ -826,13 +826,13 @@ class Worker():
                 # start RL
                 self.env.finished = False
                 while not self.env.finished:
-                    is_collision_for_shaping=False
 
                     ob=tf.expand_dims(s[0],0)
                     ob=tf.expand_dims(ob,0)
                     ob=tf.cast(ob,dtype=tf.float32)
                     goal=tf.expand_dims(s[1],0)
                     goal=tf.expand_dims(goal,0)
+                    goal=tf.concat([goal,a_onehot],-1)
                     goal=tf.cast(goal,dtype=tf.float32)
 
 
@@ -895,8 +895,6 @@ class Worker():
                         latent_init=first_latent
                         
 
-                    is_first_step=False
-
 
                     #補正用データ
                     is_no_guide=tf.constant([False],tf.bool)
@@ -909,11 +907,9 @@ class Worker():
                     distance_list.append(cost_map[5,4])
                     distance_list.append(cost_map[4,5])
                     distance_list_replace=[1000 if i<0 else i for i in distance_list]
-                    if(distance_list_replace.count(0)>1):
-                        is_no_guide=tf.constant([True],tf.bool)
-                    else:
-                        a_guide=distance_list_replace.index(min(distance_list_replace))
-                        guide_dir=action2dir(a_guide)
+                
+                    a_guide=distance_list_replace.index(min(distance_list_replace))
+                    guide_dir=action2dir(a_guide)
 
 
                    
@@ -926,7 +922,7 @@ class Worker():
                             a=np.random.choice(indices, p=probabilities)
                             
                         else:
-                            if(random.random() > max([min([correction_rate*(30.0-self.mean_finishes)/20.0, 0.3]), 0.0])):
+                            if(random.random() > max([min([correction_rate*(10.0-self.mean_finishes)/10.0, correction_rate]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
@@ -994,6 +990,8 @@ class Worker():
                     if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
                         episode_collision_count+=1
                         is_collision_for_shaping=True
+
+                    """
                     #シェーピング報酬の計算
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
@@ -1006,15 +1004,24 @@ class Worker():
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
                             shaping_reward=-0.1
                         shaping_reward=shaping_reward #*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
+                    """
+
+                    extra_reward=0
+                    action=action2dir(a)
+                    if s[0][2][5+action[0]][5+action[1]]==1:
+                        extra_reward-=0.2
+                    if ((np.array(action)+np.array(pre_action))==np.array([0,0])) & (action!=(0,0)):
+                        extra_reward-=0.2
+                    pre_action=action
                     
-                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+shaping_reward
+                    r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+extra_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
 
                     self.synchronize()
                     # Append to Appropriate buffers 
                     if not skipping_state:
                         obs_buffer.append(s[0])
-                        goals_buffer.append(s[1])
+                        goals_buffer.append(goal[0][0].numpy())
                         actions_buffer.append(a)
                         rewards_buffer.append(r)
                         valids_buffer.append(train_valid)
@@ -1042,7 +1049,7 @@ class Worker():
                         if joint_done[self.metaAgentID][self.agentID]:
                             joint_done[self.metaAgentID][self.agentID] = False
                             obs_buffer.append(s[0])      #終端の報酬予測経験を学習できるようにするために。
-                            goals_buffer.append(s[1])
+                            goals_buffer.append(goal[0][0].numpy())
                             actions_buffer.append(0)
                             rewards_buffer.append(0)
                             train_valid = np.zeros(a_size)
