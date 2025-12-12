@@ -798,6 +798,7 @@ class Worker():
             
             pre_action=(0,0)
             a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
+            a_onehot=tf.reshape(a_onehot,[1,1,5])
             mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
 
             self.synchronize()  # synchronize starting time of the threads
