@@ -792,7 +792,8 @@ def main():
                         obs,goals,actions,rewards,valids,messages,masks,tentatives=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode)
                         all_loss.append(loss_list)
-                        print("update loop")
+                        if info["id"]==0:
+                            print("update loop")
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
