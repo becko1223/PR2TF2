@@ -989,6 +989,11 @@ class Worker():
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
+
+                    if(joint_rewards[self.metaAgentID][self.agentID]==5):
+                        if self.metaAgentID==0 and self.agentID==1:
+                            print("status:1")
+
                     if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
                         episode_collision_count+=1
                         if self.metaAgentID==0 and self.agentID==1:
