@@ -772,7 +772,7 @@ class Worker():
             masks_buffer = []
             tentatives_buffer = []
             episode_values = []
-            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_collision_count= 0
+            episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_stop_count= 0
 
             # Initial state from the environment
             if self.agentID == 1:
@@ -973,7 +973,8 @@ class Worker():
                     self.synchronize()
 
                     if self.agentID == 1:
-                        print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
+                        if self.metaAgentID == 0:
+                            print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
                         observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         all_obs,visible_agents_dict=observe_result
                         for i in range(1, self.num_workers + 1):
@@ -990,6 +991,8 @@ class Worker():
                     s1 = joint_observations[self.metaAgentID][self.agentID]
                     if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
                         episode_collision_count+=1
+                        if self.metaAgentID==0 and self.agentID==1:
+                            print("status:-2 or -3")
                         is_collision_for_shaping=True
 
                     """
@@ -1010,7 +1013,10 @@ class Worker():
                     extra_reward=0
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
-                        extra_reward-=0.2
+                        if self.metaAgentID==0 and self.agentID==1:
+                            print("status:-1")
+                        episode_wall_stop_count+=1
+                        extra_reward-=0.1
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
                     pre_action=action
@@ -1121,7 +1127,7 @@ class Worker():
                     episode_stop_count,
                     episode_astar_count,
                     episode_collision_count,
-                    episode_wall_collision_count,
+                    episode_wall_stop_count,
                     episode_reward,
                     targets_done
                 ])
