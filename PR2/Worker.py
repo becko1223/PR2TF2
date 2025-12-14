@@ -778,7 +778,7 @@ class Worker():
             if self.agentID == 1:
                 if episode_count > (random_term-1):
                     self.env._reset(maze_generator(
-                                        env_size=ENVIRONMENT_SIZE,
+                                        env_size=(ENVIRONMENT_SIZE[0],ENVIRONMENT_SIZE[0]+30+30*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
                                         wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+(WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
                                         obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+(OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0]))
                                     ))

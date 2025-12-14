@@ -22,7 +22,7 @@ gammma_tdmpc            =0.95
 temperature             =0.25
 iterations              =1
 
-random_term             =25
+random_term             =5
 correction_rate         =0.2
 
 # observer parameters
@@ -45,7 +45,7 @@ NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
 SUMMARY_WINDOW          = 1
-load_model              = True
+load_model              = False
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
