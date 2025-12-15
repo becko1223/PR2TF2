@@ -1099,7 +1099,7 @@ class Worker():
                             print("status:-2 or -3")
                         is_collision_for_shaping=True
 
-                    """
+                    
                     #シェーピング報酬の計算
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
@@ -1108,11 +1108,11 @@ class Worker():
                     shaping_reward=0
                     if not is_collision_for_shaping:
                         if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
-                            shaping_reward=0.1
+                            shaping_reward=0.05
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
-                            shaping_reward=-0.1
+                            shaping_reward=-0.05
                         shaping_reward=shaping_reward #*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
-                    """
+                    
 
                     extra_reward=0
                     action=action2dir(a)
@@ -1124,6 +1124,7 @@ class Worker():
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
                     pre_action=action
+                    extra_reward+=shaping_reward
                     
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+extra_reward
                     validActions = self.env.listValidActions(self.agentID, s1)
