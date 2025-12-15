@@ -938,7 +938,6 @@ class Worker():
                     first_latent=self.local_ACRD.encode(ob,goal)
                     #print("mean shape",tf.shape(mean))
                     tentative=mean[:-1]
-                    print("tentative shape",tf.shape(tentative))
                     tentative.set_shape([horizon-1,a_size])
                     #print("tentative shape",tf.shape(tentative))
                     encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
@@ -1029,7 +1028,7 @@ class Worker():
                             a=a.numpy().item()
                         
                         #mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
-                        mean=tf.concat([mean[1:],tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)],axis=0)
+                        mean=tf.concat([mean[1:],tf.ones([1, a_size], dtype=tf.float32) / float(a_size)],axis=0)
                        
 
                     else:
