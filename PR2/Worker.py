@@ -282,6 +282,30 @@ class Worker():
         #actions_onehot_samples=tf.boolean_mask(actions_onehot_samples,cond)
 
         return actions_onehot_samples
+
+
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[horizon, a_size], dtype=tf.float32)
+    ])
+    def sample_from_logits(self,action_probs):
+        logits = tf.math.log(action_probs + 1e-10)
+        
+        # バッチサイズ分繰り返すために次元を拡張 [num_samples, horizon, a_size]
+        # tf.random.categorical は [batch, logits] を期待するので形状変更が必要
+        logits_reshaped = tf.reshape(logits, [1, horizon, a_size]) # [1, H, A]
+        logits_tiled = tf.tile(logits_reshaped, [num_samples, 1, 1]) # [N, H, A]
+        logits_flat = tf.reshape(logits_tiled, [num_samples * horizon, a_size])
+
+        # サンプリング実行 [N*H, 1]
+        samples_indices = tf.random.categorical(logits_flat, num_samples=1, dtype=tf.int32)
+        
+        # 形状を戻す [N, H]
+        samples_indices = tf.reshape(samples_indices, [num_samples, horizon])
+        
+        # One-hotに変換 [N, H, A]
+        samples_onehot = tf.one_hot(samples_indices, a_size, dtype=tf.float32)
+        
+        return samples_onehot
     
 
 
@@ -462,6 +486,39 @@ class Worker():
         #print("std shape",std.shape)
 
         return mean, std
+    
+
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[None, ], dtype=tf.float32),          # V
+        tf.TensorSpec(shape=[None, horizon, a_size], dtype=tf.float32) # samples
+    ])
+    def get_mean_prob(self,V,samples):
+        # 上位k個のエリートを選出
+        topK = tf.math.top_k(V, k=num_elites)
+        V_elite = topK.values                # [k,]
+        actions_elite = tf.gather(samples, topK.indices) # [k, horizon, a_size]
+        
+        # スコア計算 (Softmax)
+        score = tf.math.exp(temperature * (V_elite - tf.reduce_max(V_elite)))
+        score = score / (tf.reduce_sum(score) + 1e-10)   # [k,]
+        
+        # 次の計算のために次元拡張 [k, 1, 1]
+        score_expanded = tf.reshape(score, [-1, 1, 1])
+        
+        # 重み付き平均を計算 [horizon, a_size]
+        # One-hotベクトルの重み付き平均 = その行動が選ばれる確率
+        new_probs = tf.reduce_sum(actions_elite * score_expanded, axis=0)
+        
+        # 探索が完全になくならないように、わずかに一様分布を混ぜる（スムージング）
+        # これにより、確率が0になって二度と選ばれなくなるのを防ぐ
+        smoothing_weight = 0.05 # 調整パラメータ
+        uniform_dist = tf.ones_like(new_probs) / float(a_size)
+        new_probs = (1.0 - smoothing_weight) * new_probs + smoothing_weight * uniform_dist
+        
+        # 念のため正規化 (計算誤差対策)
+        new_probs = new_probs / tf.reduce_sum(new_probs, axis=-1, keepdims=True)
+
+        return new_probs
 
 
     @tf.function(input_signature=[
@@ -499,6 +556,46 @@ class Worker():
         action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
         return action_best,mean
+    
+
+
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=[1, 1, 11, 11, FILTER_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[horizon, a_size], dtype=tf.float32), # これは確率分布として扱われる
+        tf.TensorSpec(shape=[None, a_size], dtype=tf.float32),
+        tf.TensorSpec(shape=[1], dtype=tf.bool),
+        tf.TensorSpec(shape=[2], dtype=tf.float32)
+    ], reduce_retracing=True)
+    def mppi_prob(self, latent_init, action_probs, validActions, is_no_guide, guide_dir):
+        
+        # 初期分布の正規化（念のため）
+        current_probs = action_probs / (tf.reduce_sum(action_probs, axis=-1, keepdims=True) + 1e-10)
+        
+        # Actorからのサンプル（ガイドとして機能）
+        inits_for_actor = tf.repeat(latent_init, num_actor_traj, axis=0)
+        samples_from_actor = self.sample_from_actor(inits_for_actor) # [B, H, A]
+
+        # 評価用の初期状態
+        inits_for_return = tf.repeat(latent_init, num_actor_traj + num_samples, axis=0)
+
+        for i in tf.range(iterations):
+            # 分布からのサンプリング
+            samples_from_distribution = self.sample_from_logits(current_probs) 
+            
+            # Actorサンプルと結合
+            allsamples = tf.concat([samples_from_actor, samples_from_distribution], axis=0)
+            
+            # 評価 (Vの計算)
+            V = self.compute_return(allsamples, inits_for_return, validActions, is_no_guide, guide_dir)
+            
+            # 分布の更新 (meanではなく分布そのものが返ってくる)
+            current_probs = self.get_mean_prob(V, allsamples)
+
+        # 最終決定: 最も確率の高い行動、あるいは期待リターンの高かった分布から再サンプリング
+        # ここでは更新された分布のstep 0で最も確率の高い行動を選択
+        action_best = tf.argmax(current_probs[0])
+
+        return action_best, current_probs
 
 
 
@@ -797,7 +894,8 @@ class Worker():
             pre_action=(0,0)
             a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
             a_onehot=tf.reshape(a_onehot,[1,1,5])
-            mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
+            #mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
+            mean = tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)
 
             self.synchronize()  # synchronize starting time of the threads
             swarm_reward[self.metaAgentID] = 0
@@ -926,10 +1024,11 @@ class Worker():
                             if(random.random() > max([min([correction_rate*(10.0-self.mean_finishes)/10.0, correction_rate]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
-                            a, mean=self.mppi(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
+                            a, mean=self.mppi_prob(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
                             a=a.numpy().item()
                         
-                        mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
+                        #mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
+                        mean=tf.concat([mean[1:],tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)],axis=0)
                        
 
                     else:
@@ -1021,7 +1120,7 @@ class Worker():
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-1")
                         episode_wall_stop_count+=1
-                        extra_reward-=0.1
+                        extra_reward-=0.
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
                     pre_action=action
