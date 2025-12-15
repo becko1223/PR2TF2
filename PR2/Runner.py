@@ -144,9 +144,9 @@ class Runner(object):
 
         inference_lock = threading.Lock()       
 
-        workersPerMetaAgent = NUM_THREADS
+        workersPerMetaAgent = 2+ int((NUM_THREADS-2)*max([min([(-5.0+mean_finishes)/40.0, 1.0]), 0.0]))
 
-        for a in range(NUM_THREADS):
+        for a in range(workersPerMetaAgent):
             agentID = a + 1
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,

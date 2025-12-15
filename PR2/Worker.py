@@ -776,14 +776,12 @@ class Worker():
 
             # Initial state from the environment
             if self.agentID == 1:
-                if episode_count > (random_term-1):
-                    self.env._reset(maze_generator(
-                                        env_size=(ENVIRONMENT_SIZE[0],ENVIRONMENT_SIZE[0]+30+30*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
-                                        wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+(WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0])),
-                                        obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+(OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-10.0+self.mean_finishes)/20.0, 1.0]), 0.0]))
-                                    ))
-                else:
-                    self.env._reset()
+                self.env._reset(maze_generator(
+                                    env_size=(ENVIRONMENT_SIZE[0],ENVIRONMENT_SIZE[0]+int((ENVIRONMENT_SIZE[1]-ENVIRONMENT_SIZE[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+int((WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+int((OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
+                                ),num_agents)
+              
                 joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID] = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads
@@ -853,10 +851,10 @@ class Worker():
                     visible_agents=joint_visible_agents[self.metaAgentID][self.agentID]
                     num=len(visible_agents)
                     visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
-                    visible_messages_for_buffer=np.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
+                    visible_messages_for_buffer=np.zeros([NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
-                    masks_for_buffer=np.zeros([1,num_agents])
+                    masks_for_buffer=np.zeros([1,NUM_THREADS])
                     if(episode_count>(random_term-1)):
                         masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
 
@@ -1069,8 +1067,8 @@ class Worker():
                             train_valid = np.zeros(a_size)
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
-                            messages_buffer.append(tf.zeros([num_agents,FILTER_SIZE+(horizon-1)*a_size]))
-                            masks_buffer.append(tf.zeros([1,num_agents]))
+                            messages_buffer.append(tf.zeros([NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size]))
+                            masks_buffer.append(tf.zeros([1,NUM_THREADS]))
                             dummy_tentative=tf.constant([1,0,0,0,0],dtype=tf.float32)
                             dummy_tentative=tf.expand_dims(dummy_tentative,axis=0)
                             dummy_tentative=tf.tile(dummy_tentative,[horizon-1,1])

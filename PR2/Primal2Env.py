@@ -24,11 +24,13 @@ class Primal2Env(MAPFEnv):
                                           num_agents=num_agents,
                                           IsDiagonal=IsDiagonal, frozen_steps=frozen_steps, isOneShot=isOneShot)
 
-    def _reset(self, new_generator=None):
+    def _reset(self, new_generator=None,num_agents=None):
         if new_generator is None:
             self.set_world()
         else:
             self.map_generator = new_generator
+            if num_agents!=None:
+                self.num_agents=num_agents
             self.world = World(self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
             self.num_agents = self.world.num_agents
             self.observer.set_env(self.world)
