@@ -890,7 +890,7 @@ class Worker():
             s = joint_observations[self.metaAgentID][self.agentID]
 
            
-            
+            is_collision_for_shaping=False
             pre_action=(0,0)
             a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
             a_onehot=tf.reshape(a_onehot,[1,1,5])
