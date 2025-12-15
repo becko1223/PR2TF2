@@ -138,7 +138,7 @@ class Runner(object):
     def multiThreadedJob(self, episodeNumber, mean_finishes):
         workers = []
         worker_threads = []
-        workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]
+        workerNames = ["worker_" + str(i+1) for i in range(2+ int((NUM_THREADS-2)*max([min([(-5.0+mean_finishes)/40.0, 1.0]), 0.0])))]
         groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO  
 
 
