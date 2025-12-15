@@ -779,7 +779,7 @@ class Worker():
                 self.env._reset(maze_generator(
                                     env_size=(ENVIRONMENT_SIZE[0],ENVIRONMENT_SIZE[0]+int((ENVIRONMENT_SIZE[1]-ENVIRONMENT_SIZE[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
                                     wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+int((WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
-                                    obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+int((OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
+                                    obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+((OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
                                 ),num_agents)
               
                 joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID] = self.env._observe()
