@@ -879,7 +879,7 @@ class Worker():
                                     obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+((OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
                                 ),num_agents)
               
-                joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID] = self.env._observe()
+                joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID],joint_normalized_distances[self.metaAgentID] = self.env._observe()
 
             self.synchronize()  # synchronize starting time of the threads
 
