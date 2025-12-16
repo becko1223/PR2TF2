@@ -32,7 +32,7 @@ NUM_FUTURE_STEPS        = 3
 # environment parameters
 ENVIRONMENT_SIZE        = (10, 70)  # the total size of the environment (length of one side) , Starting Point of Curriculum Only
 WALL_COMPONENTS         = (3, 21)    # Starting Params of Curriculum = TRUE
-OBSTACLE_DENSITY        = (0.2, 0.7)  # range of densities   Starting Params of Curriculum = TRUE
+OBSTACLE_DENSITY        = (0.15, 0.7)  # range of densities   Starting Params of Curriculum = TRUE
 
 DIAG_MVMT               = False  # Diagonal movements allowed?
 TENTATIVE               = True
@@ -45,7 +45,7 @@ NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
 SUMMARY_WINDOW          = 1
-load_model              = True
+load_model              = False
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
