@@ -1015,7 +1015,7 @@ class Worker():
 
                     #行動選択
                     if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
-                        if(random.random()<0.05):
+                        if(random.random()<1.0-0.9*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
