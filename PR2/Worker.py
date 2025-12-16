@@ -932,7 +932,7 @@ class Worker():
                     goal=tf.cast(goal,dtype=tf.float32)
                     a_onehot=tf.cast(a_onehot,dtype=tf.float32)
                     a_onehot.set_shape([1,1,5])
-                    goal=tf.concat([goal,a_onehot],-1)
+                    #goal=tf.concat([goal,a_onehot],-1)
 
 
                     first_latent=self.local_ACRD.encode(ob,goal)

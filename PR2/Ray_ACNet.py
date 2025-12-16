@@ -120,7 +120,7 @@ class ACRDNet(tf.keras.Model):
 
     @tf.function(input_signature=[
                         tf.TensorSpec(shape=[None, None, 4, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
-                        tf.TensorSpec(shape=[None, None, 8], dtype=tf.float32),          # goal (B, S, F)
+                        tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
                     ])
     def encode(self,inputs,goal_pos):
         x=inputs

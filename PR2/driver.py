@@ -588,7 +588,7 @@ class ReplayBuffer():
 
         # バッファからデータを取得
         obs = np.empty(( batch_size, horizon+1,4,11,11), dtype=np.float32)
-        goals= np.empty((batch_size,horizon+1,8))
+        goals= np.empty((batch_size,horizon+1,3))
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
@@ -644,7 +644,7 @@ def main():
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
-        dummy_goals=tf.zeros([1,1,8])   
+        dummy_goals=tf.zeros([1,1,3])   
         dummy_latents=tf.zeros([1,1,11,11,FILTER])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,1,FILTER+(horizon-1)*a_size])
