@@ -184,11 +184,18 @@ class Primal2Observer(ObservationBuilder):
         time6 = time.time() - start_time
         start_time = time.time()
 
-        return state, [dx, dy, mag],visible_agents, np.array([time1, time2, time3, time4, time5, time6])
+        normalized_distance=0
+        max_distance=np.max(self.world.agents[agent_id].distanceMap)
+        if(max_distance!=0):
+            #normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/max_distance
+            normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/100.0
+
+        return state, [dx, dy, mag],visible_agents,normalized_distance, np.array([time1, time2, time3, time4, time5, time6])
 
     def get_many(self, handles=None):
         observations = {}
         all_visible_agents = {}
+        normalized_distances = {}
         
         if handles is None:
             handles = list(range(1, self.world.num_agents + 1))
@@ -196,13 +203,14 @@ class Primal2Observer(ObservationBuilder):
         times = np.zeros((1, 6))
 
         for h in handles:
-            state, vector,visible_agents, time = self._get(h)
+            state, vector,visible_agents,normalized_distance, time = self._get(h)
             observations[h] = [state, vector]
             all_visible_agents[h]=visible_agents
+            normalized_distances[h]=normalized_distance
             times += time
         if self.printTime:
             print(times)
-        return observations,all_visible_agents
+        return observations,all_visible_agents,normalized_distances
 
     def get_astar_map(self):
         """

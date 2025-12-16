@@ -1075,12 +1075,13 @@ class Worker():
                         if self.metaAgentID == 0:
                             print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
                         observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
-                        all_obs,visible_agents_dict=observe_result
+                        all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
                             joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
                             joint_visible_agents[self.metaAgentID][i]=visible_agents_dict[i]
+                            joint_normalized_distances[self.metaAgentID][i]=normalized_distances[i]
                         if saveGIF and self.agentID == 1:
                             GIF_frames.append(self.env._render())
 
@@ -1089,17 +1090,17 @@ class Worker():
                     # Get observation,reward, valid actions for each agent 
                     s1 = joint_observations[self.metaAgentID][self.agentID]
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==4.7):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==2.925):
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:1")
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-0.575):
                         episode_collision_count+=1
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-2 or -3")
                         is_collision_for_shaping=True
 
-                    
+                    """
                     #シェーピング報酬の計算
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
@@ -1112,18 +1113,25 @@ class Worker():
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
                             shaping_reward=-0.05
                         shaping_reward=shaping_reward #*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
-                    
+                    """
+                    shaping_reward=-(1-0.1)*gammma_tdmpc*joint_normalized_distances[self.metaAgentID][self.agentID]
+
 
                     extra_reward=0
+                    
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-1")
                         episode_wall_stop_count+=1
                         extra_reward-=0.
+                    """
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
                     pre_action=action
+                    """
+                    
+
                     extra_reward+=shaping_reward
                     
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+extra_reward

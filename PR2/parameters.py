@@ -18,7 +18,7 @@ num_samples             =200
 num_actor_traj          =16
 num_elites              =64
 
-gammma_tdmpc            =0.95
+gammma_tdmpc            =0.99
 temperature             =0.25
 iterations              =2
 
@@ -99,6 +99,7 @@ joint_done              = [{} for _ in range(NUM_META_AGENTS)]
 joint_tentative_actions = [{} for _ in range(NUM_META_AGENTS)]
 joint_encoded_obs       = [{} for _ in range(NUM_META_AGENTS)]
 joint_visible_agents    = [{} for _ in range(NUM_META_AGENTS)]
+joint_normalized_distances = [{} for _ in range(NUM_META_AGENTS)]
 
 
 env_params              = [[ [WALL_COMPONENTS[0], WALL_COMPONENTS[1]] , [OBSTACLE_DENSITY[0],OBSTACLE_DENSITY[1]]]  for _ in range(NUM_META_AGENTS)]

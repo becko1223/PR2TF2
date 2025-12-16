@@ -789,7 +789,7 @@ class MAPFEnv(gym.Env):
         else:
             self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(5)])
 
-        self.ACTION_COST, self.WALL_COLLISION_REWARD, self.GOAL_REWARD, self.COLLISION_REWARD = -0.3,-0,  5., -2
+        self.ACTION_COST, self.WALL_COLLISION_REWARD, self.GOAL_REWARD, self.COLLISION_REWARD = -0.075,-0,  3., -0.5
 
     def getObstacleMap(self):
         return (self.world.state == -1).astype(int)
@@ -831,14 +831,14 @@ class MAPFEnv(gym.Env):
         Returns Dict of observation {agentid:[], ...}
         """
         if handles is None:
-            self.obs_dict,visible_agents = self.observer.get_many( list(range(1, self.num_agents + 1)))
+            self.obs_dict,visible_agents,normalized_distances = self.observer.get_many( list(range(1, self.num_agents + 1)))
         elif handles in list(range(1, self.num_agents + 1)):
-            self.obs_dict,visible_agents = self.observer.get_many( [handles])
+            self.obs_dict,visible_agents,normalized_distances = self.observer.get_many( [handles])
         elif set(handles) == set(handles) & set(list(range(1, self.num_agents + 1))):
-            self.obs_dict,visible_agents = self.observer.get_many(handles)
+            self.obs_dict,visible_agents,normalized_distances = self.observer.get_many(handles)
         else:
             raise ValueError("Invalid agent_id given")
-        return self.obs_dict,visible_agents
+        return self.obs_dict,visible_agents,normalized_distances
 
     def step_all(self, movement_dict):
         """
