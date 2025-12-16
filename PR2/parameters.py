@@ -22,7 +22,7 @@ gammma_tdmpc            =0.99
 temperature             =0.25
 iterations              =2
 
-random_term             =25
+random_term             =50
 correction_rate         =0
 
 # observer parameters
