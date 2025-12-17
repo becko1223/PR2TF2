@@ -1021,7 +1021,7 @@ class Worker():
                             a=np.random.choice(indices, p=probabilities)
                             
                         else:
-                            if(random.random() > max([min([correction_rate*(10.0-self.mean_finishes)/10.0, correction_rate]), 0.0])):
+                            if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             a, mean=self.mppi_prob(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
@@ -1100,7 +1100,7 @@ class Worker():
                             print("status:-2 or -3")
                         is_collision_for_shaping=True
 
-                    """
+                    
                     #シェーピング報酬の計算
                     action=action2dir(a)
                     if s[0][2][5+action[0]][5+action[1]]==1:
@@ -1109,12 +1109,12 @@ class Worker():
                     shaping_reward=0
                     if not is_collision_for_shaping:
                         if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
-                            shaping_reward=0.05
+                            shaping_reward=0.03
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
-                            shaping_reward=-0.05
-                        shaping_reward=shaping_reward #*max([min([(30.0-self.mean_finishes)/20.0, 1.0]), 0.0])
-                    """
-                    shaping_reward=-(1-0.1)*gammma_tdmpc*joint_normalized_distances[self.metaAgentID][self.agentID]
+                            shaping_reward=-0.03
+                        
+                    
+                    #shaping_reward=-(1-0.1)*gammma_tdmpc*joint_normalized_distances[self.metaAgentID][self.agentID]
 
 
                     extra_reward=0
