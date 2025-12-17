@@ -32,7 +32,7 @@ NUM_FUTURE_STEPS        = 3
 # environment parameters
 ENVIRONMENT_SIZE        = (10, 70)  # the total size of the environment (length of one side) , Starting Point of Curriculum Only
 WALL_COMPONENTS         = (1, 21)    # Starting Params of Curriculum = TRUE
-OBSTACLE_DENSITY        = (0.07, 0.7)  # range of densities   Starting Params of Curriculum = TRUE
+OBSTACLE_DENSITY        = (0.05, 0.7)  # range of densities   Starting Params of Curriculum = TRUE
 
 DIAG_MVMT               = False  # Diagonal movements allowed?
 TENTATIVE               = True
