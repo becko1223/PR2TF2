@@ -296,7 +296,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         weights_expanded_expanded=tf.expand_dims(tf.expand_dims(tf.expand_dims(weights_expanded, axis=-1), -1), -1)
         consistency_loss=tf.reduce_mean(weights_expanded_expanded*tf.expand_dims(tf.expand_dims(tf.expand_dims(rhos,axis=-1),-1),-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
-        total_loss=0.5*reward_loss+0.5*(q1value_loss+q2value_loss)+2.0*consistency_loss
+        total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
     world_grads=tape.gradient(total_loss,variables_except_for_actor)
 
 
