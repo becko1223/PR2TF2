@@ -286,6 +286,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         td_errors_q1 = tf.abs(q_target - batch_q1value_preds)
         td_errors_q2 = tf.abs(q_target - batch_q2value_preds)
         td_errors = (td_errors_q1 + td_errors_q2) / 2.0
+        reward_errors = tf.abs(batch_reward_preds-batch_rewards[:,:])
 
         weights_expanded = tf.expand_dims(batch_weights, axis=-1) #[batch,] to [batch, 1]
 
@@ -341,7 +342,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
     policy_optimizer.apply_gradients(zip(policy_grads,variables_for_actor))
 
-    return world_grad_norms,policy_grad_norms,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy], td_errors
+    return world_grad_norms,policy_grad_norms,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy], td_errors+reward_errors
 
 
 
@@ -363,9 +364,9 @@ def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tenta
     
 
     
-    world_grad_norms,policy_grad_norms,loss_list, td_errors=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives, batch_weights, world_optimizer,policy_optimizer)
+    world_grad_norms,policy_grad_norms,loss_list, errors=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives, batch_weights, world_optimizer,policy_optimizer)
 
-    new_priorities = td_errors.numpy()
+    new_priorities = errors.numpy()
     if len(new_priorities.shape) > 1:
          new_priorities = np.mean(new_priorities, axis=1)
 

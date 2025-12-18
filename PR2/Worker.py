@@ -1124,7 +1124,7 @@ class Worker():
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-1")
                         episode_wall_stop_count+=1
-                        extra_reward-=0.
+                        extra_reward-=0.03
                     """
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
