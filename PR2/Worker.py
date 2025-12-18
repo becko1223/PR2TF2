@@ -511,7 +511,7 @@ class Worker():
         
         # 探索が完全になくならないように、わずかに一様分布を混ぜる（スムージング）
         # これにより、確率が0になって二度と選ばれなくなるのを防ぐ
-        smoothing_weight = 0.05 # 調整パラメータ
+        smoothing_weight = 0.1 # 調整パラメータ
         uniform_dist = tf.ones_like(new_probs) / float(a_size)
         new_probs = (1.0 - smoothing_weight) * new_probs + smoothing_weight * uniform_dist
         
@@ -875,8 +875,8 @@ class Worker():
             if self.agentID == 1:
                 self.env._reset(maze_generator(
                                     env_size=(ENVIRONMENT_SIZE[0],ENVIRONMENT_SIZE[0]+int((ENVIRONMENT_SIZE[1]-ENVIRONMENT_SIZE[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
-                                    wall_components=(WALL_COMPONENTS[0], WALL_COMPONENTS[0]+int((WALL_COMPONENTS[1]-WALL_COMPONENTS[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
-                                    obstacle_density=(OBSTACLE_DENSITY[0], OBSTACLE_DENSITY[0]+((OBSTACLE_DENSITY[1]-OBSTACLE_DENSITY[0])*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
+                                    wall_components=(WALL_COMPONENTS[0], 2+int(19*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    obstacle_density=(OBSTACLE_DENSITY[0], 0.1+(0.6*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
                                 ),num_agents)
               
                 joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID],joint_normalized_distances[self.metaAgentID] = self.env._observe()
@@ -1124,7 +1124,7 @@ class Worker():
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-1")
                         episode_wall_stop_count+=1
-                        extra_reward-=0.03
+                        extra_reward-=0.05
                     """
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
