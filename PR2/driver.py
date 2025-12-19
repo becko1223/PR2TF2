@@ -422,7 +422,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
     total=sum(goals_numbers)
     number=len(goals_numbers)
     if number>0:
-        global_mean_finishes=total/number
+        global_mean_finishes=total/10.0
     
 
     with global_summary.as_default():
