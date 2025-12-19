@@ -290,6 +290,11 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
         weights_expanded = tf.expand_dims(batch_weights, axis=-1) #[batch,] to [batch, 1]
 
+        log_reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
+        log_q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
+        log_q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
+        log_consistency_loss=tf.reduce_mean(tf.expand_dims(tf.expand_dims(tf.expand_dims(rhos,axis=-1),-1),-1)*tf.square(batch_latent_targets-batch_latent_preds))
+
         reward_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
         q1value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q1value_preds))
         q2value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q2value_preds))
@@ -324,7 +329,9 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         batch_q=tf.math.minimum(q1_next,q2_next)
         batch_q=tf.squeeze(batch_q) 
         
-        
+        log_policy_loss=-tf.reduce_mean(rhos*batch_q)
+        log_valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+        log_entropy=-tf.reduce_mean(*tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
 
         policy_loss=-tf.reduce_mean(weights_expanded*rhos*batch_q)
@@ -342,7 +349,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     world_optimizer.apply_gradients(zip(world_grads,variables_except_for_actor))
     policy_optimizer.apply_gradients(zip(policy_grads,variables_for_actor))
 
-    return world_grad_norms,policy_grad_norms,[reward_loss,(q1value_loss+q2value_loss)/2.0,consistency_loss,policy_loss,valid_loss,entropy], td_errors+reward_errors
+    return world_grad_norms,policy_grad_norms,[log_reward_loss,(log_q1value_loss+log_q2value_loss)/2.0,log_consistency_loss,log_policy_loss,log_valid_loss,log_entropy], td_errors+reward_errors
 
 
 
@@ -473,7 +480,7 @@ class ReplayBuffer():
         self.priorities = [] # indexlistに対応する優先度を保持
         self.alpha = 0.6     # 優先度の度合い (0でランダム, 1で完全優先)
         self.beta = 0.4      # 重点サンプリングによる補正 (学習初期は小さく、終盤は1に近づける)
-        self.beta_increment_per_sampling = 0.00001
+        self.beta_increment_per_sampling = 0.0000005
         self.epsilon = 1e-5  # 優先度が0にならないように加算する微小値
         self.abs_err_upper = 1.0  # クリッピング用
 
@@ -491,6 +498,7 @@ class ReplayBuffer():
                     self.tentatives_buffer=data["tentatives_buffer"]
                     self.indexlist=data["indexlist"]
                     self.priorities=data["priorities"]
+                    self.beta = data.get("beta", 0.4)
                     
                     self.deletecount=data["deletecount"]
                     self.addcount=data["addcount"]
@@ -629,6 +637,7 @@ class ReplayBuffer():
                 data["tentatives_buffer"]=self.tentatives_buffer
                 data["indexlist"]=self.indexlist
                 data["priorities"] = self.priorities
+                data["beta"] = self.beta
                 
                 data["deletecount"]=self.deletecount
                 data["addcount"]=self.addcount
