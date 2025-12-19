@@ -331,7 +331,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         log_policy_loss=-tf.reduce_mean(rhos*batch_q)
         log_valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
-        log_entropy=-tf.reduce_mean(*tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+        log_entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
 
         policy_loss=-tf.reduce_mean(weights_expanded*rhos*batch_q)
