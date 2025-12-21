@@ -1060,6 +1060,14 @@ class Worker():
 
                     else:
                         probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
+                        for i in range(a_size):
+                                move=action2dir(i)
+                                if (s[0][2][5+move[0]][5+move[1]] == 1):
+                                    probabilities[i]=0
+                        total=sum(probabilities)
+                        probabilities=[i/total for i in probabilities]
+                                
+                        indices = np.arange(len(probabilities))
                         indices = np.arange(len(probabilities))
                         a=np.random.choice(indices, p=probabilities)
                         q=np.zeros((1,1))
