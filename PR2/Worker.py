@@ -313,10 +313,11 @@ class Worker():
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
         tf.TensorSpec(shape=[None,1,11,11,FILTER_SIZE],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
+        tf.TensorSpec(shape=[11,11],dtype=tf.float32),
         tf.TensorSpec(shape=[1], dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)
     ])
-    def compute_return(self,samples,latent_inits,validActions,is_no_goalguide_condition,guide_dir): #[B,horizon,onehot] , [B,1,latentdim]
+    def compute_return(self,samples,latent_inits,validActions,obstacle_map,is_no_goalguide_condition,guide_dir): #[B,horizon,onehot] , [B,1,latentdim]
 
         """
         #scanはむずかしい
@@ -350,7 +351,7 @@ class Worker():
         rewards_ta = tf.TensorArray(dtype=tf.float32, size=horizon, dynamic_size=False,clear_after_read=False)
 
         
-
+        current_pos=tf.fill([B_size, 2], 5.0)
         for t in tf.range(horizon):
             actions=samples[t]
             actions_expanded = tf.expand_dims(actions, axis=1)
@@ -363,7 +364,21 @@ class Worker():
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
             current_latents.set_shape([None,1,11,11,FILTER_SIZE])
-            rewards_ta=rewards_ta.write(t,rewards*discount)
+
+            move = distribution_to_coordinate(actions)
+            planned_pos=current_pos+move
+            is_wall = tf.gather_nd(obstacle_map,tf.cast(planned_pos,dtype=tf.int32))
+
+            wall_penalty = is_wall * -100.0
+
+            is_wall_bool = tf.cast(is_wall, tf.bool)
+            current_pos = tf.where(
+                tf.expand_dims(is_wall_bool, axis=1), 
+                current_pos,                   
+                planned_pos                    
+            )
+
+            rewards_ta=rewards_ta.write(t,(rewards+wall_penalty)*discount)
             discount*=gammma_tdmpc
 
 
@@ -391,7 +406,9 @@ class Worker():
             q2_value=self.local_ACRD.q2(current_latents,actions_expanded)
             q_value=tf.minimum(q1_value,q2_value)
             q_value.set_shape([None,1,1])
-            q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value
+            q_expected+=tf.expand_dims(tf.expand_dims(policy_for_sampling[:, t], axis=1), axis=2)*q_value  
+            
+            
 
 
         #last_actions=tf.squeeze(last_actions)
@@ -525,10 +542,11 @@ class Worker():
         tf.TensorSpec(shape=[1,1, 11,11,FILTER_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
+        tf.TensorSpec(shape=[11,11],dtype=tf.float32),
         tf.TensorSpec(shape=[1],dtype=tf.bool),
         tf.TensorSpec(shape=[2],dtype=tf.float32)
     ], reduce_retracing=True)
-    def mppi(self,latent_init,mean,validActions,is_no_guide,guide_dir):
+    def mppi(self,latent_init,mean,validActions,obstacle_map,is_no_guide,guide_dir):
         std=tf.ones([horizon,])
 
         #print("latent_init shape:",latent_init.shape)
@@ -545,13 +563,13 @@ class Worker():
         for i in tf.range(iterations):
             samples_from_distribution=self.sample_from_distribution(mean,std) 
             allsamples=tf.concat([samples_from_actor,samples_from_distribution],axis=0)
-            V=self.compute_return(allsamples,inits_for_return,validActions,is_no_guide,guide_dir)
+            V=self.compute_return(allsamples,inits_for_return,validActions,obstacle_map,is_no_guide,guide_dir)
             #tf.print("V shape befre get_mean:", tf.shape(V))
             mean,std=self.get_mean(V,allsamples)
 
         samples_from_distribution=self.sample_from_distribution(mean,std)
         inits_for_return=tf.repeat(latent_init,num_samples,axis=0)
-        V=self.compute_return(samples_from_distribution,inits_for_return,validActions,is_no_guide,guide_dir)
+        V=self.compute_return(samples_from_distribution,inits_for_return,validActions,obstacle_map,is_no_guide,guide_dir)
 
         action_best=tf.argmax(samples_from_distribution[tf.argmax(V),0])
 
@@ -563,10 +581,11 @@ class Worker():
         tf.TensorSpec(shape=[1, 1, 11, 11, FILTER_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon, a_size], dtype=tf.float32), # これは確率分布として扱われる
         tf.TensorSpec(shape=[None, a_size], dtype=tf.float32),
+        tf.TensorSpec(shape=[11,11],dtype=tf.float32),
         tf.TensorSpec(shape=[1], dtype=tf.bool),
         tf.TensorSpec(shape=[2], dtype=tf.float32)
     ], reduce_retracing=True)
-    def mppi_prob(self, latent_init, action_probs, validActions, is_no_guide, guide_dir):
+    def mppi_prob(self, latent_init, action_probs, validActions,obstacle_map, is_no_guide, guide_dir):
         
         # 初期分布の正規化（念のため）
         current_probs = action_probs / (tf.reduce_sum(action_probs, axis=-1, keepdims=True) + 1e-10)
@@ -586,7 +605,7 @@ class Worker():
             allsamples = tf.concat([samples_from_actor, samples_from_distribution], axis=0)
             
             # 評価 (Vの計算)
-            V = self.compute_return(allsamples, inits_for_return, validActions, is_no_guide, guide_dir)
+            V = self.compute_return(allsamples, inits_for_return, validActions,obstacle_map, is_no_guide, guide_dir)
             
             # 分布の更新 (meanではなく分布そのものが返ってくる)
             current_probs = self.get_mean_prob(V, allsamples)
@@ -1017,6 +1036,13 @@ class Worker():
                     if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.1-0.09*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
+                            for i in range(a_size):
+                                move=action2dir(i)
+                                if (s[0][2][5+move[0]][5+move[1]] == 1):
+                                    probabilities[i]=0
+                            total=sum(probabilities)
+                            probabilities=[i/total for i in probabilities]
+                                
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
                             
@@ -1024,7 +1050,8 @@ class Worker():
                             if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0.0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
-                            a, mean=self.mppi_prob(latent_init,mean,validActions_onehot,is_no_guide,guide_dir)
+                            obstacle_map=tf.convert_to_tensor(s[0][2],dtype=tf.float32)
+                            a, mean=self.mppi_prob(latent_init,mean,validActions_onehot,obstacle_map,is_no_guide,guide_dir)
                             a=a.numpy().item()
                         
                         #mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
@@ -1124,7 +1151,7 @@ class Worker():
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-1")
                         episode_wall_stop_count+=1
-                        extra_reward-=0.05
+                        extra_reward-=0.00
                     """
                     if ((np.all(np.array(action)+np.array(pre_action))==0) and (action!=(0,0))):
                         extra_reward-=0.2
