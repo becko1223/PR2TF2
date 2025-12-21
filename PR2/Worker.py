@@ -964,14 +964,14 @@ class Worker():
 
                     #コミュニケーションを挟む
                     visible_agents=joint_visible_agents[self.metaAgentID][self.agentID]
-                    num=len(visible_agents)
-                    visible_messages=np.zeros([1,1,num+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
+                    num_visible=len(visible_agents)
+                    visible_messages=np.zeros([1,1,num_visible+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages_for_buffer=np.zeros([NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
                     masks_for_buffer=np.zeros([1,NUM_THREADS])
                     if(episode_count>(random_term-1)):
-                        masks_for_buffer[0,:num+1]=1 #自エージェント＋visible agents
+                        masks_for_buffer[0,:num_visible+1]=1 #自エージェント＋visible agents
 
                     def get_angles(pos, i, d_model):
                         angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
@@ -992,7 +992,7 @@ class Worker():
 
                         return tf.cast(pos_encoding, dtype=tf.float32)
 
-                    for i in range(num):
+                    for i in range(num_visible):
                         dy=visible_agents[i][1]
                         dx=visible_agents[i][2]
                         id=visible_agents[i][0]
@@ -1003,8 +1003,8 @@ class Worker():
                         visible_messages_for_buffer[i+1]=message[0][0]
 
                     if(episode_count>(random_term-1)):
-                        mask=tf.ones([1,1,1,num+1],dtype=tf.bool)
-                        mask.set_shape([1,1,1,num+1])
+                        mask=tf.ones([1,1,1,num_visible+1],dtype=tf.bool)
+                        mask.set_shape([1,1,1,num_visible+1])
                         latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),mask)
                         
                     else:
@@ -1141,10 +1141,16 @@ class Worker():
                 
                     shaping_reward=0
                     if not is_collision_for_shaping:
-                        if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
-                            shaping_reward=0.075
-                        elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
-                            shaping_reward=-0.075
+                        if num_visible>0:
+                            if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
+                                shaping_reward=0.2
+                            elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
+                                shaping_reward=-0.2
+                        else:
+                            if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
+                                shaping_reward=0.02
+                            elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
+                                shaping_reward=-0.02
                         
                     
                     #shaping_reward=-(1-0.1)*gammma_tdmpc*joint_normalized_distances[self.metaAgentID][self.agentID]
