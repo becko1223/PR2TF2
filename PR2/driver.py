@@ -238,7 +238,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
             )
         
         batch_latent_preds = tf.squeeze(batch_latent_preds, axis=2)     #長さhorizon
-        batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2,3,4])  # [h,b,dim]to[b,h,dim]
+        batch_latent_preds = tf.transpose(batch_latent_preds, [1, 0, 2])  # [h,b,dim]to[b,h,dim]
 
         batch_reward_preds = tf.squeeze(batch_reward_preds, axis=2)
         batch_reward_preds = tf.transpose(batch_reward_preds, [1,0,2])
