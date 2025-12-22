@@ -963,7 +963,7 @@ class Worker():
                     #print("mean shape",tf.shape(mean))
                     tentative=mean[:-1]
                     tentative.set_shape([horizon-1,a_size])
-                    tentative=tf.reshape(tentative,[1,-1])
+                    tentative=tf.reshape(tentative,[-1])
                     #print("tentative shape",tf.shape(tentative))
                     encoded_obs,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
                     rnn_state=[rnn_state[0],rnn_state[1]]
