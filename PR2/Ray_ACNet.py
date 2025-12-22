@@ -76,8 +76,9 @@ class ACRDNet(tf.keras.Model):
         self.mha=layers.MultiHeadAttention(num_heads=8,key_dim=64,dropout=0.1)
         self.mha_layernorm=layers.LayerNormalization()
         self.feedforward1=layers.Dense(units=2048,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
-        self.feedforward2=layers.Dense(units=RNN_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
+        self.feedforward2=layers.Dense(units=RNN_SIZE+(horizon-1)*A_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
         self.ff_layernorm=layers.LayerNormalization()
+        self.mha_last_dense=layers.Dense(units=RNN_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
 
 
         #状態遷移
@@ -178,11 +179,12 @@ class ACRDNet(tf.keras.Model):
         mask_flat = tf.reshape(mask, [B * T, 1, L])
         mha_output_flat=self.mha(query=own_vec_flat,key=all_vec_flat,value=all_vec_flat,attention_mask=mask_flat)
         mha_output = tf.reshape(mha_output_flat, [B, T, 1, D])
-        mha_output=layers.TimeDistributed(self.mha_layernorm)(mha_output+own_vec)
+        mha_output=self.mha_layernorm(mha_output+own_vec)
 
-        ff_output=layers.TimeDistributed(self.feedforward1)(mha_output)
-        ff_output=layers.TimeDistributed(self.feedforward2)(ff_output)
-        output=layers.TimeDistributed(self.ff_layernorm)(mha_output+ff_output)
+        ff_output=self.feedforward1(mha_output)
+        ff_output=self.feedforward2(ff_output)
+        output=self.ff_layernorm(mha_output+ff_output)
+        output=self.mha_last_dense(output)
         return output
 
 
