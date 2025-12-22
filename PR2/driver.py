@@ -666,10 +666,8 @@ def main():
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         global_network.encode(dummy_obs,dummy_goals,dummy_h,dummy_c)
-        global_network.comm_encode(dummy_latents,dummy_tentatives)
-        #global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
+       
         global_network.communication.get_concrete_function(
-            tf.TensorSpec(shape=[None, None,RNN_SIZE], dtype=tf.float32), # own_latent
             tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
             tf.TensorSpec(shape=[None, None, None, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
             tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)                 # mask (4次元目をNoneに！)

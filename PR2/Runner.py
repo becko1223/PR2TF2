@@ -108,10 +108,8 @@ class Runner(object):
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
         self.localNetwork.encode(dummy_obs,dummy_goals,dummy_h,dummy_c)
-        self.localNetwork.comm_encode(dummy_latents,dummy_tentatives)
-        #self.localNetwork.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
+        
         self.localNetwork.communication.get_concrete_function(
-            tf.TensorSpec(shape=[None, None, ], dtype=tf.float32), # own_latent
             tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
             tf.TensorSpec(shape=[None, None, None, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
             tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)                 # mask (4次元目をNoneに！)
