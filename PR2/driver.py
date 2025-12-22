@@ -602,7 +602,7 @@ class ReplayBuffer():
         messages = np.empty((batch_size,horizon+1,NUM_THREADS,RNN_SIZE+(horizon-1)*a_size))
         masks = np.empty((batch_size,horizon+1,1,NUM_THREADS))
         tentatives = np.empty((batch_size,horizon+1,(horizon-1)*a_size))
-        rnnstates = np.empty((batch_size,1,2,RNN_SIZE))
+        rnnstates = np.empty((batch_size,1,2,1,RNN_SIZE))
 
         print("rnnstates shape:",np.array(self.rnnstates_buffer).shape)
         for i in range(batch_size):
@@ -614,7 +614,7 @@ class ReplayBuffer():
             messages[i]=np.stack(self.messages_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             masks[i]=np.stack(self.masks_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             tentatives[i]=np.stack(self.tentatives_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
-            rnnstates[i][0]=np.stack(self.rnnstates_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]])
+            rnnstates[i]=np.stack(self.rnnstates_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]])
             
         return obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates,sample_ids,weights
     

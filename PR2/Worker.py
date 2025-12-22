@@ -1248,7 +1248,7 @@ class Worker():
                             self.all_messages_buffer.append(messages_buffer)
                             self.all_masks_buffer.append(masks_buffer)
                             self.all_tentatives_buffer.append(tentatives_buffer)
-                            self.all_rnn_states_buffer.append(rnn_state)
+                            self.all_rnn_states_buffer.append(rnn_state_buffer)
 
                         obs_buffer=[]
                         goals_buffer=[]
