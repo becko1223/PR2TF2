@@ -233,7 +233,7 @@ class ACRDNet(tf.keras.Model):
         
         # Merge
         x = tf.concat([x, g], axis=-1)
-        x = layers.TimeDistributed(self.pre_lstm_dense)(x)
+        x = self.pre_lstm_dense(x)
         
         # LSTM
         lstm_out, state_h, state_c = self.lstm(x, initial_state=[h_state, c_state])
