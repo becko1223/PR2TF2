@@ -1015,7 +1015,7 @@ class Worker():
                     if(episode_count>(random_term-1)):
                         mask=tf.ones([1,1,1,num_visible+1],dtype=tf.bool)
                         mask.set_shape([1,1,1,num_visible+1])
-                        latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),mask)
+                        latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs_with_actions,axis=2),tf.convert_to_tensor(visible_messages),mask)
                         
                     else:
                         latent_init=encoded_obs
