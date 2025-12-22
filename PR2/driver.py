@@ -285,14 +285,14 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         log_reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
         log_q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
         log_q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
-        log_consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=0)*tf.square(batch_latent_targets-batch_latent_preds))
+        log_consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
         reward_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
         q1value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q1value_preds))
         q2value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q2value_preds))
         
-        weights_expanded_expanded=tf.expand_dims(weights_expanded, 0)
-        consistency_loss=tf.reduce_mean(weights_expanded_expanded*tf.expand_dims(rhos,axis=0)*tf.square(batch_latent_targets-batch_latent_preds))
+        weights_expanded_expanded=tf.expand_dims(weights_expanded, -1)
+        consistency_loss=tf.reduce_mean(weights_expanded_expanded*tf.expand_dims(rhos,axis=-1)*tf.square(batch_latent_targets-batch_latent_preds))
 
         total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
     world_grads=tape.gradient(total_loss,variables_except_for_actor)
