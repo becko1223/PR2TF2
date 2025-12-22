@@ -266,7 +266,7 @@ class ACRDNet(tf.keras.Model):
         x = self.mha_ln2(x + ff)
         
         x = self.comm_out(x)
-        return tf.reshape(x, [B, T, D])
+        return tf.reshape(x, [B, T, RNN_SIZE])
 
 
 
