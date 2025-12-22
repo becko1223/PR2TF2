@@ -71,11 +71,9 @@ class ACRDNet(tf.keras.Model):
 
         self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)
 
-        self.h0=tf.zeros((1,RNN_SIZE))
-        self.c0=tf.zeros((1,RNN_SIZE))
         
         #コミュニケーション
-        self.mha=layers.MultiHeadAttention(heads=8,key_dim=64,dropout=0.1)
+        self.mha=layers.MultiHeadAttention(num_heads=8,key_dim=64,dropout=0.1)
         self.mha_layernorm=layers.LayerNormalization()
         self.feedforward1=layers.Dense(units=2048,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
         self.feedforward2=layers.Dense(units=RNN_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
