@@ -604,7 +604,6 @@ class ReplayBuffer():
         tentatives = np.empty((batch_size,horizon+1,(horizon-1)*a_size))
         rnnstates = np.empty((batch_size,1,2,1,RNN_SIZE))
 
-        print("rnnstates shape:",np.array(self.rnnstates_buffer).shape)
         for i in range(batch_size):
             obs[i]=np.stack(self.obs_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             goals[i]=np.stack(self.goals_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
