@@ -174,7 +174,7 @@ class ACRDNet(tf.keras.Model):
         # --- Communication (Multi-Head Attention) ---
         self.mha = layers.MultiHeadAttention(num_heads=4, key_dim=64, dropout=0.0) # DropoutはRLでは0が良いことが多い
         self.mha_ln1 = layers.LayerNormalization()
-        self.mha_ff = layers.Dense(RNN_SIZE, activation="elu")
+        self.mha_ff = layers.Dense(RNN_SIZE+(horizon-1)*A_SIZE, activation="elu")
         self.mha_ln2 = layers.LayerNormalization()
         # プロジェクション層を追加して次元を合わせる
         self.comm_out = layers.Dense(RNN_SIZE, activation=None)
