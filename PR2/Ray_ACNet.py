@@ -178,13 +178,14 @@ class ACRDNet(tf.keras.Model):
         all_vec_flat = tf.reshape(all_vec, [B * T, L, D])
         mask_flat = tf.reshape(mask, [B * T, 1, L])
         mha_output_flat=self.mha(query=own_vec_flat,key=all_vec_flat,value=all_vec_flat,attention_mask=mask_flat)
-        mha_output = tf.reshape(mha_output_flat, [B, T, 1, D])
+        own_vec = tf.reshape(own_vec, [B, T, D])
         mha_output=self.mha_layernorm(mha_output+own_vec)
 
         ff_output=self.feedforward1(mha_output)
         ff_output=self.feedforward2(ff_output)
         output=self.ff_layernorm(mha_output+ff_output)
         output=self.mha_last_dense(output)
+
         return output
 
 
