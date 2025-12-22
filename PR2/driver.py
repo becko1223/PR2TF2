@@ -16,6 +16,7 @@ import random
 
 GRAD_CLIP = 10.0
 FILTER=32
+RNN_SIZE=512
 
 ray.init(num_gpus=1)
 
@@ -147,7 +148,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 
 
 @tf.function
-def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives,batch_weights, world_optimizer, policy_optimizer):
+def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives,batch_rnnstates,batch_weights, world_optimizer, policy_optimizer):
     variables_for_actor=global_network.policy_conv1.trainable_variables+global_network.policy_layernorm1.trainable_variables+global_network.policy_dense1.trainable_variables+global_network.policy_layernorm2.trainable_variables+global_network.policy_dense2.trainable_variables
     
     variables_except_for_actor = (
@@ -210,12 +211,13 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     
 
     #latentのターゲットを出す(b,s,h,w,c)
-    batch_pre_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
-    batch_comm_encoded_targets=global_network.comm_encode(batch_pre_latent_targets,batch_tentatives[:,1:])
+    _,states_for_target=global_network.encode(batch_obs[:,0:1],batch_goals[:,0:1],tf.reshape(batch_rnnstates[:,0],[-1,512]),tf.reshape(batch_rnnstates[:,1],[-1,512]))
+    batch_pre_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],states_for_target[:,0],states_for_target[:,1])
+    batch_comm_encoded_targets=tf.concat([batch_pre_latent_targets,batch_tentatives[:,1:]])
     batch_other_messages = batch_messages[:, 1:, 1:, :]
     batch_curr_own_message = tf.expand_dims(batch_comm_encoded_targets, axis=2)
     batch_replaced_messages=tf.concat([batch_curr_own_message,batch_other_messages],axis=2)
-    batch_latent_targets=global_network.communication(batch_pre_latent_targets,batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
+    batch_latent_targets=global_network.communication(batch_curr_own_message,batch_replaced_messages,batch_masks[:,1:])
 
 
     #アクター以外訓練
@@ -231,12 +233,12 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
-        pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
+        pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_rnnstates[:,0],[-1,512]),tf.reshape(batch_rnnstates[:,1],[-1,512]))
         comm_encoded=global_network.comm_encode(pre_latent,batch_tentatives[:,0:1])
         other_messages = batch_messages[:, 0:1, 1:, :]
         curr_own_message = tf.expand_dims(comm_encoded, axis=2)
         messages=tf.concat([curr_own_message,other_messages],axis=2)
-        latent_init=global_network.communication(pre_latent,curr_own_message,messages,batch_masks[:,0:1])
+        latent_init=global_network.communication(curr_own_message,messages,batch_masks[:,0:1])
 
         #latent,rewardの予測値
         batch_latent_preds,batch_reward_preds = tf.scan(  #[horizon,batch,1,dim]
@@ -293,14 +295,14 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         log_reward_loss=tf.reduce_mean(rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
         log_q1value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q1value_preds))
         log_q2value_loss=tf.reduce_mean(rhos*tf.square(q_target-batch_q2value_preds))
-        log_consistency_loss=tf.reduce_mean(tf.expand_dims(tf.expand_dims(tf.expand_dims(rhos,axis=-1),-1),-1)*tf.square(batch_latent_targets-batch_latent_preds))
+        log_consistency_loss=tf.reduce_mean(tf.expand_dims(rhos,axis=0)*tf.square(batch_latent_targets-batch_latent_preds))
 
         reward_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(batch_reward_preds-batch_rewards[:,:]))
         q1value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q1value_preds))
         q2value_loss=tf.reduce_mean(weights_expanded*rhos*tf.square(q_target-batch_q2value_preds))
         
-        weights_expanded_expanded=tf.expand_dims(tf.expand_dims(tf.expand_dims(weights_expanded, axis=-1), -1), -1)
-        consistency_loss=tf.reduce_mean(weights_expanded_expanded*tf.expand_dims(tf.expand_dims(tf.expand_dims(rhos,axis=-1),-1),-1)*tf.square(batch_latent_targets-batch_latent_preds))
+        weights_expanded_expanded=tf.expand_dims(weights_expanded, 0)
+        consistency_loss=tf.reduce_mean(weights_expanded_expanded*tf.expand_dims(rhos,axis=0)*tf.square(batch_latent_targets-batch_latent_preds))
 
         total_loss=0.5*reward_loss+0.1*(q1value_loss+q2value_loss)+2.0*consistency_loss
     world_grads=tape.gradient(total_loss,variables_except_for_actor)
@@ -353,7 +355,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
 
 
-def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tentatives, world_optimizer,policy_optimizer, curr_episode, indices, weights, replaybuffer):
+def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates, world_optimizer,policy_optimizer, curr_episode, indices, weights, replaybuffer):
 
 
     batch_obs = tf.convert_to_tensor(obs,dtype=tf.float32) 
@@ -366,12 +368,13 @@ def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tenta
     batch_masks=tf.convert_to_tensor(masks,dtype=tf.bool)
     batch_tentatives=tf.convert_to_tensor(tentatives,dtype=tf.float32)
     batch_weights = tf.convert_to_tensor(weights, dtype=tf.float32)
+    batch_rnnstates = tf.convert_to_tensor(rnnstates, dtype=tf.float32)
     
 
     
 
     
-    world_grad_norms,policy_grad_norms,loss_list, errors=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives, batch_weights, world_optimizer,policy_optimizer)
+    world_grad_norms,policy_grad_norms,loss_list, errors=tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives,batch_rnnstates, batch_weights, world_optimizer,policy_optimizer)
 
     new_priorities = errors.numpy()
     if len(new_priorities.shape) > 1:
@@ -468,6 +471,7 @@ class ReplayBuffer():
         self.messages_buffer = []
         self.masks_buffer = []
         self.tentatives_buffer = []
+        self.rnnstates_buffer = []
 
         self.indexlist = []
 
@@ -496,6 +500,7 @@ class ReplayBuffer():
                     self.messages_buffer=data["messages_buffer"]
                     self.masks_buffer=data["masks_buffer"]
                     self.tentatives_buffer=data["tentatives_buffer"]
+                    self.rnnstates_buffer=data["rnnstates_buffer"]
                     self.indexlist=data["indexlist"]
                     self.priorities=data["priorities"]
                     self.beta = data.get("beta", 0.4)
@@ -509,7 +514,7 @@ class ReplayBuffer():
        
 
 
-    def add(self, obs, goals, actions, rewards, valids, messages, masks, tentatives):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
+    def add(self, obs, goals, actions, rewards, valids, messages, masks, tentatives,rnnstates):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
         max_priority = np.max(self.priorities) if self.priorities else 1.0
 
         if self.iter >= replay_buffer_size:
@@ -529,6 +534,8 @@ class ReplayBuffer():
             self.masks_buffer.append(masks)
             self.tentatives_buffer.pop(0)
             self.tentatives_buffer.append(tentatives)
+            self.rnnstates_buffer.pop(0)
+            self.rnnstates_buffer.append(rnnstates)
 
             """
             self.indexlist=[i for i in self.indexlist if i[0]!=0] #古いやつのインデックス候補消す
@@ -560,6 +567,7 @@ class ReplayBuffer():
             self.messages_buffer.append(messages)
             self.masks_buffer.append(masks)
             self.tentatives_buffer.append(tentatives)
+            self.rnnstates_buffer.append(rnnstates)
 
             items_to_add = len(obs) - horizon
 
@@ -604,6 +612,7 @@ class ReplayBuffer():
         messages = np.empty((batch_size,horizon+1,NUM_THREADS,FILTER+(horizon-1)*a_size))
         masks = np.empty((batch_size,horizon+1,1,NUM_THREADS))
         tentatives = np.empty((batch_size,horizon+1,horizon-1,a_size))
+        rnnstates = np.empty((batch_size,1,2,RNN_SIZE))
 
 
         for i in range(batch_size):
@@ -615,8 +624,9 @@ class ReplayBuffer():
             messages[i]=np.stack(self.messages_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             masks[i]=np.stack(self.masks_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
             tentatives[i]=np.stack(self.tentatives_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]:self.indexlist[sample_ids[i]][1]+horizon+1])
+            rnnstates[i]=np.stack(self.rnnstates_buffer[self.indexlist[sample_ids[i]][0]-self.deletecount][self.indexlist[sample_ids[i]][1]])
         
-        return obs,goals,actions,rewards,valids,messages,masks,tentatives,sample_ids,weights
+        return obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates,sample_ids,weights
     
     def update_priorities(self, batch_indices, batch_priorities):
         for idx, priority in zip(batch_indices, batch_priorities):
@@ -635,6 +645,7 @@ class ReplayBuffer():
                 data["messages_buffer"]=self.messages_buffer
                 data["masks_buffer"]=self.masks_buffer
                 data["tentatives_buffer"]=self.tentatives_buffer
+                data["rnnstates_buffer"]=self.rnnstates_buffer
                 data["indexlist"]=self.indexlist
                 data["priorities"] = self.priorities
                 data["beta"] = self.beta
@@ -655,10 +666,10 @@ def main():
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
         dummy_goals=tf.zeros([1,1,3])   
-        dummy_latents=tf.zeros([1,1,11,11,FILTER])
+        dummy_latents=tf.zeros([1,1,RNN_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
-        dummy_message=tf.zeros([1,1,1,FILTER+(horizon-1)*a_size])
-        dummy_messages=tf.zeros([1,1,NUM_THREADS,FILTER+(horizon-1)*a_size])
+        dummy_message=tf.zeros([1,1,1,RNN_SIZE+(horizon-1)*a_size])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,RNN_SIZE+(horizon-1)*a_size])
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
@@ -666,9 +677,9 @@ def main():
         global_network.comm_encode(dummy_latents,dummy_tentatives)
         #global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
         global_network.communication.get_concrete_function(
-            tf.TensorSpec(shape=[None, None, 11, 11, FILTER], dtype=tf.float32), # own_latent
-            tf.TensorSpec(shape=[None, None, 1, FILTER+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
-            tf.TensorSpec(shape=[None, None, None, FILTER+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
+            tf.TensorSpec(shape=[None, None,RNN_SIZE], dtype=tf.float32), # own_latent
+            tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
+            tf.TensorSpec(shape=[None, None, None, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
             tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)                 # mask (4次元目をNoneに！)
         )
         global_network.dynamics(dummy_latents,dummy_actions) 
@@ -836,17 +847,17 @@ def main():
                 continue 
 
             # 正常終了の場合のみアンパックする
-            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, messagesResults, masksResults, tentativesResults, metrics, info = result
+            obsResults, goalsResults, actionsResults, rewardsResults, validsResults, messagesResults, masksResults, tentativesResults,rnnstatesResults, metrics, info = result
 
             all_loss=[]
             
-            if obsResults and goalsResults and actionsResults and rewardsResults and validsResults and messagesResults and masksResults and tentativesResults:
+            if obsResults and goalsResults and actionsResults and rewardsResults and validsResults and messagesResults and masksResults and tentativesResults and rnnstatesResults:
                 for i in range(len(obsResults)):
-                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i],messagesResults[i],masksResults[i],tentativesResults[i])
+                    replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i],messagesResults[i],masksResults[i],tentativesResults[i],rnnstatesResults[i])
                 if curr_episode>(random_term-1): #random_term個分が終わったタイミングから学習を始めたい。
                     for i in range(max_episode_length*(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4): #max_episode_length*NUM_THREADS//4
-                        obs,goals,actions,rewards,valids,messages,masks,tentatives, indices, per_weights=replaybuffer.sample(batch_size,horizon)
-                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
+                        obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates, indices, per_weights=replaybuffer.sample(batch_size,horizon)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
                         all_loss.append(loss_list)
                         if info["id"]==0:
                             print("update loop")
@@ -854,8 +865,8 @@ def main():
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
                     for i in range(max_episode_length*random_term*(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4):
-                        obs,goals,actions,rewards,valids,messages,masks,tentatives, indices, per_weights=replaybuffer.sample(batch_size,horizon)
-                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
+                        obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates, indices, per_weights=replaybuffer.sample(batch_size,horizon)
+                        loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,rnnstates,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
                         all_loss.append(loss_list)
                         if info["id"]==0:
                             print("update loop")

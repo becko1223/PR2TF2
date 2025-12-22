@@ -92,6 +92,7 @@ class Worker():
         self.all_messages_buffer=[]
         self.all_masks_buffer=[]
         self.all_tentatives_buffer=[]
+        self.all_rnn_states_buffer=[]
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
         
@@ -103,7 +104,7 @@ class Worker():
         
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[num_actor_traj,1,11,11, FILTER_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[num_actor_traj,1,RNN_SIZE], dtype=tf.float32)
     ])
     def sample_from_actor(self,latent_inits):    #init:[batch,1,feature]
 
@@ -164,7 +165,7 @@ class Worker():
             
             # Predict Next Latent (B, 1, dim)
             current_latent = self.local_ACRD.dynamics(current_latent, actions_onehot)
-            current_latent.set_shape([num_actor_traj, 1, 11, 11, FILTER_SIZE])
+            current_latent.set_shape([num_actor_traj, 1, RNN_SIZE])
             
             # 結果をTensorArrayに書き込む (B, A_SIZE)
             actions_ta = actions_ta.write(t, tf.squeeze(actions_onehot, axis=1))
@@ -311,7 +312,7 @@ class Worker():
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=[None,horizon, a_size], dtype=tf.float32),
-        tf.TensorSpec(shape=[None,1,11,11,FILTER_SIZE],dtype=tf.float32),
+        tf.TensorSpec(shape=[None,1,RNN_SIZE],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[11,11],dtype=tf.float32),
         tf.TensorSpec(shape=[1], dtype=tf.bool),
@@ -363,7 +364,7 @@ class Worker():
             #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
             
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
-            current_latents.set_shape([None,1,11,11,FILTER_SIZE])
+            current_latents.set_shape([None,1,RNN_SIZE])
 
             move = distribution_to_coordinate(actions)
             planned_pos=current_pos+move
@@ -539,7 +540,7 @@ class Worker():
 
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[1,1, 11,11,FILTER_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[1,1, RNN_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[None,a_size],dtype=tf.float32),
         tf.TensorSpec(shape=[11,11],dtype=tf.float32),
@@ -578,7 +579,7 @@ class Worker():
 
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[1, 1, 11, 11, FILTER_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[1, 1, RNN_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[horizon, a_size], dtype=tf.float32), # これは確率分布として扱われる
         tf.TensorSpec(shape=[None, a_size], dtype=tf.float32),
         tf.TensorSpec(shape=[11,11],dtype=tf.float32),
@@ -888,6 +889,7 @@ class Worker():
             masks_buffer = []
             tentatives_buffer = []
             episode_values = []
+            rnn_state_buffer=[]
             episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_stop_count= 0
 
             # Initial state from the environment
@@ -907,6 +909,11 @@ class Worker():
                                                         joint_observations[self.metaAgentID][self.agentID])
 
             s = joint_observations[self.metaAgentID][self.agentID]
+
+            h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+            c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
+            rnn_state = [h_init, c_init]
+            rnn_state_prev = rnn_state
 
            
             is_collision_for_shaping=False
@@ -952,21 +959,24 @@ class Worker():
                     
 
 
-                    first_latent=self.local_ACRD.encode(ob,goal)
+                   
                     #print("mean shape",tf.shape(mean))
                     tentative=mean[:-1]
                     tentative.set_shape([horizon-1,a_size])
+                    tentative=tf.keras.layers.Flatten(tentative) 
                     #print("tentative shape",tf.shape(tentative))
-                    encoded_obs=self.local_ACRD.comm_encode(first_latent,tf.expand_dims(tf.expand_dims(tentative,axis=0),axis=0))
-                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs.numpy()
+                    encoded_obs,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
+                    rnn_state=[rnn_state[0],rnn_state[1]]
+                    encoded_obs_with_actions=tf.concat([encoded_obs,tf.reshape(tentative,[1,1,-1])],axis=-1)
+                    joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs_with_actions
 
                     self.synchronize()
 
                     #コミュニケーションを挟む
                     visible_agents=joint_visible_agents[self.metaAgentID][self.agentID]
                     num_visible=len(visible_agents)
-                    visible_messages=np.zeros([1,1,num_visible+1,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
-                    visible_messages_for_buffer=np.zeros([NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size],dtype=np.float32)
+                    visible_messages=np.zeros([1,1,num_visible+1,RNN_SIZE+(horizon-1)*a_size],dtype=np.float32)
+                    visible_messages_for_buffer=np.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages[0][0][0]=encoded_obs[0][0].numpy()
                     visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
                     masks_for_buffer=np.zeros([1,NUM_THREADS])
@@ -996,8 +1006,8 @@ class Worker():
                         dy=visible_agents[i][1]
                         dx=visible_agents[i][2]
                         id=visible_agents[i][0]
-                        pos_encoding1=positional_encoding(dy,FILTER_SIZE+(horizon-1)*a_size)
-                        pos_encoding2=positional_encoding(dx,FILTER_SIZE+(horizon-1)*a_size)
+                        pos_encoding1=positional_encoding(dy,RNN_SIZE+(horizon-1)*a_size)
+                        pos_encoding2=positional_encoding(dx,RNN_SIZE+(horizon-1)*a_size)
                         message=joint_encoded_obs[self.metaAgentID][id]+pos_encoding1+pos_encoding2
                         visible_messages[0][0][i+1]=message[0][0]
                         visible_messages_for_buffer[i+1]=message[0][0]
@@ -1005,10 +1015,10 @@ class Worker():
                     if(episode_count>(random_term-1)):
                         mask=tf.ones([1,1,1,num_visible+1],dtype=tf.bool)
                         mask.set_shape([1,1,1,num_visible+1])
-                        latent_init=self.local_ACRD.communication(first_latent,tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),mask)
+                        latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs,axis=2),tf.convert_to_tensor(visible_messages),mask)
                         
                     else:
-                        latent_init=first_latent
+                        latent_init=encoded_obs
                         
 
 
@@ -1187,6 +1197,7 @@ class Worker():
                         messages_buffer.append(visible_messages_for_buffer)
                         masks_buffer.append(masks_for_buffer)
                         tentatives_buffer.append(tentative)
+                        rnn_state_buffer.append(rnn_state_prev)
                         
                         
                         
@@ -1195,6 +1206,7 @@ class Worker():
 
                     # Update State
                     s = s1
+                    rnn_state_prev=rnn_state
                     
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
@@ -1214,12 +1226,13 @@ class Worker():
                             train_valid = np.zeros(a_size)
                             train_valid[validActions] = 1
                             valids_buffer.append(train_valid)
-                            messages_buffer.append(tf.zeros([NUM_THREADS,FILTER_SIZE+(horizon-1)*a_size]))
+                            messages_buffer.append(tf.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size]))
                             masks_buffer.append(tf.zeros([1,NUM_THREADS]))
                             dummy_tentative=tf.constant([1,0,0,0,0],dtype=tf.float32)
                             dummy_tentative=tf.expand_dims(dummy_tentative,axis=0)
                             dummy_tentative=tf.tile(dummy_tentative,[horizon-1,1])
                             tentatives_buffer.append(dummy_tentative)
+                            rnn_state_buffer.append(rnn_state)
                             targets_done += 1
                            
 
@@ -1235,6 +1248,7 @@ class Worker():
                             self.all_messages_buffer.append(messages_buffer)
                             self.all_masks_buffer.append(masks_buffer)
                             self.all_tentatives_buffer.append(tentatives_buffer)
+                            self.all_rnn_states_buffer.append(rnn_state)
 
                         obs_buffer=[]
                         goals_buffer=[]
