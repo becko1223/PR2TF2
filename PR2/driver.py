@@ -203,7 +203,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     #latentのターゲットを出す(b,s,h,w,c)
     _,states_for_target=global_network.encode(batch_obs[:,0:1],batch_goals[:,0:1],tf.reshape(batch_rnnstates[:,0],[-1,512]),tf.reshape(batch_rnnstates[:,1],[-1,512]))
     batch_pre_latent_targets,_=global_network.encode(batch_obs[:,1:],batch_goals[:,1:],states_for_target[:,0],states_for_target[:,1])
-    batch_comm_encoded_targets=tf.concat([batch_pre_latent_targets,batch_tentatives[:,1:]])
+    batch_comm_encoded_targets=tf.concat([batch_pre_latent_targets,batch_tentatives[:,1:]],axis=-1)
     batch_other_messages = batch_messages[:, 1:, 1:, :]
     batch_curr_own_message = tf.expand_dims(batch_comm_encoded_targets, axis=2)
     batch_replaced_messages=tf.concat([batch_curr_own_message,batch_other_messages],axis=2)
@@ -223,9 +223,9 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
-        pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_rnnstates[:,0],[-1,512]),tf.reshape(batch_rnnstates[:,1],[-1,512]))
-        comm_encoded=global_network.comm_encode(pre_latent,batch_tentatives[:,0:1])
+        pre_latent,_=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1],tf.reshape(batch_rnnstates[:,0],[-1,512]),tf.reshape(batch_rnnstates[:,1],[-1,512]))
         other_messages = batch_messages[:, 0:1, 1:, :]
+        comm_encoded=tf.concat([pre_latent,batch_tentatives[:,0:1]],axis=-1)
         curr_own_message = tf.expand_dims(comm_encoded, axis=2)
         messages=tf.concat([curr_own_message,other_messages],axis=2)
         latent_init=global_network.communication(curr_own_message,messages,batch_masks[:,0:1])
@@ -601,7 +601,7 @@ class ReplayBuffer():
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
         messages = np.empty((batch_size,horizon+1,NUM_THREADS,RNN_SIZE+(horizon-1)*a_size))
         masks = np.empty((batch_size,horizon+1,1,NUM_THREADS))
-        tentatives = np.empty((batch_size,horizon+1,horizon-1,a_size))
+        tentatives = np.empty((batch_size,horizon+1,(horizon-1)*a_size))
         rnnstates = np.empty((batch_size,1,2,RNN_SIZE))
 
 
