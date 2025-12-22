@@ -599,7 +599,7 @@ class ReplayBuffer():
         actions = np.empty(( batch_size,horizon, ), dtype=np.float32)
         rewards = np.empty((batch_size,horizon,  ), dtype=np.float32)
         valids = np.empty((batch_size,horizon,5),dtype=np.float32)
-        messages = np.empty((batch_size,horizon+1,NUM_THREADS,FILTER+(horizon-1)*a_size))
+        messages = np.empty((batch_size,horizon+1,NUM_THREADS,RNN_SIZE+(horizon-1)*a_size))
         masks = np.empty((batch_size,horizon+1,1,NUM_THREADS))
         tentatives = np.empty((batch_size,horizon+1,horizon-1,a_size))
         rnnstates = np.empty((batch_size,1,2,RNN_SIZE))
