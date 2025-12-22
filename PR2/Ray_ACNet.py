@@ -169,7 +169,15 @@ class ACRDNet(tf.keras.Model):
         tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
     ])
     def communication(self,own_vec,all_vec,mask):
-        mha_output=layers.TimeDistributed(self.mha)(query=own_vec,key=all_vec,attention_mask=mask)
+        B = tf.shape(own_vec)[0]
+        T = tf.shape(own_vec)[1]
+        D = tf.shape(own_vec)[3] # FILTER
+        L = tf.shape(all_vec)[2]
+        own_vec_flat = tf.reshape(own_vec, [B * T, 1, D])
+        all_vec_flat = tf.reshape(all_vec, [B * T, L, D])
+        mask_flat = tf.reshape(mask, [B * T, 1, L])
+        mha_output_flat=self.mha(query=own_vec_flat,key=all_vec_flat,attention_mask=mask_flat)
+        mha_output = tf.reshape(mha_output_flat, [B, T, 1, D])
         mha_output=layers.TimeDistributed(self.mha_layernorm)(mha_output+own_vec)
 
         ff_output=layers.TimeDistributed(self.feedforward1)(mha_output)
