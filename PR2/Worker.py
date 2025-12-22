@@ -977,8 +977,8 @@ class Worker():
                     num_visible=len(visible_agents)
                     visible_messages=np.zeros([1,1,num_visible+1,RNN_SIZE+(horizon-1)*a_size],dtype=np.float32)
                     visible_messages_for_buffer=np.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size],dtype=np.float32)
-                    visible_messages[0][0][0]=encoded_obs[0][0].numpy()
-                    visible_messages_for_buffer[0]=encoded_obs[0][0].numpy()
+                    visible_messages[0][0][0]=encoded_obs_with_actions[0][0].numpy()
+                    visible_messages_for_buffer[0]=encoded_obs_with_actions[0][0].numpy()
                     masks_for_buffer=np.zeros([1,NUM_THREADS])
                     if(episode_count>(random_term-1)):
                         masks_for_buffer[0,:num_visible+1]=1 #自エージェント＋visible agents
