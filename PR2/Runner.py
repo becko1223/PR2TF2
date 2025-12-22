@@ -97,7 +97,9 @@ class Runner(object):
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
-        dummy_goals=tf.zeros([1,1,3])   
+        dummy_goals=tf.zeros([1,1,3]) 
+        dummy_h=tf.zeros([1,RNN_SIZE]) 
+        dummy_c=tf.zeros([1,RNN_SIZE])  
         dummy_latents=tf.zeros([1,1,RNN_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,1,RNN_SIZE+(horizon-1)*a_size])
@@ -105,7 +107,7 @@ class Runner(object):
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        self.localNetwork.encode(dummy_obs,dummy_goals)
+        self.localNetwork.encode(dummy_obs,dummy_goals,dummy_h,dummy_c)
         self.localNetwork.comm_encode(dummy_latents,dummy_tentatives)
         #self.localNetwork.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
         self.localNetwork.communication.get_concrete_function(

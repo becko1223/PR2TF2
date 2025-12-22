@@ -150,7 +150,7 @@ def apply_gradients(global_network, gradients, world_optimizer,policy_optimizer,
 @tf.function
 def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_actions,  batch_valids, batch_messages, batch_masks, batch_tentatives,batch_rnnstates,batch_weights, world_optimizer, policy_optimizer):
     variables_for_actor=global_network.policy_dense1.trainable_variables+global_network.policy_dense2.trainable_variables
-    
+
     variables_except_for_actor = (
     # エンコーダ
     global_network.vgg1_conv1.trainable_variables +
@@ -655,7 +655,9 @@ def main():
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
-        dummy_goals=tf.zeros([1,1,3])   
+        dummy_goals=tf.zeros([1,1,3]) 
+        dummy_h=tf.zeros([1,RNN_SIZE]) 
+        dummy_c=tf.zeros([1,RNN_SIZE])
         dummy_latents=tf.zeros([1,1,RNN_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
         dummy_message=tf.zeros([1,1,1,RNN_SIZE+(horizon-1)*a_size])
@@ -663,7 +665,7 @@ def main():
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        global_network.encode(dummy_obs,dummy_goals)
+        global_network.encode(dummy_obs,dummy_goals,dummy_h,dummy_c)
         global_network.comm_encode(dummy_latents,dummy_tentatives)
         #global_network.communication(dummy_latents,dummy_message,dummy_messages,dummy_masks)
         global_network.communication.get_concrete_function(
