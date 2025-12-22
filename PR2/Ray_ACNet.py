@@ -176,7 +176,7 @@ class ACRDNet(tf.keras.Model):
         own_vec_flat = tf.reshape(own_vec, [B * T, 1, D])
         all_vec_flat = tf.reshape(all_vec, [B * T, L, D])
         mask_flat = tf.reshape(mask, [B * T, 1, L])
-        mha_output_flat=self.mha(query=own_vec_flat,key=all_vec_flat,attention_mask=mask_flat)
+        mha_output_flat=self.mha(query=own_vec_flat,key=all_vec_flat,velue=all_vec_flat,attention_mask=mask_flat)
         mha_output = tf.reshape(mha_output_flat, [B, T, 1, D])
         mha_output=layers.TimeDistributed(self.mha_layernorm)(mha_output+own_vec)
 
