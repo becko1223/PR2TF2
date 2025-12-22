@@ -1228,9 +1228,7 @@ class Worker():
                             valids_buffer.append(train_valid)
                             messages_buffer.append(tf.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size]))
                             masks_buffer.append(tf.zeros([1,NUM_THREADS]))
-                            dummy_tentative=tf.constant([1,0,0,0,0],dtype=tf.float32)
-                            dummy_tentative=tf.expand_dims(dummy_tentative,axis=0)
-                            dummy_tentative=tf.tile(dummy_tentative,[horizon-1,1])
+                            dummy_tentative=tf.fill([(horizon-1)*a_size],1/5.0)
                             tentatives_buffer.append(dummy_tentative)
                             rnn_state_buffer.append(rnn_state)
                             targets_done += 1
