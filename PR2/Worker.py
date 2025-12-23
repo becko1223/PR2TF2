@@ -916,7 +916,7 @@ class Worker():
             validActions = self.env.listValidActions(self.agentID,
                                                         joint_observations[self.metaAgentID][self.agentID])
 
-            s = joint_observations[self.metaAgentID][self.agentID][:4]
+            s = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
 
             h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
@@ -1078,6 +1078,7 @@ class Worker():
                        
 
                     else:
+                        """
                         probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                         for i in range(a_size):
                                 move=action2dir(i)
@@ -1089,6 +1090,8 @@ class Worker():
                         indices = np.arange(len(probabilities))
                         indices = np.arange(len(probabilities))
                         a=np.random.choice(indices, p=probabilities)
+                        """
+                        a = random.choice(validActions)
                         q=np.zeros((1,1))
 
                     a_onehot=tf.one_hot(a,a_size)
@@ -1131,7 +1134,7 @@ class Worker():
                         observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):
-                            joint_observations[self.metaAgentID][i] = all_obs[i][:4]
+                            joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
                             joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
                             joint_visible_agents[self.metaAgentID][i]=visible_agents_dict[i]
@@ -1142,7 +1145,7 @@ class Worker():
                     self.synchronize()  # synchronize threads
 
                     # Get observation,reward, valid actions for each agent 
-                    s1 = joint_observations[self.metaAgentID][self.agentID]
+                    s1 = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
 
                     if(joint_rewards[self.metaAgentID][self.agentID]==4.7):
                         if self.metaAgentID==0 and self.agentID==1:
