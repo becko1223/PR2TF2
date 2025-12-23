@@ -1198,7 +1198,7 @@ class Worker():
                     extra_reward+=shaping_reward
                     
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+extra_reward
-                    validActions = self.env.listValidActions(self.agentID, all_obs[self.agentID])
+                    validActions = self.env.listValidActions(self.agentID, joint_observations[self.metaAgentID][self.agentID])
 
                     self.synchronize()
                     # Append to Appropriate buffers 
