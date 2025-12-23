@@ -128,14 +128,19 @@ class Primal2Env(MAPFEnv):
                 direction = action2dir(action)
                 new_pos = tuple_plus(direction, pos)
                 lastpos = None
-               
+                blocking_valid = self.get_blocking_validity(agent_obs, agent_ID, new_pos)
+                if not blocking_valid:
+                    continue
                 try:
                     lastpos = self.world.agents[agent_ID].position_history[-2]
                 except:
                     pass
                 if new_pos == lastpos:
                     continue
-                
+                if self.world.corridor_map[new_pos[0], new_pos[1]][1] == 1:
+                    valid = self.get_convention_validity(agent_obs, agent_ID, new_pos)
+                    if not valid:
+                        continue
                 if self.world.state[new_pos[0], new_pos[1]] == 0:
                     available_actions.append(action)
 
@@ -144,7 +149,7 @@ class Primal2Env(MAPFEnv):
     def get_blocking_validity(self, observation, agent_ID, pos):
         top_left = (self.world.getPos(agent_ID)[0] - self.obs_size // 2,
                     self.world.getPos(agent_ID)[1] - self.obs_size // 2)
-        blocking_map = observation[0][5]
+        blocking_map = observation[0][6]
         if blocking_map[pos[0] - top_left[0], pos[1] - top_left[1]] == 1:
             return 0
         return 1
@@ -152,13 +157,13 @@ class Primal2Env(MAPFEnv):
     def get_convention_validity(self, observation, agent_ID, pos):
         top_left = (self.world.getPos(agent_ID)[0] - self.obs_size // 2,
                     self.world.getPos(agent_ID)[1] - self.obs_size // 2)
-        blocking_map = observation[0][5]
+        blocking_map = observation[0][6]
         if blocking_map[pos[0] - top_left[0], pos[1] - top_left[1]] == -1:
-            deltay_map = observation[0][7]
+            deltay_map = observation[0][5]
             if deltay_map[pos[0] - top_left[0], pos[1] - top_left[1]] > 0:
                 return 1
             elif deltay_map[pos[0] - top_left[0], pos[1] - top_left[1]] == 0:
-                deltax_map = observation[0][6]
+                deltax_map = observation[0][4]
                 if deltax_map[pos[0] - top_left[0], pos[1] - top_left[1]] > 0:
                     return 1
                 else:

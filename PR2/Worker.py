@@ -422,7 +422,15 @@ class Worker():
 
         rewards=rewards_ta.stack()
         #print("rewards shape:",rewards.shape)
-        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)   
+        V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)  
+
+
+        first_actions = samples[0]
+        match = tf.matmul(first_actions, validActions, transpose_b=True)
+        is_valid = tf.reduce_any(match > 0.9, axis=1) 
+        is_invalid = tf.logical_not(is_valid) 
+        invalid_penalty = tf.cast(is_invalid, dtype=tf.float32) * -100.0
+        V += invalid_penalty
 
 
         #print("V shape:",V.shape)
@@ -908,7 +916,7 @@ class Worker():
             validActions = self.env.listValidActions(self.agentID,
                                                         joint_observations[self.metaAgentID][self.agentID])
 
-            s = joint_observations[self.metaAgentID][self.agentID]
+            s = joint_observations[self.metaAgentID][self.agentID][:4]
 
             h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
             c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
@@ -1043,6 +1051,7 @@ class Worker():
                     #行動選択
                     if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.1-0.09*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
+                            """
                             probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
                             for i in range(a_size):
                                 move=action2dir(i)
@@ -1053,6 +1062,8 @@ class Worker():
                                 
                             indices = np.arange(len(probabilities))
                             a=np.random.choice(indices, p=probabilities)
+                            """
+                            a = random.choice(validActions)
                             
                         else:
                             if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0.0])):
@@ -1120,7 +1131,7 @@ class Worker():
                         observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
                         all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):
-                            joint_observations[self.metaAgentID][i] = all_obs[i]
+                            joint_observations[self.metaAgentID][i] = all_obs[i][:4]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
                             joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
                             joint_visible_agents[self.metaAgentID][i]=visible_agents_dict[i]
@@ -1184,7 +1195,7 @@ class Worker():
                     extra_reward+=shaping_reward
                     
                     r = copy.deepcopy(joint_rewards[self.metaAgentID][self.agentID])+extra_reward
-                    validActions = self.env.listValidActions(self.agentID, s1)
+                    validActions = self.env.listValidActions(self.agentID, all_obs[self.agentID])
 
                     self.synchronize()
                     # Append to Appropriate buffers 

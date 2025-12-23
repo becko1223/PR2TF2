@@ -123,7 +123,6 @@ class Primal2Observer(ObservationBuilder):
             current_corridor_id = \
                 self.world.corridor_map[self.world.getPos(agent_id)[0], self.world.getPos(agent_id)[1]][0]
 
-        """
         positions = self.get_next_positions(agent_id)
         for position in positions:
             cell_info = self.world.corridor_map[position[0], position[1]]
@@ -158,7 +157,7 @@ class Primal2Observer(ObservationBuilder):
                             2)
                     else:
                         pass
-        """
+        
 
         time5 = time.time() - start_time
         start_time = time.time()
@@ -178,7 +177,7 @@ class Primal2Observer(ObservationBuilder):
                     index = distance_list.index(dist_mag)
                     pathlength_map[i, j] = (index + 1) * step_size
 
-        state = np.array([poss_map, goal_map, obs_map, pathlength_map])
+        state = np.array([poss_map, goal_map, obs_map, pathlength_map,deltax_map,deltay_map,blocking_map])
    
 
         time6 = time.time() - start_time
