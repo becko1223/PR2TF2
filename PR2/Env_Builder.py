@@ -529,7 +529,7 @@ class World:
         """
         if manual_pos is None:
             # randomly init agents everywhere
-            free_space = np.argwhere(np.logical_or(self.state == 0, self.goals_map == 0) == 1)
+            free_space = np.argwhere(np.logical_and(self.state == 0, self.goals_map == 0) == 1)
             new_idx = np.random.choice(len(free_space), size=len(id_list), replace=False)
             init_poss = [free_space[idx] for idx in new_idx]
         else:
