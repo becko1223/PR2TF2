@@ -1166,9 +1166,9 @@ class Worker():
                     shaping_reward=0
                     if not is_collision_for_shaping:
                         if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
-                            shaping_reward=0.2
+                            shaping_reward=0.3
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
-                            shaping_reward=-0.2
+                            shaping_reward=-0.3
                        
                         
                     
