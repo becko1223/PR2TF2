@@ -117,6 +117,7 @@ class Primal2Observer(ObservationBuilder):
         time4 = time.time() - start_time
         start_time = time.time()
 
+        """
         current_corridor_id = -1
         current_corridor = self.world.corridor_map[self.world.getPos(agent_id)[0], self.world.getPos(agent_id)[1]][1]
         if current_corridor == 1:
@@ -157,6 +158,7 @@ class Primal2Observer(ObservationBuilder):
                             2)
                     else:
                         pass
+        """
         
 
         time5 = time.time() - start_time
