@@ -274,7 +274,7 @@ class World:
             self.goals_map = np.zeros([self.state.shape[0], self.state.shape[1]])
 
         self.corridor_map = {}
-        self.restrict_init_corridor = True
+        self.restrict_init_corridor = False
         self.visited = []
         self.corridors = {}
         #self.get_corridors()
