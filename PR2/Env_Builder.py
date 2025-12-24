@@ -277,7 +277,7 @@ class World:
         self.restrict_init_corridor = True
         self.visited = []
         self.corridors = {}
-        self.get_corridors()
+        #self.get_corridors()
 
     def reset_agent(self):
         """
