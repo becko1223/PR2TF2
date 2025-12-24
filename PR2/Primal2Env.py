@@ -88,6 +88,8 @@ class Primal2Env(MAPFEnv):
 
         available_actions = []
         pos = self.world.getPos(agent_ID)
+
+        """
         # if the agent is inside a corridor
         if self.world.corridor_map[pos[0], pos[1]][1] == 1:
             corridor_id = self.world.corridor_map[pos[0], pos[1]][0]
@@ -142,6 +144,14 @@ class Primal2Env(MAPFEnv):
                     if not valid:
                         continue
                 if self.world.state[new_pos[0], new_pos[1]] == 0:
+                    available_actions.append(action)
+        """
+        available_actions.append(0)
+        num_actions = 4 + 1 if not self.IsDiagonal else 8 + 1
+        for action in range(1, num_actions):
+            direction = action2dir(action)
+            new_pos = tuple_plus(direction, pos)
+            if self.world.state[new_pos[0], new_pos[1]] == 0:
                     available_actions.append(action)
 
         return available_actions

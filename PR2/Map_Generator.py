@@ -158,6 +158,44 @@ def maze_generator(env_size=(10, 70), wall_components=(1, 8), obstacle_density=N
 
     return generator
 
+def random_obstacle_generator(env_size=(10, 70), obstacle_density=(0.05, 0.15, 0.3)):
+    """
+    Args:
+        env_size: (min_size, max_size)
+        obstacle_density: (low, mode, high) のタプル
+    """
+    min_size, max_size = env_size
+    # 密度設定の展開
+    d_low, d_mode, d_high = obstacle_density
+
+    def generator():
+        # 1. マップサイズの決定
+        size = np.random.randint(min_size, max_size + 1)
+        h, w = size, size
+        
+        # 2. 密度の決定 (三角分布)
+        # 指定した d_mode で発生確率が最大になる
+        density = np.random.triangular(d_low, d_mode, d_high)
+        
+        # 3. マップの初期化
+        Z = np.zeros((h, w), dtype=int)
+        
+        # 4. 外枠の作成
+        Z[0, :] = Z[-1, :] = 1
+        Z[:, 0] = Z[:, -1] = 1
+        
+        # 5. 内部にランダム配置
+        inner_h, inner_w = h - 2, w - 2
+        if inner_h > 0 and inner_w > 0:
+            random_mask = np.random.rand(inner_h, inner_w) < density
+            Z[1:-1, 1:-1] = random_mask.astype(int)
+        
+        # 既存環境との互換性のため -1倍
+        world = -(Z.astype(int))
+        return world, None
+
+    return generator
+
 
 def manual_generator(state_map, goals_map=None):
     state_map = np.array(state_map)

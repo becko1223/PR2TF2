@@ -9,7 +9,7 @@ import random
 import itertools
 from Env_Builder import *
 
-from Map_Generator import maze_generator
+from Map_Generator import maze_generator, random_obstacle_generator
 
 from parameters import *
 
@@ -902,10 +902,17 @@ class Worker():
 
             # Initial state from the environment
             if self.agentID == 1:
+                """
                 self.env._reset(maze_generator(
                                     env_size=(ENVIRONMENT_SIZE[0],15+int(55*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
                                     wall_components=(WALL_COMPONENTS[0], 3+int(18*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
                                     obstacle_density=(OBSTACLE_DENSITY[0], 0.2+(0.5*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])))
+                                ),num_agents)
+                """
+
+                self.env._reset(random_obstacle_generator(
+                                    env_size=(10,15+int(55*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    obstacle_density=(0,0.33,0.5)
                                 ),num_agents)
               
                 joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID],joint_normalized_distances[self.metaAgentID] = self.env._observe()

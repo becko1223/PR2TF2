@@ -11,7 +11,7 @@ IL_MAX_EP_LENGTH        = 64
 episode_count           = 0
 
 # TDMPC parameters
-horizon                 =3
+horizon                 =4
 rho                     =0.5
 
 num_samples             =200
@@ -22,7 +22,7 @@ gammma_tdmpc            =0.99
 temperature             =0.25
 iterations              =2
 
-random_term             =100
+random_term             =2
 correction_rate         =0
 
 # observer parameters
