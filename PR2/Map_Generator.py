@@ -192,6 +192,7 @@ def random_obstacle_generator(env_size=(10, 70), obstacle_density=(0.05, 0.15, 0
         
         # 既存環境との互換性のため -1倍
         world = -(Z.astype(int))
+        world = get_largest_connected_component(world)
         return world, None
 
     return generator
@@ -211,6 +212,42 @@ def manual_generator(state_map, goals_map=None):
         return state_map, goals_map
 
     return generator
+
+
+def get_largest_connected_component(map_array):
+    """マップ内の最大の移動可能エリアを特定し、それ以外を壁にする"""
+    rows, cols = map_array.shape
+    visited = np.zeros_like(map_array, dtype=bool)
+    walkable = (map_array == 0)
+    components = []
+
+    for r in range(rows):
+        for c in range(cols):
+            if walkable[r, c] and not visited[r, c]:
+                # BFSで連結成分を探索
+                component = []
+                queue = [(r, c)]
+                visited[r, c] = True
+                while queue:
+                    curr_r, curr_c = queue.pop(0)
+                    component.append((curr_r, curr_c))
+                    for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                        nr, nc = curr_r + dr, curr_c + dc
+                        if 0 <= nr < rows and 0 <= nc < cols and \
+                           walkable[nr, nc] and not visited[nr, nc]:
+                            visited[nr, nc] = True
+                            queue.append((nr, nc))
+                components.append(component)
+    
+    if not components:
+        return map_array
+
+    # 最大の成分以外を壁にする
+    largest_component = max(components, key=len)
+    new_map = np.full_like(map_array, -1)  # 一旦すべて壁にする
+    for r, c in largest_component:
+        new_map[r, c] = 0
+    return new_map
 
 
 if __name__ == "__main__":
