@@ -19,7 +19,7 @@ import scipy.signal as signal
 from parameters import *
 
 FILTER_SIZE=32
-RNN_SIZE=512
+ENCODE_SIZE=512
 
 
 class Runner(object):
@@ -97,21 +97,19 @@ class Runner(object):
 
         #ダミーデータでのネットワーク構築
         dummy_obs=tf.zeros([1,1,4,11,11])
-        dummy_goals=tf.zeros([1,1,3]) 
-        dummy_h=tf.zeros([1,RNN_SIZE]) 
-        dummy_c=tf.zeros([1,RNN_SIZE])  
-        dummy_latents=tf.zeros([1,1,RNN_SIZE])
+        dummy_goals=tf.zeros([1,1,3])  
+        dummy_latents=tf.zeros([1,1,ENCODE_SIZE])
         dummy_tentatives=tf.zeros([1,1,horizon-1,a_size])
-        dummy_message=tf.zeros([1,1,1,RNN_SIZE+(horizon-1)*a_size])
-        dummy_messages=tf.zeros([1,1,NUM_THREADS,RNN_SIZE+(horizon-1)*a_size])
+        dummy_message=tf.zeros([1,1,1,ENCODE_SIZE+(horizon-1)*a_size])
+        dummy_messages=tf.zeros([1,1,NUM_THREADS,ENCODE_SIZE+(horizon-1)*a_size])
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        self.localNetwork.encode(dummy_obs,dummy_goals,dummy_h,dummy_c)
+        self.localNetwork.encode(dummy_obs,dummy_goals)
         
         self.localNetwork.communication.get_concrete_function(
-            tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
-            tf.TensorSpec(shape=[None, None, None, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
+            tf.TensorSpec(shape=[None, None, 1, ENCODE_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
+            tf.TensorSpec(shape=[None, None, None, ENCODE_SIZE+(horizon-1)*a_size], dtype=tf.float32),   # all_messages (3次元目をNoneに！)
             tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)                 # mask (4次元目をNoneに！)
         )
         self.localNetwork.dynamics(dummy_latents,dummy_actions) 
@@ -174,7 +172,6 @@ class Runner(object):
         messagesResults=[]
         masksResults=[]
         tentativeResults=[]
-        rnnstatesResults=[]
 
 
         loss_metrics = []
@@ -190,7 +187,7 @@ class Runner(object):
                 messagesResults = messagesResults+ w.all_messages_buffer
                 masksResults = masksResults + w.all_masks_buffer
                 tentativeResults = tentativeResults + w.all_tentatives_buffer
-                rnnstatesResults = rnnstatesResults + w.all_rnn_states_buffer
+
     
             
             is_imitation = False # w.is_imitation
@@ -232,7 +229,7 @@ class Runner(object):
                 print(f"gradient[{i}] length: {len(grads)}")
         print("mean_finishes:",mean_finishes)
         
-        return obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults,rnnstatesResults, all_metrics, is_imitation
+        return obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults, all_metrics, is_imitation
     
 
     def imitationLearningJob(self, episodeNumber):
@@ -267,7 +264,7 @@ class Runner(object):
                 jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-                obsResults, goalsResults, actionsResults, rewardsResults,  validsResults,messagesResults,masksResults,tentativeResults,rnnstatesResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
+                obsResults, goalsResults, actionsResults, rewardsResults,  validsResults,messagesResults,masksResults,tentativeResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
                 print("not implemented")
@@ -283,7 +280,7 @@ class Runner(object):
                 "is_imitation": is_imitation
             }
 
-            result= obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults,rnnstatesResults, metrics, info
+            result= obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults, metrics, info
             return result
         except Exception as e:
             import traceback

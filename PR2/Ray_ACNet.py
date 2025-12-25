@@ -7,7 +7,7 @@ import numpy as np
 GRAD_CLIP = 10.0
 KEEP_PROB1 = 1  # was 0.5
 KEEP_PROB2 = 1  # was 0.7
-RNN_SIZE = 512
+ENCODE_SIZE = 512
 FILTER=32
 GOAL_REPR_SIZE = 12
 A_SIZE=5
@@ -89,17 +89,17 @@ class ACRDNet(tf.keras.Model):
 
         """
         #エンコード
-        self.vgg1_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg1_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv1=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv2=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg1_conv3=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.maxpool1=layers.MaxPool2D(2)
 
-        self.vgg2_conv1=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv2=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
-        self.vgg2_conv3=layers.Conv2D(filters=RNN_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv1=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv2=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
+        self.vgg2_conv3=layers.Conv2D(filters=ENCODE_SIZE // 4,kernel_size=3,strides=1,padding="same",data_format="channels_last",kernel_initializer=w_init, activation='relu')
         self.maxpool2=layers.MaxPool2D(2)
 
-        self.conv3=layers.Conv2D(filters=RNN_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
+        self.conv3=layers.Conv2D(filters=ENCODE_SIZE - GOAL_REPR_SIZE,kernel_size=2,strides=1,padding="valid",data_format="channels_last",kernel_initializer=w_init, activation=None)
 
         self.flat=layers.Flatten()
         self.actflat=layers.ReLU()
@@ -107,23 +107,23 @@ class ACRDNet(tf.keras.Model):
         self.goal_layer=layers.Dense(units=GOAL_REPR_SIZE,activation='relu')
 
 
-        self.h1=layers.Dense(units=RNN_SIZE,activation='relu')
+        self.h1=layers.Dense(units=ENCODE_SIZE,activation='relu')
         self.d1=layers.Dropout(rate=1-KEEP_PROB1)
-        self.h2=layers.Dense(units=RNN_SIZE,activation='relu')
+        self.h2=layers.Dense(units=ENCODE_SIZE,activation='relu')
         self.d2=layers.Dropout(rate=1-KEEP_PROB2)
 
         self.h3=layers.ReLU()
 
-        self.lstm=layers.LSTM(units=RNN_SIZE,return_state=True,return_sequences=True)
+        self.lstm=layers.LSTM(units=ENCODE_SIZE,return_state=True,return_sequences=True)
 
         
         #コミュニケーション
         self.mha=layers.MultiHeadAttention(num_heads=8,key_dim=64,dropout=0.1)
         self.mha_layernorm=layers.LayerNormalization()
         self.feedforward1=layers.Dense(units=2048,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="relu")
-        self.feedforward2=layers.Dense(units=RNN_SIZE+(horizon-1)*A_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
+        self.feedforward2=layers.Dense(units=ENCODE_SIZE+(horizon-1)*A_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
         self.ff_layernorm=layers.LayerNormalization()
-        self.mha_last_dense=layers.Dense(units=RNN_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
+        self.mha_last_dense=layers.Dense(units=ENCODE_SIZE,kernel_initializer=tf.keras.initializers.Orthogonal(gain=1.0, seed=None),activation="linear")
 
 
         #状態遷移
@@ -168,16 +168,16 @@ class ACRDNet(tf.keras.Model):
         self.goal_layer = layers.Dense(units=GOAL_REPR_SIZE, activation="elu")
         
         # Encoder Projection
-        self.pre_lstm_dense = layers.Dense(RNN_SIZE, activation="elu")
-        self.lstm = layers.LSTM(units=RNN_SIZE, return_state=True, return_sequences=True)
+        self.pre_dense = layers.Dense(ENCODE_SIZE, activation="elu")
+        self.encode_res = MLPBlock(512)
 
         # --- Communication (Multi-Head Attention) ---
         self.mha = layers.MultiHeadAttention(num_heads=4, key_dim=64, dropout=0.0) # DropoutはRLでは0が良いことが多い
         self.mha_ln1 = layers.LayerNormalization()
-        self.mha_ff = layers.Dense(RNN_SIZE+(horizon-1)*A_SIZE, activation="elu")
+        self.mha_ff = layers.Dense(ENCODE_SIZE+(horizon-1)*A_SIZE, activation="elu")
         self.mha_ln2 = layers.LayerNormalization()
         # プロジェクション層を追加して次元を合わせる
-        self.comm_out = layers.Dense(RNN_SIZE, activation=None)
+        self.comm_out = layers.Dense(ENCODE_SIZE, activation=None)
 
         # --- Dynamics (Residual MLP) ---
         # 入力を潜在空間に変換する層
@@ -185,7 +185,7 @@ class ACRDNet(tf.keras.Model):
         self.dyn_res1 = MLPBlock(512)
         self.dyn_res2 = MLPBlock(512)
         # 次の状態への変化量(delta)を出力すると学習しやすい
-        self.dyn_out = layers.Dense(RNN_SIZE, activation=None) 
+        self.dyn_out = layers.Dense(ENCODE_SIZE, activation=None) 
 
         # --- Reward ---
         self.rew_embed = layers.Dense(256, activation="elu")
@@ -211,10 +211,8 @@ class ACRDNet(tf.keras.Model):
     @tf.function(input_signature=[
                         tf.TensorSpec(shape=[None, None, 4, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
                         tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
-                        tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # h_state (B, RNN_SIZE)
-                        tf.TensorSpec(shape=[None, 512], dtype=tf.float32),              # c_state (B, RNN_SIZE)
                     ])
-    def encode(self,inputs,goal_pos,h_state,c_state):
+    def encode(self,inputs,goal_pos):
         x=inputs
         
             
@@ -233,16 +231,15 @@ class ACRDNet(tf.keras.Model):
         
         # Merge
         x = tf.concat([x, g], axis=-1)
-        x = self.pre_lstm_dense(x)
-        
-        # LSTM
-        lstm_out, state_h, state_c = self.lstm(x, initial_state=[h_state, c_state])
-        return lstm_out, [state_h, state_c]
+        x = self.pre_dense(x)
+  
+        x = self.encode_res(x)
+        return x
    
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*A_SIZE], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None, None, RNN_SIZE+(horizon-1)*A_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, 1, ENCODE_SIZE+(horizon-1)*A_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, None, ENCODE_SIZE+(horizon-1)*A_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, 1, None], dtype=tf.bool)
     ])
     def communication(self,own_vec,all_vec,mask):
@@ -266,12 +263,12 @@ class ACRDNet(tf.keras.Model):
         x = self.mha_ln2(x + ff)
         
         x = self.comm_out(x)
-        return tf.reshape(x, [B, T, RNN_SIZE])
+        return tf.reshape(x, [B, T, ENCODE_SIZE])
 
 
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, ENCODE_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None, None, A_SIZE], dtype=tf.float32)
     ])
     def dynamics(self,latent,action):
@@ -286,7 +283,7 @@ class ACRDNet(tf.keras.Model):
         
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, ENCODE_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def reward(self,latent,action):
@@ -297,7 +294,7 @@ class ACRDNet(tf.keras.Model):
         
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32)
+        tf.TensorSpec(shape=[None, None, ENCODE_SIZE], dtype=tf.float32)
     ])
     def policy(self,latent):
         x = self.pi_embed(latent)
@@ -305,7 +302,7 @@ class ACRDNet(tf.keras.Model):
         return self.pi_out(x)
     
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, ENCODE_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def q1(self,latent,action):
@@ -315,7 +312,7 @@ class ACRDNet(tf.keras.Model):
         return self.q1_out(x)
   
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=[None, None, RNN_SIZE], dtype=tf.float32),
+        tf.TensorSpec(shape=[None, None, ENCODE_SIZE], dtype=tf.float32),
         tf.TensorSpec(shape=[None,None,A_SIZE],dtype=tf.float32)
     ])
     def q2(self,latent,action):

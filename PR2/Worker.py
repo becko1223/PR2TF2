@@ -92,7 +92,6 @@ class Worker():
         self.all_messages_buffer=[]
         self.all_masks_buffer=[]
         self.all_tentatives_buffer=[]
-        self.all_rnn_states_buffer=[]
         self.loss_metrics =[]
         self.perf_metrics= np.zeros(6)
         
@@ -897,7 +896,6 @@ class Worker():
             masks_buffer = []
             tentatives_buffer = []
             episode_values = []
-            rnn_state_buffer=[]
             episode_reward = episode_step_count = episode_buffer_count = episode_inv_count = targets_done = episode_stop_count = episode_astar_count= episode_collision_count= episode_wall_stop_count= 0
 
             # Initial state from the environment
@@ -925,10 +923,6 @@ class Worker():
 
             s = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
 
-            h_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            c_init = tf.zeros([1, RNN_SIZE], dtype=tf.float32)
-            rnn_state = [h_init, c_init]
-            rnn_state_prev = rnn_state
 
            
             is_collision_for_shaping=False
@@ -980,8 +974,8 @@ class Worker():
                     tentative.set_shape([horizon-1,a_size])
                     tentative=tf.reshape(tentative,[-1])
                     #print("tentative shape",tf.shape(tentative))
-                    encoded_obs,rnn_state=self.local_ACRD.encode(ob,goal,rnn_state[0],rnn_state[1])
-                    rnn_state=[rnn_state[0],rnn_state[1]]
+                    encoded_obs=self.local_ACRD.encode(ob,goal)
+    
                     encoded_obs_with_actions=tf.concat([encoded_obs,tf.reshape(tentative,[1,1,-1])],axis=-1)
                     joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs_with_actions
 
@@ -1213,7 +1207,6 @@ class Worker():
                         messages_buffer.append(visible_messages_for_buffer)
                         masks_buffer.append(masks_for_buffer)
                         tentatives_buffer.append(tentative)
-                        rnn_state_buffer.append(rnn_state_prev)
                         
                         
                         
@@ -1222,7 +1215,6 @@ class Worker():
 
                     # Update State
                     s = s1
-                    rnn_state_prev=rnn_state
                     
 
                     # If the episode hasn't ended, but the experience buffer is full, then we
@@ -1245,8 +1237,7 @@ class Worker():
                             messages_buffer.append(tf.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size]))
                             masks_buffer.append(tf.zeros([1,NUM_THREADS]))
                             dummy_tentative=tf.fill([(horizon-1)*a_size],1/5.0)
-                            tentatives_buffer.append(dummy_tentative)
-                            rnn_state_buffer.append(rnn_state)
+                            tentatives_buffer.append(dummy_tentative)                       
                             targets_done += 1
                            
 
@@ -1262,7 +1253,6 @@ class Worker():
                             self.all_messages_buffer.append(messages_buffer)
                             self.all_masks_buffer.append(masks_buffer)
                             self.all_tentatives_buffer.append(tentatives_buffer)
-                            self.all_rnn_states_buffer.append(rnn_state_buffer)
 
                         obs_buffer=[]
                         goals_buffer=[]
