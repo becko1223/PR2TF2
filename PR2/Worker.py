@@ -1158,7 +1158,7 @@ class Worker():
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:1")
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==-2.3):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-1.3):
                         episode_collision_count+=1
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-2 or -3")
