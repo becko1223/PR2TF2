@@ -164,6 +164,7 @@ class Primal2Observer(ObservationBuilder):
         time5 = time.time() - start_time
         start_time = time.time()
 
+        """
         free_spaces = list(np.argwhere(pathlength_map > 0))
         distance_list = []
         for arg in free_spaces:
@@ -178,6 +179,7 @@ class Primal2Observer(ObservationBuilder):
                 if dist_mag > 0:
                     index = distance_list.index(dist_mag)
                     pathlength_map[i, j] = (index + 1) * step_size
+        """
 
         state = np.array([poss_map, goal_map, obs_map, pathlength_map,deltax_map,deltay_map,blocking_map])
    
@@ -189,7 +191,7 @@ class Primal2Observer(ObservationBuilder):
         max_distance=np.max(self.world.agents[agent_id].distanceMap)
         if(max_distance!=0):
             #normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/max_distance
-            normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/100.0
+            normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/80.0
 
         return state, [dx, dy, mag],visible_agents,normalized_distance, np.array([time1, time2, time3, time4, time5, time6])
 
