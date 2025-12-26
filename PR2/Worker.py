@@ -1148,7 +1148,7 @@ class Worker():
                     # Get observation,reward, valid actions for each agent 
                     s1 = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==4.7):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==9.7):
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:1")
 
