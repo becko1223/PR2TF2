@@ -909,7 +909,7 @@ class Worker():
                 """
 
                 self.env._reset(random_obstacle_generator(
-                                    env_size=(10,60),#int(55*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    env_size=(10,15+int(45*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
                                     obstacle_density=(0,0.3,0.5)
                                 ),num_agents)
               

@@ -817,7 +817,7 @@ def main():
                 for i in range(len(obsResults)):
                     replaybuffer.add(obsResults[i],goalsResults[i],actionsResults[i],rewardsResults[i],validsResults[i],messagesResults[i],masksResults[i],tentativesResults[i])
                 if curr_episode>(random_term-1): #random_term個分が終わったタイミングから学習を始めたい。
-                    for i in range(max_episode_length*NUM_THREADS//4):#(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4): #max_episode_length*NUM_THREADS//4
+                    for i in range(max_episode_length*(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4): #max_episode_length*NUM_THREADS//4
                         obs,goals,actions,rewards,valids,messages,masks,tentatives, indices, per_weights=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
                         all_loss.append(loss_list)
@@ -826,7 +826,7 @@ def main():
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
-                    for i in range(max_episode_length*random_term*NUM_THREADS//4):#(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4):
+                    for i in range(max_episode_length*random_term*(2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4):
                         obs,goals,actions,rewards,valids,messages,masks,tentatives, indices, per_weights=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
                         all_loss.append(loss_list)
