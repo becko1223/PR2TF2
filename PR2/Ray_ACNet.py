@@ -170,6 +170,7 @@ class ACRDNet(tf.keras.Model):
         # Encoder Projection
         self.pre_dense = layers.Dense(ENCODE_SIZE, activation="elu")
         self.encode_res = MLPBlock(512)
+        self.encode_norm = layers.LayerNormalization()
 
         # --- Communication (Multi-Head Attention) ---
         self.mha = layers.MultiHeadAttention(num_heads=4, key_dim=64, dropout=0.0) # DropoutはRLでは0が良いことが多い
@@ -186,6 +187,7 @@ class ACRDNet(tf.keras.Model):
         self.dyn_res2 = MLPBlock(512)
         # 次の状態への変化量(delta)を出力すると学習しやすい
         self.dyn_out = layers.Dense(ENCODE_SIZE, activation=None) 
+        self.dyn_norm = layers.LayerNormalization()
 
         # --- Reward ---
         self.rew_embed = layers.Dense(256, activation="elu")
@@ -234,6 +236,7 @@ class ACRDNet(tf.keras.Model):
         x = self.pre_dense(x)
   
         x = self.encode_res(x)
+        x = self.encode_norm(x)
         return x
    
     
@@ -279,7 +282,9 @@ class ACRDNet(tf.keras.Model):
         delta = self.dyn_out(x)
         
         # Residual Dynamics: 次の状態 = 現在の状態 + 変化量
-        return latent + delta
+        x = latent + delta
+        x = self.dyn_norm(x)
+        return x
         
     
     @tf.function(input_signature=[

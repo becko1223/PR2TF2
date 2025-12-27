@@ -164,6 +164,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     global_network.goal_layer.trainable_variables +
     global_network.pre_dense.trainable_variables +
     global_network.encode_res.trainable_variables +
+    global_network.encode_norm.trainable_variables +
 
     # --- Communication ---
     global_network.mha.trainable_variables +
@@ -177,6 +178,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     global_network.dyn_res1.trainable_variables +
     global_network.dyn_res2.trainable_variables +
     global_network.dyn_out.trainable_variables +
+    global_network.dyn_norm.trainable_variables +
 
     # --- Reward ---
     global_network.rew_embed.trainable_variables +
@@ -681,6 +683,7 @@ def main():
         global_network.goal_layer.trainable_variables +
         global_network.pre_dense.trainable_variables +
         global_network.encode_res.trainable_variables +
+        global_network.encode_norm.trainable_variables +
 
         # --- Communication ---
         global_network.mha.trainable_variables +
@@ -694,6 +697,7 @@ def main():
         global_network.dyn_res1.trainable_variables +
         global_network.dyn_res2.trainable_variables +
         global_network.dyn_out.trainable_variables +
+        global_network.dyn_norm.trainable_variables +
 
         # --- Reward ---
         global_network.rew_embed.trainable_variables +
