@@ -191,7 +191,7 @@ class Primal2Observer(ObservationBuilder):
         max_distance=np.max(self.world.agents[agent_id].distanceMap)
         if(max_distance!=0):
             #normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/max_distance
-            normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/80.0
+            normalized_distance=self.world.agents[agent_id].distanceMap[agent_pos[0],agent_pos[1]]/40.0
 
         return state, [dx, dy, mag],visible_agents,normalized_distance, np.array([time1, time2, time3, time4, time5, time6])
 
