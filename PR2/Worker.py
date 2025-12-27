@@ -1304,7 +1304,6 @@ class Worker():
                     targets_done
                 ])
 
-                
                 return perf_metrics
 
     def synchronize(self):
