@@ -909,7 +909,7 @@ class Worker():
                 """
 
                 self.env._reset(random_obstacle_generator(
-                                    env_size=(10,15+int(45*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
+                                    env_size=(10,60),#15+int(45*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0]))),
                                     obstacle_density=(0,0.3,0.5)
                                 ),num_agents)
               
@@ -1148,11 +1148,11 @@ class Worker():
                     # Get observation,reward, valid actions for each agent 
                     s1 = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==5.925):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==9.7):
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:1")
 
-                    if(joint_rewards[self.metaAgentID][self.agentID]==-0.575):
+                    if(joint_rewards[self.metaAgentID][self.agentID]==-1.3):
                         episode_collision_count+=1
                         if self.metaAgentID==0 and self.agentID==1:
                             print("status:-2 or -3")
