@@ -1055,8 +1055,8 @@ class Worker():
                     #行動選択
                     if IS_ONESHOT and (self.env.world.getDone(self.agentID) > 0):
                         a = 0
-                        mean = tf.constant([[1, 0, 0, 0, 0]])
-                        mean = tf.tile(mean, [4, 1])
+                        stay_action = tf.constant([[1, 0, 0, 0, 0]])
+                        mean = tf.tile(stay_action, [horizon, 1])
                     elif(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.1-0.09*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
                             #a=random.choice([0,1,2,3,4])
