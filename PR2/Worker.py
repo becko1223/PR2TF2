@@ -1235,12 +1235,21 @@ class Worker():
                             dummy_tentative=tf.fill([(horizon-1)*a_size],1/5.0)
                             tentatives_buffer.append(dummy_tentative)                       
                             targets_done += 1
+                            if(IS_ONESHOT and len(obs_buffer)>horizon):
+                                self.all_obs_buffer.append(obs_buffer)
+                                self.all_goals_buffer.append(goals_buffer)
+                                self.all_actions_buffer.append(actions_buffer)
+                                self.all_rewards_buffer.append(rewards_buffer)
+                                self.all_valids_buffer.append(valids_buffer)
+                                self.all_messages_buffer.append(messages_buffer)
+                                self.all_masks_buffer.append(masks_buffer)
+                                self.all_tentatives_buffer.append(tentatives_buffer)
                            
 
                    
                             
 
-                        elif (len(obs_buffer)>horizon) and not ((joint_done[self.metaAgentID][self.agentID]==True) and IS_ONESHOT):
+                        if (len(obs_buffer)>horizon) and not ((joint_done[self.metaAgentID][self.agentID]==True) and IS_ONESHOT):
                             self.all_obs_buffer.append(obs_buffer)
                             self.all_goals_buffer.append(goals_buffer)
                             self.all_actions_buffer.append(actions_buffer)
