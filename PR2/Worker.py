@@ -363,7 +363,7 @@ class Worker():
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
             current_latents.set_shape([None,1,RNN_SIZE])
 
-            """
+            
             move = distribution_to_coordinate(actions)
             planned_pos=current_pos+move
             is_wall = tf.gather_nd(obstacle_map,tf.cast(planned_pos,dtype=tf.int32))
@@ -376,9 +376,9 @@ class Worker():
                 current_pos,                   
                 planned_pos                    
             )
-            """
+            
 
-            rewards_ta=rewards_ta.write(t,(rewards)*discount)
+            rewards_ta=rewards_ta.write(t,(rewards+wall_penalty)*discount)
             discount*=gammma_tdmpc
 
 
@@ -1055,11 +1055,12 @@ class Worker():
                     #行動選択
                     if IS_ONESHOT and (self.env.world.getDone(self.agentID) > 0):
                         a = 0
-                        mean = tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)
+                        mean = tf.constant([[1, 0, 0, 0, 0]])
+                        mean = tf.tile(mean, [4, 1])
                     elif(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.1-0.09*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
-                            a=random.choice([0,1,2,3,4])
-                            #a = random.choice(validActions)
+                            #a=random.choice([0,1,2,3,4])
+                            a = random.choice(validActions)
                             
                         else:
                             if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0])):
@@ -1074,8 +1075,8 @@ class Worker():
                        
 
                     else:
-                        a=random.choice([0,1,2,3,4])
-                        #a = random.choice(validActions)
+                        #a=random.choice([0,1,2,3,4])
+                        a = random.choice(validActions)
                         q=np.zeros((1,1))
 
                     #a_onehot=tf.one_hot(a,a_size)

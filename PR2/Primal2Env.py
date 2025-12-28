@@ -154,7 +154,7 @@ class Primal2Env(MAPFEnv):
         for action in range(1, num_actions):
             direction = action2dir(action)
             new_pos = tuple_plus(direction, pos)
-            if self.world.state[new_pos[0], new_pos[1]] == 0:
+            if self.world.state[new_pos[0], new_pos[1]] != -1:   #もともと==0
                     available_actions.append(action)
 
         return available_actions
