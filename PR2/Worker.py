@@ -1053,7 +1053,7 @@ class Worker():
                    
 
                     #行動選択
-                    if IS_ONESHOT and (self.env.world.agents[self.agentID].status > 0):
+                    if IS_ONESHOT and (self.env.world.getDone(self.agentID) > 0):
                         a = 0
                         mean = tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)
                     elif(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
