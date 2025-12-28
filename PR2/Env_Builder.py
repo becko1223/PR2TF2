@@ -873,7 +873,7 @@ class MAPFEnv(gym.Env):
             else:
                 self.world.agents[agentID].move(newPos, status_dict[agentID])
 
-            if not (self.isOneShot and self.world.getDone(agentID) > 0): #ゴールしたやつは状態２なのでこの条件分岐要らないかも
+            if not (self.isOneShot and self.world.getDone(agentID) > 0): #ゴールしたやつは状態２なのでこの条件分岐要らないかも.　ちなみにgetdoneの数値はgivemovingrewardで更新されるので、初回ゴール時にはelseの方に行くはず
                 self.give_moving_reward(agentID)
             else:
                 self.individual_rewards[agentID]=0
