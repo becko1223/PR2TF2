@@ -56,6 +56,9 @@ class Primal2Env(MAPFEnv):
         elif collision_status==-1:
             reward = self.ACTION_COST+self.WALL_COLLISION_REWARD
             self.isStandingOnGoal[agentID] = False
+        elif collision_status==2:
+            reward=0
+            self.isStandingOnGoal[agentID] = True
         else:
             reward = self.ACTION_COST + self.COLLISION_REWARD
             self.isStandingOnGoal[agentID] = False

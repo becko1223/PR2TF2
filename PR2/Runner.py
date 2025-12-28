@@ -43,7 +43,7 @@ class Runner(object):
                                    obstacle_density=OBSTACLE_DENSITY
                                    ),
                               IsDiagonal=DIAG_MVMT,
-                               isOneShot=False)
+                               isOneShot=IS_ONESHOT)
         
         self.metaAgentID = metaAgentID
 

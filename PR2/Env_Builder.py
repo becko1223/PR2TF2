@@ -789,7 +789,7 @@ class MAPFEnv(gym.Env):
         else:
             self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(5)])
 
-        self.ACTION_COST, self.WALL_COLLISION_REWARD, self.GOAL_REWARD, self.COLLISION_REWARD = -0.3,-0,  10., -1
+        self.ACTION_COST, self.WALL_COLLISION_REWARD, self.GOAL_REWARD, self.COLLISION_REWARD = -0.3,-2,  10., -2
 
     def getObstacleMap(self):
         return (self.world.state == -1).astype(int)
@@ -865,13 +865,19 @@ class MAPFEnv(gym.Env):
         put_goal_list = []
         freeze_list = []
         for agentID in range(1, self.num_agents + 1):
-            if self.isOneShot and self.world.getDone(agentID) > 0:
-                continue
 
             newPos = newPos_dict[agentID]
             self.world.state[newPos] = agentID
-            self.world.agents[agentID].move(newPos, status_dict[agentID])
-            self.give_moving_reward(agentID)
+            if self.isOneShot and self.world.agents[agentID].status == 2:
+                self.world.agents[agentID].move(newPos, 2) 
+            else:
+                self.world.agents[agentID].move(newPos, status_dict[agentID])
+
+            if not (self.isOneShot and self.world.getDone(agentID) > 0): #ゴールしたやつは状態２なのでこの条件分岐要らないかも
+                self.give_moving_reward(agentID)
+            else:
+                self.individual_rewards[agentID]=0
+
             if status_dict[agentID] == 1:
                 if not self.isOneShot:
                     if self.world.agents[agentID].freeze == 0:
@@ -881,8 +887,8 @@ class MAPFEnv(gym.Env):
                     self.world.agents[agentID].freeze += 1
                 else:
                     self.world.agents[agentID].status = 2
-                    self.world.state[newPos] = 0
-                    self.world.goals_map[newPos] = 0
+                    #self.world.state[newPos] = 0　　　#ゴールしてもエージェントは残るようにする。
+                    #self.world.goals_map[newPos] = 0
         free_agents = list(range(1, self.num_agents + 1))
 
         #print("agent1 status:",status_dict[1], " agent1 move:",movement_dict[1])
@@ -959,9 +965,10 @@ class MAPFEnv(gym.Env):
         else:
             self.viewer.add_onetime(entry)
 
+    """
     def _render(self, mode='human', close=False, screen_width=800, screen_height=800):
 
-        """
+       
         def painter(state_map, agents_dict, goals_dict):
             def initColors(num_agents):
                 c = {a + 1: hsv_to_rgb(np.array([a / float(num_agents), 1, 1])) for a in range(num_agents)}
@@ -1073,7 +1080,52 @@ class MAPFEnv(gym.Env):
         frame = painter(self.world.state, self.getPositions(), self.getGoals())
         return frame
         """
-        return None
+
+    
+
+
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+
+    # ... (既存のインポート) ...
+
+    def _render(self, mode='human', close=False):
+        # 1. マップ情報の取得
+        state_map = self.world.state      # -1: 壁, 0: 空地, 1以上: エージェントID
+        goals_map = self.world.goals_map  # 1以上: ゴールID
+        
+        height, width = state_map.shape
+        
+        # 2. 基本となるRGB画像の作成（背景は白: 255, 255, 255）
+        # 拡大して見やすくするため各セルを10x10ピクセル程度にする場合
+        scale = 10
+        img = np.full((height * scale, width * scale, 3), 255, dtype=np.uint8)
+        
+        # カラーマップの準備 (エージェントごとに色を変える)
+        cmap = plt.get_cmap('tab20') # 20色まで対応
+        
+        for i in range(height):
+            for j in range(width):
+                # 壁の描画 (黒に近いグレー)
+                if state_map[i, j] == -1:
+                    img[i*scale:(i+1)*scale, j*scale:(j+1)*scale] = [50, 50, 50]
+                
+                # ゴールの描画 (薄い色で枠線などを描く)
+                if goals_map[i, j] > 0:
+                    agent_id = int(goals_map[i, j])
+                    color = np.array(cmap(agent_id % 20)[:3]) * 255
+                    # ゴールは少し小さめの四角
+                    img[i*scale+2:(i+1)*scale-2, j*scale+2:(j+1)*scale-2] = color * 0.5 + 127 # 明るくする
+                
+                # エージェントの描画
+                if state_map[i, j] > 0:
+                    agent_id = int(state_map[i, j])
+                    color = np.array(cmap(agent_id % 20)[:3]) * 255
+                    # エージェントは塗りつぶしの四角
+                    img[i*scale:(i+1)*scale, j*scale:(j+1)*scale] = color
+
+        # imageioで扱えるようにNumPy配列を返す
+        return img
 
 
 if __name__ == "__main__":

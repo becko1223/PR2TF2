@@ -40,6 +40,8 @@ a_size                  = 5 + int(DIAG_MVMT) * 4
 NUM_META_AGENTS         = 2
 NUM_IL_META_AGENTS      = 0
 
+IS_ONESHOT              = True
+
 NUM_THREADS             = 8 # int(multiprocessing.cpu_count() / (2 * NUM_META_AGENTS))
 NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 

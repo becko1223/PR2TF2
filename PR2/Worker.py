@@ -360,11 +360,10 @@ class Worker():
             rewards=self.local_ACRD.reward(current_latents,actions_expanded)
             rewards=tf.squeeze(tf.squeeze(rewards,axis=1),axis=1)
 
-            #tf.print("penalty_tensor shape:",tf.shape(penalty_tensor))
-            
             current_latents=self.local_ACRD.dynamics(current_latents,actions_expanded)
             current_latents.set_shape([None,1,RNN_SIZE])
 
+            """
             move = distribution_to_coordinate(actions)
             planned_pos=current_pos+move
             is_wall = tf.gather_nd(obstacle_map,tf.cast(planned_pos,dtype=tf.int32))
@@ -377,8 +376,9 @@ class Worker():
                 current_pos,                   
                 planned_pos                    
             )
+            """
 
-            rewards_ta=rewards_ta.write(t,(rewards+wall_penalty)*discount)
+            rewards_ta=rewards_ta.write(t,(rewards)*discount)
             discount*=gammma_tdmpc
 
 
@@ -424,12 +424,15 @@ class Worker():
         V=tf.reduce_sum(rewards,axis=0)+discount*tf.squeeze(tf.squeeze(q_expected,1),1)  
 
 
+        """
+        #invalid除外
         first_actions = samples[0]
         match = tf.matmul(first_actions, validActions, transpose_b=True)
         is_valid = tf.reduce_any(match > 0.9, axis=1) 
         is_invalid = tf.logical_not(is_valid) 
         invalid_penalty = tf.cast(is_invalid, dtype=tf.float32) * -100.0
         V += invalid_penalty
+        """
 
 
         #print("V shape:",V.shape)
@@ -927,8 +930,8 @@ class Worker():
            
             is_collision_for_shaping=False
             pre_action=(0,0)
-            a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
-            a_onehot=tf.reshape(a_onehot,[1,1,5])
+            #a_onehot=tf.constant([1,0,0,0,0],dtype=tf.int32)
+            #a_onehot=tf.reshape(a_onehot,[1,1,5])
             #mean=tf.one_hot(tf.zeros([horizon],dtype=tf.int32),a_size)
             mean = tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)
 
@@ -1050,24 +1053,16 @@ class Worker():
                    
 
                     #行動選択
-                    if(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
+                    if IS_ONESHOT and (self.env.world.agents[self.agentID].status > 0):
+                        a = 0
+                        mean = tf.ones([horizon, a_size], dtype=tf.float32) / float(a_size)
+                    elif(episode_count>(random_term-1)):  #episode_count+1個目のエピソードをやっている。
                         if(random.random()<0.1-0.09*max([min([(-5.0+self.mean_finishes)/40.0, 1.0]), 0.0])):
-                            """
-                            probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
-                            for i in range(a_size):
-                                move=action2dir(i)
-                                if (s[0][2][5+move[0]][5+move[1]] == 1):
-                                    probabilities[i]=0
-                            total=sum(probabilities)
-                            probabilities=[i/total for i in probabilities]
-                                
-                            indices = np.arange(len(probabilities))
-                            a=np.random.choice(indices, p=probabilities)
-                            """
-                            a = random.choice(validActions)
+                            a=random.choice([0,1,2,3,4])
+                            #a = random.choice(validActions)
                             
                         else:
-                            if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0.0])):
+                            if(random.random() > max([min([correction_rate*(1.0-self.mean_finishes)/1.0, correction_rate]), 0])):
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             obstacle_map=tf.convert_to_tensor(s[0][2],dtype=tf.float32)
@@ -1079,24 +1074,12 @@ class Worker():
                        
 
                     else:
-                        """
-                        probabilities = [0.2, 0.2, 0.2, 0.2, 0.2]
-                        for i in range(a_size):
-                                move=action2dir(i)
-                                if (s[0][2][5+move[0]][5+move[1]] == 1):
-                                    probabilities[i]=0
-                        total=sum(probabilities)
-                        probabilities=[i/total for i in probabilities]
-                                
-                        indices = np.arange(len(probabilities))
-                        indices = np.arange(len(probabilities))
-                        a=np.random.choice(indices, p=probabilities)
-                        """
-                        a = random.choice(validActions)
+                        a=random.choice([0,1,2,3,4])
+                        #a = random.choice(validActions)
                         q=np.zeros((1,1))
 
-                    a_onehot=tf.one_hot(a,a_size)
-                    a_onehot=tf.expand_dims(tf.expand_dims(a_onehot,axis=0),axis=0)
+                    #a_onehot=tf.one_hot(a,a_size)
+                    #a_onehot=tf.expand_dims(tf.expand_dims(a_onehot,axis=0),axis=0)
                     
                     
 
@@ -1133,11 +1116,21 @@ class Worker():
                         if self.metaAgentID == 0:
                             print("metaID:",self.metaAgentID," step",episode_step_count,"  agent1 action:",a)
                         observe_result, all_rewards = self.env.step_all(joint_actions[self.metaAgentID])
+
+                        all_done = True
+                        for i in range(1, self.num_workers + 1):
+                            # ステータスが 1(到達) または 2(完了保持) であればゴール済みとみなす
+                            if self.env.world.getDone(i) == 0:
+                                all_done = False
+                                break
+                        if all_done:
+                            self.env.finished = True
+
                         all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):
                             joint_observations[self.metaAgentID][i] = all_obs[i]
                             joint_rewards[self.metaAgentID][i] = all_rewards[i]
-                            joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status == 1)
+                            joint_done[self.metaAgentID][i] = (self.env.world.agents[i].status >= 1)
                             joint_visible_agents[self.metaAgentID][i]=visible_agents_dict[i]
                             joint_normalized_distances[self.metaAgentID][i]=normalized_distances[i]
                         if saveGIF and self.agentID == 1:
@@ -1227,8 +1220,9 @@ class Worker():
                         
 
 
-                        if joint_done[self.metaAgentID][self.agentID]:
-                            joint_done[self.metaAgentID][self.agentID] = False
+                        if joint_done[self.metaAgentID][self.agentID] and not(IS_ONESHOT and targets_done>0):
+                            if not IS_ONESHOT:
+                                joint_done[self.metaAgentID][self.agentID] = False
                             obs_buffer.append(s[0])      #終端の報酬予測経験を学習できるようにするために。
                             goals_buffer.append(goal[0][0].numpy())
                             actions_buffer.append(0)
@@ -1246,7 +1240,7 @@ class Worker():
                    
                             
 
-                        if(len(obs_buffer)>horizon):
+                        elif (len(obs_buffer)>horizon) and not ((joint_done[self.metaAgentID][self.agentID]==True) and IS_ONESHOT):
                             self.all_obs_buffer.append(obs_buffer)
                             self.all_goals_buffer.append(goals_buffer)
                             self.all_actions_buffer.append(actions_buffer)
