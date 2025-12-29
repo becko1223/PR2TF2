@@ -53,8 +53,8 @@ training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
 gifs_path               = 'gifs_' + training_version
 train_path              = 'train_' + training_version
-OUTPUT_GIFS             = False  # Only for RL gifs
-GIFS_FREQUENCY_RL       = 10
+OUTPUT_GIFS             = True  # Only for RL gifs
+GIFS_FREQUENCY_RL       = 5
 OUTPUT_IL_GIFS          = False
 IL_GIF_PROB             = 0.
 
