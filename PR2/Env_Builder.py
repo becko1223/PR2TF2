@@ -597,6 +597,7 @@ class World:
                 new_goals = {}
                 for agentID in id_list:
                     # エージェントの現在位置から到達可能なエリアを取得
+                    from Map_Generator import GetConnectedRegion
                     curr_pos = self.agents[agentID].position
                     reachable_cells = GetConnectedRegion(self.state, {}, curr_pos[0], curr_pos[1])
                     
