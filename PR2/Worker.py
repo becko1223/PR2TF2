@@ -955,9 +955,8 @@ class Worker():
                 # prepare to save GIF
                 saveGIF = False
                 global GIFS_FREQUENCY_RL
-                if OUTPUT_GIFS and self.agentID == 1 and ((not TRAINING) or (episode_count >= self.nextGIF)):
+                if OUTPUT_GIFS and self.agentID == 1 and ((not TRAINING) or (episode_count % GIFS_FREQUENCY_RL == 0)):
                     saveGIF = True
-                    self.nextGIF = episode_count + GIFS_FREQUENCY_RL
                     GIF_episode = int(episode_count)
                     GIF_frames = [self.env._render()]
 
