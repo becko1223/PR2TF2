@@ -13,6 +13,9 @@ from matplotlib.colors import *
 import imageio
 from gym import spaces
 
+import matplotlib.pyplot as plt
+from matplotlib import cm
+
 
 def make_gif(images, fname):
     gif = imageio.mimwrite(fname, images, subrectangles=True)
@@ -1084,8 +1087,7 @@ class MAPFEnv(gym.Env):
     
 
 
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
+    
 
     # ... (既存のインポート) ...
 
