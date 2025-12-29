@@ -534,6 +534,8 @@ class World:
             # エージェントごとに、そのゴールの連結成分から開始位置を選ぶ
             init_poss = []
             regions_dict = {} # GetConnectedRegion用のキャッシュ
+
+            taken_positions = set()
             for agentID in id_list:
                 goal_pos = self.agents[agentID].goal_pos
                 # ゴールから到達可能な全座標を取得
@@ -541,7 +543,7 @@ class World:
                 reachable_tiles = GetConnectedRegion(self.state, regions_dict, goal_pos[0], goal_pos[1])
                 
                 # 空いているタイルのみを抽出
-                valid_tiles = [t for t in reachable_tiles if self.state[t] == 0 and self.goals_map[t] != agentID]
+                valid_tiles = [t for t in reachable_tiles if self.state[t] == 0 and self.goals_map[t] != agentID and t not in taken_positions]
 
                 if not valid_tiles:
                     # 空きがない場合は世界をリセットしてやり直し
@@ -552,6 +554,7 @@ class World:
                 # ランダムに選択
                 idx = np.random.choice(len(valid_tiles))
                 init_poss.append(valid_tiles[idx])
+                taken_positions.add(valid_tiles[idx])
         else:
             assert len(manual_pos.keys()) == len(id_list)
             init_poss = [manual_pos[agentID] for agentID in id_list]
