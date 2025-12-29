@@ -593,16 +593,11 @@ class World:
                 init_idx = np.random.choice(len(free_space), size=len(id_list), replace=False)
                 new_goals = {agentID: tuple(free_space[init_idx[agentID - 1]]) for agentID in id_list}
                 return new_goals
-            else:
+            else:   #ランダムマップにおいては、LIFLONGでやるときのnextgoalは適切（到達可能位置にあるかどうか）に配置することを保証するロジックになっていないかも
                 new_goals = {}
                 for agentID in id_list:
-                    # エージェントの現在位置から到達可能なエリアを取得
-                    from Map_Generator import GetConnectedRegion
-                    curr_pos = self.agents[agentID].position
-                    reachable_cells = GetConnectedRegion(self.state, {}, curr_pos[0], curr_pos[1])
-                    
-                    # 到達可能な範囲内で、かつ空いている場所を候補にする
-                    free_spaces_for_previous_goal = [pos for pos in reachable_cells if self.state[pos] == 0 and self.goals_map[pos] == 0]
+                    free_on_agents = np.logical_and(self.state > 0, self.state != agentID)
+                    free_spaces_for_previous_goal = np.logical_or(free_on_agents, free_for_all)
                     # free_spaces_for_previous_goal = np.logical_and(free_spaces_for_previous_goal, self.goals_map==0)
                     if distance > 0:
                         previous_x, previous_y = previous_goals[agentID]
