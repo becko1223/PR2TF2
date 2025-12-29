@@ -472,9 +472,9 @@ class ReplayBuffer():
         self.priorities = [] # indexlistに対応する優先度を保持
         self.alpha = 0.6     # 優先度の度合い (0でランダム, 1で完全優先)
         self.beta = 0.4      # 重点サンプリングによる補正 (学習初期は小さく、終盤は1に近づける)
-        self.beta_increment_per_sampling = 0.0000005
+        self.beta_increment_per_sampling = 0.000002
         self.epsilon = 1e-5  # 優先度が0にならないように加算する微小値
-        self.abs_err_upper = 1.0  # クリッピング用
+        self.abs_err_upper = 3.0  # クリッピング用
 
         if os.path.exists("replay_buffer/rb_data.pkl"):
             if load_model == True:
@@ -502,7 +502,7 @@ class ReplayBuffer():
 
 
     def add(self, obs, goals, actions, rewards, valids, messages, masks, tentatives):  #訓練が進みエピソードの長さが減る分バッファの保持ステップ数が減るのは問題かも？
-        max_priority = np.max(self.priorities) if self.priorities else 1.0
+        max_priority = np.max(self.priorities) if self.priorities else self.abs_err_upper
 
         if self.iter >= replay_buffer_size:
             deleted_obs=self.obs_buffer.pop(0)

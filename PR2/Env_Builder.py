@@ -531,10 +531,27 @@ class World:
                 manual_pos: a dict of manual positions {agentID: (x,y),...}
         """
         if manual_pos is None:
-            # randomly init agents everywhere
-            free_space = np.argwhere(np.logical_and(self.state == 0, self.goals_map == 0) == 1)
-            new_idx = np.random.choice(len(free_space), size=len(id_list), replace=False)
-            init_poss = [free_space[idx] for idx in new_idx]
+            # エージェントごとに、そのゴールの連結成分から開始位置を選ぶ
+            init_poss = []
+            regions_dict = {} # GetConnectedRegion用のキャッシュ
+            for agentID in id_list:
+                goal_pos = self.agents[agentID].goal_pos
+                # ゴールから到達可能な全座標を取得
+                from Map_Generator import GetConnectedRegion
+                reachable_tiles = GetConnectedRegion(self.state, regions_dict, goal_pos[0], goal_pos[1])
+                
+                # 空いているタイルのみを抽出
+                valid_tiles = [t for t in reachable_tiles if self.state[t] == 0 and self.goals_map[t] != agentID]
+
+                if not valid_tiles:
+                    # 空きがない場合は世界をリセットしてやり直し
+                    self.reset_world()
+                    self.init_agents_and_goals()
+                    return
+                
+                # ランダムに選択
+                idx = np.random.choice(len(valid_tiles))
+                init_poss.append(valid_tiles[idx])
         else:
             assert len(manual_pos.keys()) == len(id_list)
             init_poss = [manual_pos[agentID] for agentID in id_list]
@@ -579,8 +596,12 @@ class World:
             else:
                 new_goals = {}
                 for agentID in id_list:
-                    free_on_agents = np.logical_and(self.state > 0, self.state != agentID)
-                    free_spaces_for_previous_goal = np.logical_or(free_on_agents, free_for_all)
+                    # エージェントの現在位置から到達可能なエリアを取得
+                    curr_pos = self.agents[agentID].position
+                    reachable_cells = GetConnectedRegion(self.state, {}, curr_pos[0], curr_pos[1])
+                    
+                    # 到達可能な範囲内で、かつ空いている場所を候補にする
+                    free_spaces_for_previous_goal = [pos for pos in reachable_cells if self.state[pos] == 0 and self.goals_map[pos] == 0]
                     # free_spaces_for_previous_goal = np.logical_and(free_spaces_for_previous_goal, self.goals_map==0)
                     if distance > 0:
                         previous_x, previous_y = previous_goals[agentID]

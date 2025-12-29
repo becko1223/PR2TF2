@@ -192,7 +192,7 @@ def random_obstacle_generator(env_size=(10, 70), obstacle_density=(0.05, 0.15, 0
         
         # 既存環境との互換性のため -1倍
         world = -(Z.astype(int))
-        world = get_largest_connected_component(world)
+        #world = get_largest_connected_component(world)
         return world, None
 
     return generator

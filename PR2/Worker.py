@@ -633,6 +633,9 @@ class Worker():
 
 
 
+
+
+
     def calculateImitationGradient(self, rollout, episode_count):
         rollout = np.array(rollout, dtype=object)
         # we calculate the loss differently for imitation
@@ -1102,7 +1105,8 @@ class Worker():
 
                         joint_actions[self.metaAgentID][self.agentID] = a
                         if a == 0:
-                            episode_stop_count += 1
+                            if not(IS_ONESHOT and targets_done>0):
+                                episode_stop_count += 1
 
             
 

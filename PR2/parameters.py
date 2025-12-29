@@ -4,7 +4,7 @@ import numpy as np
 gamma                   = .95  # discount rate for advantage estimation and reward discounting
 LR_Q                    = 1.e-4  # 8.e-5 / NUM_THREADS # default: 1e-5
 ADAPT_LR                = True
-ADAPT_COEFF             = 2.e-4  # the coefficient A in LR_Q/sqrt(A*steps+1) for calculating LR
+ADAPT_COEFF             = 0.01  # the coefficient A in LR_Q/sqrt(A*steps+1) for calculating LR
 EXPERIENCE_BUFFER_SIZE  = 256
 max_episode_length      = 256
 IL_MAX_EP_LENGTH        = 64
@@ -14,12 +14,12 @@ episode_count           = 0
 horizon                 =4
 rho                     =0.5
 
-num_samples             =200
+num_samples             =250
 num_actor_traj          =16
 num_elites              =64
 
 gammma_tdmpc            =0.99
-temperature             =0.25
+temperature             =1.0
 iterations              =2
 
 random_term             =25
@@ -47,7 +47,7 @@ NUM_BUFFERS             = 1  # NO EXPERIENCE REPLAY int(NUM_THREADS / 2)
 
 # training parameters
 SUMMARY_WINDOW          = 1
-load_model              = True
+load_model              = False
 RESET_TRAINER           = False
 training_version        = 'astar3_continuous_0.5IL_ray2'
 model_path              = 'model_' + training_version
@@ -58,7 +58,7 @@ GIFS_FREQUENCY_RL       = 5
 OUTPUT_IL_GIFS          = False
 IL_GIF_PROB             = 0.
 
-replay_buffer_size      =500  #8で割った値が最大の過去利用量。だがだんだん1エピソードの長さが短くなるのでバッファの保有ステップ数が減ってく。
+replay_buffer_size      =800  #8で割った値が最大の過去利用量。だがだんだん1エピソードの長さが短くなるのでバッファの保有ステップ数が減ってく。
 batch_size              =512
 
 
