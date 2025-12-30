@@ -1227,17 +1227,18 @@ class Worker():
                         if joint_done[self.metaAgentID][self.agentID] and not(IS_ONESHOT and targets_done>0):
                             if not IS_ONESHOT:
                                 joint_done[self.metaAgentID][self.agentID] = False
-                            obs_buffer.append(s[0])      #終端の報酬予測経験を学習できるようにするために。
-                            goals_buffer.append(goal[0][0].numpy())
-                            actions_buffer.append(0)
-                            rewards_buffer.append(0)
-                            train_valid = np.zeros(a_size)
-                            train_valid[validActions] = 1
-                            valids_buffer.append(train_valid)
-                            messages_buffer.append(tf.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size]))
-                            masks_buffer.append(tf.zeros([1,NUM_THREADS]))
-                            dummy_tentative=tf.fill([(horizon-1)*a_size],1/5.0)
-                            tentatives_buffer.append(dummy_tentative)                       
+                            for i in range(horizon):
+                                obs_buffer.append(s[0])      #終端の報酬予測経験を学習できるようにするために。
+                                goals_buffer.append(goal[0][0].numpy())
+                                actions_buffer.append(0)
+                                rewards_buffer.append(0)
+                                train_valid = np.zeros(a_size)
+                                train_valid[validActions] = 1
+                                valids_buffer.append(train_valid)
+                                messages_buffer.append(tf.zeros([NUM_THREADS,RNN_SIZE+(horizon-1)*a_size]))
+                                masks_buffer.append(tf.zeros([1,NUM_THREADS]))
+                                dummy_tentative=tf.fill([(horizon-1)*a_size],1/5.0)
+                                tentatives_buffer.append(dummy_tentative)                       
                             targets_done += 1
                             if(IS_ONESHOT and len(obs_buffer)>horizon):
                                 self.all_obs_buffer.append(obs_buffer)
