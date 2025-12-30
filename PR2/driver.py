@@ -73,8 +73,10 @@ if not os.path.exists(gifs_path):
 global_step = 0 #これはcurrent_episodeと同じ。混在していてちょっと良くない。
 
 global_mean_finishes=0
-
 goals_numbers=collections.deque([], 10)
+
+global_SR=0
+SR_list=collections.deque([], 10)
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -397,7 +399,7 @@ def update(global_network, obs,goals,actions,rewards,valids,messages,masks,tenta
 
     
 
-def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=True):
+def writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent, plotMeans=True):
     # each row in tensorboardData represents an episode
     # each column is a specific metric
     
@@ -416,11 +418,18 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode, plotMeans=
             mean_stop, mean_astar,mean_collision, mean_wall_collision, mean_reward, mean_finishes = firstEpisode
 
     global global_mean_finishes
+    global global_SR
     goals_numbers.append(mean_finishes)
     total=sum(goals_numbers)
     number=len(goals_numbers)
     if number>0:
         global_mean_finishes=total/10.0
+
+    if mean_finishes/num_agent==1:
+        SR_list.append(1)
+    else:
+        SR_list.append(0)
+    global_SR=sum(SR_list)/10.0
     
 
     with global_summary.as_default():
@@ -815,7 +824,7 @@ def main():
             obsResults, goalsResults, actionsResults, rewardsResults, validsResults, messagesResults, masksResults, tentativesResults, metrics, info = result
 
             all_loss=[]
-            
+            num_agent=len(obsResults)
             if obsResults and goalsResults and actionsResults and rewardsResults and validsResults and messagesResults and masksResults and tentativesResults:
                 num_step=0
                 for i in range(len(obsResults)):
@@ -851,7 +860,7 @@ def main():
 
             # Every `SUMMARY_WINDOW` RL episodes, write RL episodes to tensorboard
             if len(tensorboardData) >= SUMMARY_WINDOW:
-                writeToTensorBoard(global_summary, tensorboardData, curr_episode)
+                writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent)
                 tensorboardData = []
                 
             # get the updated weights from the global network
