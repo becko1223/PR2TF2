@@ -435,7 +435,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent, 
     global_SR=sum(SR_list)/10.0
 
     if global_SR>=0.6:
-        curriculum_level+=1
+        #curriculum_level+=1
         SR_list.clear()
         
     

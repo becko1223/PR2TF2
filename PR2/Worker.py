@@ -916,7 +916,7 @@ class Worker():
                 """
 
                 self.env._reset(random_obstacle_generator(
-                                    env_size=(10,10+int(50*max([min([self.curriculum_level/6.0, 1.0]), 0.0]))),
+                                    env_size=(10,60),#10+int(50*max([min([self.curriculum_level/6.0, 1.0]), 0.0]))),
                                     obstacle_density=(0,0.3,0.5)
                                 ),num_agents)
               
@@ -1163,20 +1163,17 @@ class Worker():
                         is_collision_for_shaping=True
                 
                     shaping_reward=0
-                    """
+
                     if not is_collision_for_shaping:
                         if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
-                            shaping_reward=0.3
+                            shaping_reward=0.2
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
-                            shaping_reward=-0.3
+                            shaping_reward=-0.2
 
-                    """
-                    
                        
                         
                     
-                    shaping_reward=-joint_normalized_distances[self.metaAgentID][self.agentID]
-
+                    #shaping_reward=-joint_normalized_distances[self.metaAgentID][self.agentID]
 
                     extra_reward=0
                     
