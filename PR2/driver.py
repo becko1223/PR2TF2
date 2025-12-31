@@ -428,7 +428,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent, 
     if number>0:
         global_mean_finishes=total/10.0
 
-    if mean_finishes/num_agent==1:
+    if mean_finishes/num_agent==1 and curr_episode>random_term:
         SR_list.append(1)
     else:
         SR_list.append(0)
