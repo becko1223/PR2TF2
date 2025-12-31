@@ -165,7 +165,6 @@ class ACRDNet(tf.keras.Model):
         self.res_block3 = ResBlock(64)
         
         self.flat = layers.Flatten()
-        self.goal_layer = layers.Dense(units=GOAL_REPR_SIZE, activation="elu")
         
         # Encoder Projection
         self.pre_dense = layers.Dense(ENCODE_SIZE, activation="elu")
@@ -212,9 +211,8 @@ class ACRDNet(tf.keras.Model):
 
     @tf.function(input_signature=[
                         tf.TensorSpec(shape=[None, None, 4, 11, 11], dtype=tf.float32),  # obs (B, S,C, H, W)
-                        tf.TensorSpec(shape=[None, None, 3], dtype=tf.float32),          # goal (B, S, F)
                     ])
-    def encode(self,inputs,goal_pos):
+    def encode(self,inputs):
         x=inputs
         
             
@@ -228,11 +226,7 @@ class ACRDNet(tf.keras.Model):
         
         x = layers.TimeDistributed(self.flat)(x) # Flatten
         
-        # Goal processing
-        g = self.goal_layer(goal_pos)
         
-        # Merge
-        x = tf.concat([x, g], axis=-1)
         x = self.pre_dense(x)
   
         x = self.encode_res(x)

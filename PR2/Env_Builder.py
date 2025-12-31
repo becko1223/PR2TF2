@@ -160,7 +160,7 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isDiagonal: bo
             fScore[neighbor] = gScore[neighbor] + heuristic_cost_estimate(neighbor, goal)
 
             # parse through the gScores
-    Astar_map = map.copy()
+    Astar_map = np.where(map == -1, -1, 999).astype(float)
     for (i, j) in gScore:
         Astar_map[i, j] = gScore[i, j]
     return Astar_map

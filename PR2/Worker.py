@@ -980,7 +980,7 @@ class Worker():
                     tentative.set_shape([horizon-1,a_size])
                     tentative=tf.reshape(tentative,[-1])
                     #print("tentative shape",tf.shape(tentative))
-                    encoded_obs=self.local_ACRD.encode(ob,goal)
+                    encoded_obs=self.local_ACRD.encode(ob)
     
                     encoded_obs_with_actions=tf.concat([encoded_obs,tf.reshape(tentative,[1,1,-1])],axis=-1)
                     joint_encoded_obs[self.metaAgentID][self.agentID]=encoded_obs_with_actions

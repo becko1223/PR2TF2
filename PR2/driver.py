@@ -165,7 +165,6 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     global_network.res_block1.trainable_variables +
     global_network.res_block2.trainable_variables +
     global_network.res_block3.trainable_variables +
-    global_network.goal_layer.trainable_variables +
     global_network.pre_dense.trainable_variables +
     global_network.encode_res.trainable_variables +
     global_network.encode_norm.trainable_variables +
@@ -205,7 +204,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
     
 
     #latentのターゲットを出す(b,s,h,w,c)
-    batch_pre_latent_targets=global_network.encode(batch_obs[:,1:],batch_goals[:,1:])
+    batch_pre_latent_targets=global_network.encode(batch_obs[:,1:])
     batch_comm_encoded_targets=tf.concat([batch_pre_latent_targets,batch_tentatives[:,1:]],axis=-1)
     batch_other_messages = batch_messages[:, 1:, 1:, :]
     batch_curr_own_message = tf.expand_dims(batch_comm_encoded_targets, axis=2)
@@ -226,7 +225,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         
         batch_actions_T = tf.transpose(batch_actions[:, :], [1, 0, 2])  # [horizon, batch, action_dim]
 
-        pre_latent=global_network.encode(batch_obs[:, 0:1],batch_goals[:,0:1])
+        pre_latent=global_network.encode(batch_obs[:, 0:1])
         other_messages = batch_messages[:, 0:1, 1:, :]
         comm_encoded=tf.concat([pre_latent,batch_tentatives[:,0:1]],axis=-1)
         curr_own_message = tf.expand_dims(comm_encoded, axis=2)
@@ -325,16 +324,15 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         batch_q=tf.squeeze(batch_q) 
         
         log_policy_loss=-tf.reduce_mean(rhos*batch_q)
-        log_valid_loss=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
+        log_valid_loss=0
         log_entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
 
 
         policy_loss=-tf.reduce_mean(weights_expanded*rhos*batch_q)
         
-        valid_loss=-tf.reduce_mean(tf.expand_dims(weights_expanded,axis=-1)*tf.expand_dims(rhos,axis=-1)*(batch_valids[:,:]*tf.math.log(tf.clip_by_value(batch_policies_sig, 1e-10, 1.0))+(1-batch_valids[:,:])*tf.math.log(tf.clip_by_value(1-batch_policies_sig,1e-10,1.0))))
-        entropy=-tf.reduce_mean(tf.expand_dims(weights_expanded,axis=-1)*tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+        
 
-        total_loss=0.5*policy_loss+16*valid_loss+entropy
+        total_loss=policy_loss
     
     policy_grads=tape.gradient(total_loss,variables_for_actor)
 
@@ -671,7 +669,7 @@ def main():
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        global_network.encode(dummy_obs,dummy_goals)
+        global_network.encode(dummy_obs)
        
         global_network.communication.get_concrete_function(
             tf.TensorSpec(shape=[None, None, 1, RNN_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
@@ -697,7 +695,6 @@ def main():
         global_network.res_block1.trainable_variables +
         global_network.res_block2.trainable_variables +
         global_network.res_block3.trainable_variables +
-        global_network.goal_layer.trainable_variables +
         global_network.pre_dense.trainable_variables +
         global_network.encode_res.trainable_variables +
         global_network.encode_norm.trainable_variables +

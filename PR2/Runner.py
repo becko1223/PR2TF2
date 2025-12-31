@@ -105,7 +105,7 @@ class Runner(object):
         dummy_masks=tf.ones([1,1,1,NUM_THREADS],dtype=tf.bool)
         dummy_actions=tf.constant([[[1.0, 0.0, 0.0, 0.0, 0.0]]], dtype=tf.float32)
 
-        self.localNetwork.encode(dummy_obs,dummy_goals)
+        self.localNetwork.encode(dummy_obs)
         
         self.localNetwork.communication.get_concrete_function(
             tf.TensorSpec(shape=[None, None, 1, ENCODE_SIZE+(horizon-1)*a_size], dtype=tf.float32),      # own_encoded_obs
