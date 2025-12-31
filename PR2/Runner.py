@@ -25,7 +25,7 @@ ENCODE_SIZE=512
 class Runner(object):
     """Actor object to start running simulation on workers.
         Gradient computation is also executed on this object."""
-    def __init__(self, metaAgentID,mean_finishes):
+    def __init__(self, metaAgentID,mean_finishes, curriculum_level):
         # tensorflow must be imported within the constructor
         # because this class will be instantiated on a remote ray node
        
@@ -134,23 +134,23 @@ class Runner(object):
 
 
         
-    def multiThreadedJob(self, episodeNumber, mean_finishes):
+    def multiThreadedJob(self, episodeNumber, mean_finishes, curriculum_level):
         workers = []
         worker_threads = []
-        workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]#(2+ int((NUM_THREADS-2)*max([min([(-5.0+mean_finishes)/40.0, 1.0]), 0.0])))]
+        workerNames = ["worker_" + str(i+1) for i in range(2+ int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0])))]
         groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO  
 
 
         inference_lock = threading.Lock()       
 
-        workersPerMetaAgent = NUM_THREADS#2+ int((NUM_THREADS-2)*max([min([(-5.0+mean_finishes)/40.0, 1.0]), 0.0]))
+        workersPerMetaAgent = 2+int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0]))
 
         for a in range(workersPerMetaAgent):
             agentID = a + 1
 
             workers.append(Worker(self.metaAgentID, agentID, workersPerMetaAgent,
                                   self.env, self.localNetwork,
-                                  groupLock,inference_lock, mean_finishes, learningAgent=True))
+                                  groupLock,inference_lock, mean_finishes,curriculum_level, learningAgent=True))
 
         for w in workers:
             groupLock.acquire(0, w.name)
@@ -228,6 +228,7 @@ class Runner(object):
             else:
                 print(f"gradient[{i}] length: {len(grads)}")
         print("mean_finishes:",mean_finishes)
+        print("curriculum_level:",curriculum_level)
         
         return obsResults, goalsResults, actionsResults, rewardsResults, validsResults,messagesResults,masksResults,tentativeResults, all_metrics, is_imitation
     
@@ -250,7 +251,7 @@ class Runner(object):
         return gradients, mean_imitation_loss, is_imitation
         
         
-    def job(self, global_weights, episodeNumber, mean_finishes):
+    def job(self, global_weights, episodeNumber, mean_finishes, curriculum_level):
         try:
             print("starting episode {} on metaAgent {}".format(episodeNumber, self.metaAgentID))
 
@@ -264,7 +265,7 @@ class Runner(object):
                 jobResults, metrics, is_imitation = self.imitationLearningJob(episodeNumber)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-                obsResults, goalsResults, actionsResults, rewardsResults,  validsResults,messagesResults,masksResults,tentativeResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes)
+                obsResults, goalsResults, actionsResults, rewardsResults,  validsResults,messagesResults,masksResults,tentativeResults, metrics, is_imitation = self.multiThreadedJob(episodeNumber, mean_finishes, curriculum_level)
 
             elif COMPUTE_TYPE == COMPUTE_OPTIONS.synchronous:
                 print("not implemented")
@@ -297,11 +298,11 @@ cpu=multiprocessing.cpu_count()
 
 @ray.remote(num_cpus=cpu / (NUM_META_AGENTS  + 1), num_gpus= 1.0 / (NUM_META_AGENTS  + 1))
 class RLRunner(Runner):
-    def __init__(self, metaAgentID, mean_finishes):        
-        super().__init__(metaAgentID,mean_finishes)
+    def __init__(self, metaAgentID, mean_finishes, curriculum_level):        
+        super().__init__(metaAgentID,mean_finishes, curriculum_level)
 
 
 @ray.remote(num_cpus=(cpu*1)//19, num_gpus=0)
 class imitationRunner(Runner):
-    def __init__(self, metaAgentID, mean_finishes):        
-        super().__init__(metaAgentID,mean_finishes)
+    def __init__(self, metaAgentID, mean_finishes, curriculum_level):        
+        super().__init__(metaAgentID,mean_finishes, curriculum_level)

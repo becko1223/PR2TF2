@@ -171,7 +171,7 @@ def random_obstacle_generator(env_size=(10, 70), obstacle_density=(0.05, 0.15, 0
     def generator():
         # 1. マップサイズの決定
         size = np.random.randint(min_size, max_size + 1)
-        h, w = size, size
+        h, w = size+2, size+2
         
         # 2. 密度の決定 (三角分布)
         # 指定した d_mode で発生確率が最大になる

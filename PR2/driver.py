@@ -77,6 +77,8 @@ goals_numbers=collections.deque([], 10)
 
 global_SR=0
 SR_list=collections.deque([], 10)
+
+curriculum_level=0
         
 if ADAPT_LR:
     # computes LR_Q/sqrt(ADAPT_COEFF*steps+1)
@@ -419,6 +421,7 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent, 
 
     global global_mean_finishes
     global global_SR
+    global curriculum_level
     goals_numbers.append(mean_finishes)
     total=sum(goals_numbers)
     number=len(goals_numbers)
@@ -430,6 +433,11 @@ def writeToTensorBoard(global_summary, tensorboardData, curr_episode,num_agent, 
     else:
         SR_list.append(0)
     global_SR=sum(SR_list)/10.0
+
+    if global_SR>=0.6:
+        curriculum_level+=1
+        SR_list.clear()
+        
     
 
     with global_summary.as_default():
@@ -775,10 +783,11 @@ def main():
     replaybuffer=ReplayBuffer()
 
     global global_mean_finishes
+    global curriculum_level
         
     
     # launch all of the threads:
-    rl_agents = [RLRunner.remote(i, global_mean_finishes) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
+    rl_agents = [RLRunner.remote(i, global_mean_finishes,curriculum_level) for i in range(NUM_IL_META_AGENTS, NUM_META_AGENTS)]
     meta_agents = rl_agents 
 
     
@@ -840,7 +849,7 @@ def main():
                     avg_loss=list(np.mean(np.array(all_loss), axis=0))
                     all_metrics=avg_loss+metrics
                 elif curr_episode==random_term-1:
-                    for i in range(max_episode_length*random_term*NUM_THREADS//4):#((2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4):
+                    for i in range(len(replaybuffer.indexlist)//4):#((2+ int((NUM_THREADS-2)*max([min([(-5.0+global_mean_finishes)/40.0, 1.0]), 0.0])))//4):
                         obs,goals,actions,rewards,valids,messages,masks,tentatives, indices, per_weights=replaybuffer.sample(batch_size,horizon)
                         loss_list=update(global_network,obs,goals,actions,rewards,valids,messages,masks,tentatives,world_optimizer,policy_optimizer,curr_episode, indices, per_weights,replaybuffer)
                         all_loss.append(loss_list)
@@ -869,7 +878,7 @@ def main():
             curr_episode += 1
 
             # start a new job on the recently completed agent with the updated weights
-            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,global_mean_finishes)])
+            jobList.extend([meta_agents[info['id']].job.remote(weights, curr_episode,global_mean_finishes,curriculum_level)])
 
             
             if curr_episode % 10 == 0:
