@@ -301,7 +301,7 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
 
 
     with tf.GradientTape() as tape:
-        
+        """
         policy=global_network.policy(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1])
         policy=tf.clip_by_value(policy,-10.0,10.0)
         batch_policies_sig=tf.sigmoid(policy)
@@ -322,13 +322,52 @@ def tape_calc(global_network,batch_obs, batch_goals, batch_rewards, batch_action
         q2_next=global_network.q2(tf.concat([latent_init,batch_latent_preds],axis=1)[:,:-1],next_actions)
         batch_q=tf.math.minimum(q1_next,q2_next)
         batch_q=tf.squeeze(batch_q) 
+        """
+        # 1. Policy からロジットを取得
+        latents_for_policy = tf.concat([latent_init, batch_latent_preds], axis=1)[:, :-1]
+        logits = global_network.policy(latents_for_policy)
+        logits = tf.clip_by_value(logits, -10.0, 10.0)
         
-        log_policy_loss=-tf.reduce_mean(rhos*batch_q)
+        # 2. 確率分布 (π) を計算
+        probs = tf.nn.softmax(logits, axis=-1) # [batch, horizon, a_size]
+
+        # 3. 全ての行動パターンに対する Q 値を計算する
+        # (期待値 Σ π(a|s) * Q(s,a) を計算するため)
+        
+        # Latent を全アクション分リピート [B, H, A, Dim]
+        b_size = tf.shape(latents_for_policy)[0]
+        h_size = tf.shape(latents_for_policy)[1]
+        a_size_dim = tf.shape(probs)[-1]
+
+        # latentをアクションの数だけ拡張
+        latent_tiled = tf.tile(tf.expand_dims(latents_for_policy, 2), [1, 1, a_size_dim, 1])
+        
+        # 全アクションの one-hot ベクトルを作成 [1, 1, A, A]
+        all_actions = tf.eye(a_size_dim)
+        all_actions = tf.reshape(all_actions, [1, 1, a_size_dim, a_size_dim])
+        all_actions = tf.tile(all_actions, [b_size, h_size, 1, 1])
+
+        # 全パターンの Q 値を一括計算
+        # Q ネットワークの入力形式に合わせて reshape する必要があります
+        q1_all = global_network.q1(tf.reshape(latent_tiled, [-1, RNN_SIZE]), 
+                                    tf.reshape(all_actions, [-1, a_size_dim]))
+        q2_all = global_network.q2(tf.reshape(latent_tiled, [-1, RNN_SIZE]), 
+                                    tf.reshape(all_actions, [-1, a_size_dim]))
+        
+        q_min_all = tf.math.minimum(q1_all, q2_all)
+        q_min_all = tf.reshape(q_min_all, [b_size, h_size, a_size_dim]) # [B, H, A]
+
+        # 4. 期待値 (Expectation) を取る: Σ(π * Q)
+        # これにより勾配が probs (Policyネットワーク) へ流れるようになります
+        expected_q = tf.reduce_sum(probs * q_min_all, axis=-1)
+
+        # 5. ロス計算 (最大化したいのでマイナスをつける)
+        policy_loss = -tf.reduce_mean(weights_expanded * rhos * expected_q)
+        
+        log_policy_loss=-tf.reduce_mean(rhos*expected_q)
         log_valid_loss=0
-        log_entropy=-tf.reduce_mean(tf.expand_dims(rhos,axis=-1)*policy * tf.math.log(tf.clip_by_value(policy, 1e-10, 1.0)))
+        log_entropy=0
 
-
-        policy_loss=-tf.reduce_mean(weights_expanded*rhos*batch_q)
         
         
 
