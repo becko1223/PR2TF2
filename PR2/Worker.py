@@ -1163,17 +1163,19 @@ class Worker():
                         is_collision_for_shaping=True
                 
                     shaping_reward=0
-                    
+                    """
                     if not is_collision_for_shaping:
                         if (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])>0:
                             shaping_reward=0.3
                         elif (cost_map[5][5]-cost_map[5+action[0]][5+action[1]])<0:
                             shaping_reward=-0.3
+
+                    """
                     
                        
                         
                     
-                    #shaping_reward=-(1-0.1)*gammma_tdmpc*joint_normalized_distances[self.metaAgentID][self.agentID]
+                    shaping_reward=-joint_normalized_distances[self.metaAgentID][self.agentID]
 
 
                     extra_reward=0

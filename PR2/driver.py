@@ -797,7 +797,7 @@ def main():
     jobList = [] # Ray ObjectIDs 
     weights = global_network.get_weights()
     for i, meta_agent in enumerate(meta_agents):
-        jobList.append(meta_agent.job.remote(weights, curr_episode, global_mean_finishes))
+        jobList.append(meta_agent.job.remote(weights, curr_episode, global_mean_finishes,curriculum_level))
         curr_episode += 1
 
     tensorboardData = []
