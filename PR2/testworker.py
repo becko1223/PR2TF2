@@ -733,13 +733,12 @@ class Testworker():
                         visible_messages[0][0][i+1]=message[0][0]
                         
 
-                    if(episode_count>(random_term-1)):
-                        mask=tf.ones([1,1,1,num_visible+1],dtype=tf.bool)
-                        mask.set_shape([1,1,1,num_visible+1])
-                        latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs_with_actions,axis=2),tf.convert_to_tensor(visible_messages),mask)
-                        
-                    else:
-                        latent_init=encoded_obs
+                 
+                    mask=tf.ones([1,1,1,num_visible+1],dtype=tf.bool)
+                    mask.set_shape([1,1,1,num_visible+1])
+                    latent_init=self.local_ACRD.communication(tf.expand_dims(encoded_obs_with_actions,axis=2),tf.convert_to_tensor(visible_messages),mask)
+                    
+                 
                         
                     #補正用データ
                     is_no_guide=tf.constant([False],tf.bool)
@@ -837,7 +836,7 @@ class Testworker():
                        
 
                     self.synchronize()  # synchronize threads
-                    
+
                     self.isgoal=True if (self.env.world.getDone(self.agentID) > 0) else False
 
                     # Get observation,reward, valid actions for each agent 
