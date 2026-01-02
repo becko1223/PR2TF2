@@ -825,7 +825,7 @@ class Testworker():
                                 break
                         if all_done:
                             self.env.finished = True
-                        self.isgoal=True if (self.env.world.getDone(self.agentID) > 0) else False
+                      
 
                         all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):
@@ -837,6 +837,8 @@ class Testworker():
                        
 
                     self.synchronize()  # synchronize threads
+                    
+                    self.isgoal=True if (self.env.world.getDone(self.agentID) > 0) else False
 
                     # Get observation,reward, valid actions for each agent 
                     s1 = [joint_observations[self.metaAgentID][self.agentID][0][:4],joint_observations[self.metaAgentID][self.agentID][1]]
