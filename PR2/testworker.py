@@ -81,7 +81,7 @@ class Testworker():
         self.groupLock = groupLock
         self.inferenceLock=inference_lock
 
-        self.isgoal=0
+        self.isgoal=False
         self.length=256
         
       
@@ -825,7 +825,7 @@ class Testworker():
                                 break
                         if all_done:
                             self.env.finished = True
-                        self.isgoal=1 if (self.env.world.getDone(self.agentID) > 0) else 0
+                        self.isgoal=True if (self.env.world.getDone(self.agentID) > 0) else False
 
                         all_obs,visible_agents_dict,normalized_distances=observe_result
                         for i in range(1, self.num_workers + 1):

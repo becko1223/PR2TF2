@@ -137,13 +137,13 @@ class Runner(object):
     def multiThreadedJob(self, episodeNumber, mean_finishes, curriculum_level):
         workers = []
         worker_threads = []
-        workerNames = ["worker_" + str(i+1) for i in range(4)]#2+ int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0])))]
+        workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]#2+ int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0])))]
         groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO  
 
 
         inference_lock = threading.Lock()       
 
-        workersPerMetaAgent = 4#2+int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0]))
+        workersPerMetaAgent = NUM_THREADS#2+int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0]))
 
         for a in range(workersPerMetaAgent):
             agentID = a + 1
