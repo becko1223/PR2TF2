@@ -166,7 +166,7 @@ def main():
 
                       workers = []
                       worker_threads = []
-                      workerNames = ["worker_" + str(i+1) for i in range(NUM_THREADS)]#2+ int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0])))]
+                      workerNames = ["worker_" + str(i+1) for i in range(num_agents)]#2+ int((NUM_THREADS-2)*max([min([(curriculum_level)/6.0, 1.0]), 0.0])))]
                       groupLock = GroupLock.GroupLock([workerNames, workerNames]) # TODO  
 
 
