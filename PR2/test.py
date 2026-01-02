@@ -181,7 +181,7 @@ def main():
 
                     for w in workers:
                         groupLock.acquire(0, w.name)
-                        worker_work = lambda: w.work(coord)
+                        worker_work = lambda: w.work(0,coord)
                         t = threading.Thread(target=(worker_work))
                         t.start()
                         

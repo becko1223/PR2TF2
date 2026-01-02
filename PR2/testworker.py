@@ -943,7 +943,7 @@ class Testworker():
         self.currEpisode = currEpisode
 
         if COMPUTE_TYPE == COMPUTE_OPTIONS.multiThreaded:
-            self.perf_metrics = self.run_episode_multithreaded(currEpisode, coord)
+            self.perf_metrics = self.run_episode_multithreaded( coord)
         else:
             print("not implemented")
             assert (1 == 0)
