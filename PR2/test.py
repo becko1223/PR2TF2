@@ -121,7 +121,7 @@ def main():
           path = "test3"#model_path
           checkpoint = tf.train.Checkpoint(model=global_network, world_optimizer=world_optimizer,policy_optimizer=policy_optimizer)
 
-          checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
+          checkpoint_manager=tf.train.CheckpointManager(checkpoint,path,1)
 
   
       print ('Loading Model...')
