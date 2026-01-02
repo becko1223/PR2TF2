@@ -70,6 +70,7 @@ class Testworker():
 
 
         self.agentID = workerID
+        self.metaAgentID = 0
         self.name = "worker_" + str(workerID)
         self.num_workers = num_agents
         
@@ -618,11 +619,6 @@ class Testworker():
 
     def run_episode_multithreaded(self, coord):
 
-        if self.metaAgentID < NUM_IL_META_AGENTS:
-            assert (1 == 0)
-            # print("THIS CODE SHOULD NOT TRIGGER")
-            self.is_imitation = True
-            self.imitation_learning_only()
 
         global episode_lengths
 
