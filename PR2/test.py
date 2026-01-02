@@ -132,8 +132,8 @@ def main():
 
 
       MAP_SIZES = [40]
-      DENSITIES = [0]
-      AGENT_COUNTS = [16,64]
+      DENSITIES = [0.15]
+      AGENT_COUNTS = [4,8,16,32]
       NUM_EPISODES = 50
       MAX_STEPS = 256
 
