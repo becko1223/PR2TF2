@@ -916,8 +916,8 @@ class Worker():
                 """
 
                 self.env._reset(random_obstacle_generator(
-                                    env_size=(10,60),#10+int(50*max([min([self.curriculum_level/6.0, 1.0]), 0.0]))),
-                                    obstacle_density=(0,0.3,0.5)
+                                    env_size=(40,40),#10+int(50*max([min([self.curriculum_level/6.0, 1.0]), 0.0]))),
+                                    obstacle_density=(0,0.,0.)
                                 ),num_agents)
               
                 joint_observations[self.metaAgentID],joint_visible_agents[self.metaAgentID],joint_normalized_distances[self.metaAgentID] = self.env._observe()
