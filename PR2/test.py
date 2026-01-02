@@ -124,7 +124,7 @@ def main():
 
  
     print ('Loading Model...')
-    checkpoint.restore(checkpoint_manager.latest_checkpoint)
+    checkpoint.restore(checkpoint_manager.latest_checkpoint).expect_partial()
 
     p=checkpoint_manager.latest_checkpoint
     print("checkpoint name:",p)

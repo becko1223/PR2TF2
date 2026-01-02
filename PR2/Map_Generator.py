@@ -175,7 +175,10 @@ def random_obstacle_generator(env_size=(10, 70), obstacle_density=(0.05, 0.15, 0
         
         # 2. 密度の決定 (三角分布)
         # 指定した d_mode で発生確率が最大になる
-        density = np.random.triangular(d_low, d_mode, d_high)
+        if d_low == d_high:
+            density = d_low
+        else:
+            density = np.random.triangular(d_low, d_mode, d_high)
         
         # 3. マップの初期化
         Z = np.zeros((h, w), dtype=int)
