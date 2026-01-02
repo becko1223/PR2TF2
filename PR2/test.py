@@ -131,7 +131,7 @@ def main():
       print("checkpoint name:",p)
 
 
-      MAP_SIZES = [40]
+      MAP_SIZES = [80]
       DENSITIES = [0.30]
       AGENT_COUNTS = [4, 8, 16, 32, 64]
       NUM_EPISODES = 50

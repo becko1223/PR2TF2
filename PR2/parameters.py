@@ -6,7 +6,7 @@ LR_Q                    = 1.e-4  # 8.e-5 / NUM_THREADS # default: 1e-5
 ADAPT_LR                = True
 ADAPT_COEFF             = 0.01  # the coefficient A in LR_Q/sqrt(A*steps+1) for calculating LR
 EXPERIENCE_BUFFER_SIZE  = 256
-max_episode_length      = 256
+max_episode_length      = 386
 IL_MAX_EP_LENGTH        = 64
 episode_count           = 0
 
