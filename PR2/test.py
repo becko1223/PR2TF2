@@ -122,13 +122,12 @@ def main():
 
         checkpoint_manager=tf.train.CheckpointManager(checkpoint,model_path,1)
 
-   
-    if load_model == True:
-        print ('Loading Model...')
-        checkpoint.restore(checkpoint_manager.latest_checkpoint)
+ 
+    print ('Loading Model...')
+    checkpoint.restore(checkpoint_manager.latest_checkpoint)
 
-        p=checkpoint_manager.latest_checkpoint
-        print("checkpoint name:",p)
+    p=checkpoint_manager.latest_checkpoint
+    print("checkpoint name:",p)
 
 
     MAP_SIZES = [30, 60]
