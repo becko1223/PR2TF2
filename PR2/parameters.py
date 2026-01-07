@@ -19,7 +19,7 @@ num_actor_traj          =16
 num_elites              =64
 
 gammma_tdmpc            =0.99
-temperature             =1.0
+temperature             =0.5
 iterations              =2
 
 random_term             =25
