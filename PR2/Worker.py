@@ -1070,7 +1070,7 @@ class Worker():
                                 is_no_guide=tf.constant([True],tf.bool)
                             validActions_onehot=tf.one_hot(tf.convert_to_tensor(np.array(validActions),dtype=tf.int32),a_size)
                             obstacle_map=tf.convert_to_tensor(s[0][2],dtype=tf.float32)
-                            a, mean=self.mppi_prob(latent_init,mean,validActions_onehot,obstacle_map,is_no_guide,guide_dir)
+                            a, mean=self.mppi(latent_init,mean,validActions_onehot,obstacle_map,is_no_guide,guide_dir)
                             a=a.numpy().item()
                         
                         #mean=tf.concat([mean[1:],tf.one_hot(tf.constant([0]),a_size)],axis=0)
